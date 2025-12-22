@@ -14,6 +14,7 @@ export interface User {
   username: string;
   firstName: string;
   lastName: string;
+  fullName?: string;
   phone: string;
   district: string;
   sector: string;
@@ -22,8 +23,11 @@ export interface User {
   role: "admin" | "staff";
   branch?: string | Branch;
   imagephoto?: string | null;
+  profileImage?: string | null;
   email: string;
   isActive: boolean;
+  businessName?: string;
+  gender?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

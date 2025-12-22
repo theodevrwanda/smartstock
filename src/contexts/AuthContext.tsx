@@ -6,32 +6,56 @@ import {
   onAuthStateChanged, 
   signOut,
   sendPasswordResetEmail,
+  createUserWithEmailAndPassword,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebase';
 import { AuthState, User } from '@/types';
 import axios from 'axios';
 
-// Update the User interface to focus on branch ID
-interface User {
+// Extended User interface for auth context
+interface AuthUser {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
   fullName: string;
   role: 'admin' | 'staff';
-  branch: string | null; // Branch ID as string
+  branch: string | null;
   isActive: boolean;
   profileImage: string | null;
+  username?: string;
+  phone?: string;
+  district?: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
+  businessName?: string;
+  gender?: string;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  sector: string;
+  cell: string;
+  village: string;
+  phoneNumber: string;
+  businessName: string;
+  profileImage?: string;
 }
 
 interface AuthContextType extends AuthState {
   login: (identifier: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
+  updateUser: (userData: Partial<AuthUser>) => void;
   resetPassword: (email: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<boolean>;
   errorMessage: string | null;
   clearError: () => void;
 }
@@ -70,49 +94,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (userDoc.exists()) {
-        const userData = userDoc.data() as User;
-
-        // Validate required fields
-        const requiredFields = ['firstName', 'lastName', 'email', 'role', 'isActive'];
-        const missingFields = requiredFields.filter(field => userData[field] === undefined || userData[field] === null);
-        if (missingFields.length > 0) {
-          console.error(`Missing required fields: ${missingFields.join(', ')}`);
-          setErrorMessage(`User data incomplete: missing ${missingFields.join(', ')}. Please contact support.`);
-          await signOut(auth);
-          return null;
-        }
-
-        // Check if user is active
-        if (!userData.isActive) {
-          setErrorMessage('Your account is not activated. Please contact support.');
-          await signOut(auth);
-          return null;
-        }
-
-        // Validate role
-        if (!['admin', 'staff'].includes(userData.role)) {
-          setErrorMessage('Invalid user role. Please contact support.');
-          await signOut(auth);
-          return null;
-        }
+        const userData = userDoc.data();
 
         // Create full user object with Firebase data
         const fullUser: User = {
           id: firebaseUser.uid,
-          email: firebaseUser.email || userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          fullName: `${userData.firstName} ${userData.lastName}`.trim(),
-          role: userData.role,
-          branch: userData.branch || null, // Allow any branch value, including null
-          isActive: userData.isActive,
-          profileImage: userData.imagephoto|| firebaseUser.imagephoto || null,
+          email: firebaseUser.email || userData.email || '',
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          fullName: `${userData.firstName || ''} ${userData.lastName || ''}`.trim(),
+          username: userData.username || userData.email || firebaseUser.email || '',
+          phone: userData.phone || userData.phoneNumber || '',
+          district: userData.district || '',
+          sector: userData.sector || '',
+          cell: userData.cell || '',
+          village: userData.village || '',
+          role: userData.role || 'staff',
+          branch: userData.branch || null,
+          isActive: userData.isActive !== false,
+          imagephoto: userData.imagephoto || userData.profileImage || null,
+          profileImage: userData.profileImage || userData.imagephoto || null,
+          businessName: userData.businessName || '',
+          gender: userData.gender || '',
         };
 
         return fullUser;
       } else {
-        setErrorMessage('User data not found. Please contact support.');
-        await signOut(auth);
+        // For new registrations, user doc may not exist yet
         return null;
       }
     } catch (error) {
@@ -253,6 +261,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const register = async (data: RegisterData): Promise<boolean> => {
+    setAuthState((prev) => ({ ...prev, loading: true }));
+    setErrorMessage(null);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      
+      const userData: Partial<User> = {
+        id: userCredential.user.uid,
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        fullName: `${data.firstName} ${data.lastName}`.trim(),
+        username: data.email,
+        phone: data.phoneNumber,
+        sector: data.sector,
+        cell: data.cell,
+        village: data.village,
+        district: '',
+        role: 'staff',
+        branch: null,
+        isActive: true,
+        profileImage: data.profileImage || null,
+        imagephoto: data.profileImage || null,
+        businessName: data.businessName,
+        gender: data.gender,
+        createdAt: new Date(),
+      };
+
+      await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+      return true;
+    } catch (error: any) {
+      let message = 'Registration failed. Please try again.';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'This email is already registered.';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password is too weak.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address.';
+      }
+      
+      setErrorMessage(message);
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      return false;
+    }
+  };
+
   const clearError = () => setErrorMessage(null);
 
   return (
@@ -264,6 +320,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         logout,
         updateUser,
         resetPassword,
+        register,
         errorMessage,
         clearError,
       }}

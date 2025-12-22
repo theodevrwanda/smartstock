@@ -41,7 +41,7 @@ setPersistence(auth, browserLocalPersistence).catch((error) => {
 export const db = getFirestore(app);
 
 // Enable offline cache + auto sync
-enableIndexedDbPersistence(db, { synchronizeTabs: true }).catch((error) => {
+enableIndexedDbPersistence(db).catch((error) => {
   if (error.code === "failed-precondition") {
     console.warn(
       "Offline persistence failed: multiple tabs open."
