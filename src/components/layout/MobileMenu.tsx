@@ -38,10 +38,12 @@ interface MobileMenuProps {
 const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   const { logout, user } = useAuth();
 
+  // Dynamic user and business data
+  const businessName = user?.businessName || "Pixel";
   const fullName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   const initials = fullName
     ? fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
-    : 'OF';
+    : 'U';
   const profileImage = user?.profileImage || '';
 
   if (!isOpen) return null;
@@ -50,32 +52,40 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
         onClick={onClose}
       />
       
       {/* Mobile Menu */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border z-50 lg:hidden transform transition-transform duration-300 ease-in-out">
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-sidebar-border min-h-[60px]">
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-6 bg-primary rounded flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">EMS</span>
+      <div className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-sidebar-border z-50 lg:hidden shadow-2xl transform transition-transform duration-300 ease-in-out">
+        
+        {/* Header - Updated to display Business Name */}
+        <div className="flex items-center justify-between p-4 border-b border-sidebar-border min-h-[70px]">
+          <div className="flex items-center space-x-3 overflow-hidden">
+            <div className="flex-shrink-0 w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm">
+              <span className="text-primary-foreground font-bold text-sm uppercase">
+                {businessName.substring(0, 2)}
+              </span>
             </div>
-            <span className="font-semibold text-sidebar-foreground text-sm">Electronics Pro</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sidebar-foreground text-sm truncate uppercase tracking-tight">
+                {businessName}
+              </span>
+              <span className="text-[10px] text-muted-foreground leading-none font-medium">Smart Manager</span>
+            </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="p-1.5 h-auto w-auto"
+            className="p-1 h-8 w-8 text-gray-500"
           >
-            <X size={16} />
+            <X size={20} />
           </Button>
         </div>
 
         {/* Scrollable Navigation */}
-        <ScrollArea className="flex-1 p-2">
+        <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
             {sidebarItems.map((item) => (
               <NavLink
@@ -84,14 +94,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center px-2 py-2 rounded-md transition-colors text-sm space-x-2",
+                    "flex items-center px-3 py-2.5 rounded-lg transition-all text-sm font-medium space-x-3",
                     isActive
-                      ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      ? "bg-primary/10 text-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
                   )
                 }
               >
-                <item.icon size={16} className="flex-shrink-0" />
+                <item.icon size={18} className={cn("flex-shrink-0")} />
                 <span className="truncate">{item.label}</span>
               </NavLink>
             ))}
@@ -99,19 +109,21 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
         </ScrollArea>
 
         {/* User Section */}
-        <div className="p-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-t border-sidebar-border bg-sidebar-accent/20">
           {user && (
-            <div className="flex items-center space-x-2 mb-2 p-2">
-              <Avatar className="w-6 h-6 overflow-hidden">
-                <AvatarImage src={profileImage} className="object-cover w-full h-full" />
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <div className="flex items-center space-x-3 mb-4 p-2 rounded-lg bg-sidebar-accent/30">
+              <Avatar className="w-9 h-9 border-2 border-primary/20">
+                <AvatarImage src={profileImage} className="object-cover" />
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-900 dark:text-white truncate">
-                  {fullName || 'User'}
+                <p className="text-sm font-bold text-sidebar-foreground truncate">
+                  {fullName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {user?.role || 'Role'}
+                <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">
+                  {user?.role || 'Staff'}
                 </p>
               </div>
             </div>
@@ -123,9 +135,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
               logout();
               onClose();
             }}
-            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm justify-start space-x-2 px-2"
+            className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold justify-start space-x-3 px-3 h-11 rounded-lg transition-colors"
           >
-            <LogOut size={14} />
+            <LogOut size={18} />
             <span>Logout</span>
           </Button>
         </div>

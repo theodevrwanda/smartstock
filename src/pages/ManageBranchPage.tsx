@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -12,21 +11,14 @@ import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye } from 'lucide-rea
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Define Branch interface based on Mongoose schema
-interface Branch {
-  id: string;
-  branchName: string;
-  district: string;
-  sector: string;
-  cell: string;
-  village: string;
-  createdAt: string;
-}
-
-// Use environment variable for API base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-const BRANCH_API_URL = `${API_BASE_URL}/branches`;
+import {
+  getBranches,
+  addBranch,
+  updateBranch,
+  deleteBranch,
+  deleteMultipleBranches,
+  Branch,
+} from '@/functions/branch';
 
 const ManageBranchPage: React.FC = () => {
   const { toast } = useToast();
@@ -36,13 +28,17 @@ const ManageBranchPage: React.FC = () => {
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleteSelectedConfirmOpen, setIsDeleteSelectedConfirmOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+
+  // Form data
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
-  const [newBranch, setNewBranch] = useState<Partial<Branch>>({
+  const [newBranch, setNewBranch] = useState<Omit<Branch, 'id' | 'createdAt'>>({
     branchName: '',
     district: '',
     sector: '',
@@ -51,43 +47,19 @@ const ManageBranchPage: React.FC = () => {
   });
   const [branchToDelete, setBranchToDelete] = useState<string | null>(null);
 
-  // Check if user is admin
   const isAdmin = user?.role === 'admin';
 
-  // Fetch branches from API for admins only
+  // Fetch branches
   useEffect(() => {
-    if (!isAdmin) {
-      setLoading(false);
-      return;
-    }
     const fetchBranches = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(BRANCH_API_URL, { withCredentials: true });
-        const branchesData = response.data.data.branches.map((branch: any) => ({
-          id: branch._id,
-          branchName: branch.branchName,
-          district: branch.district,
-          sector: branch.sector,
-          cell: branch.cell,
-          village: branch.village,
-          createdAt: branch.createdAt,
-        }));
-        setBranches(branchesData);
-        setLoading(false);
-      } catch (error: any) {
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch branches: ' + (error.response?.data?.message || error.message),
-          variant: 'destructive',
-        });
-        setLoading(false);
-      }
+      setLoading(true);
+      const data = await getBranches();
+      setBranches(data);
+      setLoading(false);
     };
     fetchBranches();
-  }, [toast, isAdmin]);
+  }, []);
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString('en-US', {
@@ -100,686 +72,456 @@ const ManageBranchPage: React.FC = () => {
     }
   };
 
-  // Filter branches based on search term
-  const filteredBranches = branches.filter(
-    b =>
-      b.branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.district.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.sector.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.cell.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.village.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredBranches = branches.filter(branch =>
+    [branch.branchName, branch.district, branch.sector, branch.cell, branch.village]
+      .join(' ')
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
 
-  // Handle create branch
+  // Create branch
   const handleCreateBranch = async () => {
-    if (!newBranch.branchName || !newBranch.district || !newBranch.sector || !newBranch.cell || !newBranch.village) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields.',
-        variant: 'destructive',
-      });
+    const { branchName, district, sector, cell, village } = newBranch;
+    if (!branchName || !district || !sector || !cell || !village) {
+      toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' });
       return;
     }
-    try {
-      setActionLoading(true);
-      const response = await axios.post(BRANCH_API_URL, newBranch, { withCredentials: true });
-      const newBranchData: Branch = {
-        id: response.data.data.branch._id,
-        branchName: response.data.data.branch.branchName,
-        district: response.data.data.branch.district,
-        sector: response.data.data.branch.sector,
-        cell: response.data.data.branch.cell,
-        village: response.data.data.branch.village,
-        createdAt: response.data.data.branch.createdAt,
-      };
-      setBranches(prev => [...prev, newBranchData]);
+
+    setActionLoading(true);
+    const createdBranch = await addBranch(newBranch);
+    if (createdBranch) {
+      setBranches(prev => [...prev, createdBranch]);
       setNewBranch({ branchName: '', district: '', sector: '', cell: '', village: '' });
       setIsCreateDialogOpen(false);
-      toast({
-        title: 'Success',
-        description: 'Branch created successfully!',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create branch: ' + (error.response?.data?.message || error.message),
-        variant: 'destructive',
-      });
-    } finally {
-      setActionLoading(false);
     }
+    setActionLoading(false);
   };
 
-  // Handle update branch
+  // Update branch
   const handleUpdateBranch = async () => {
-    if (
-      !currentBranch ||
-      !currentBranch.branchName ||
-      !currentBranch.district ||
-      !currentBranch.sector ||
-      !currentBranch.cell ||
-      !currentBranch.village
-    ) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    try {
-      setActionLoading(true);
-      const response = await axios.put(`${BRANCH_API_URL}/${currentBranch.id}`, {
-        branchName: currentBranch.branchName,
-        district: currentBranch.district,
-        sector: currentBranch.sector,
-        cell: currentBranch.cell,
-        village: currentBranch.village,
-      }, { withCredentials: true });
-      const updatedBranch: Branch = {
-        id: response.data.data.branch._id,
-        branchName: response.data.data.branch.branchName,
-        district: response.data.data.branch.district,
-        sector: response.data.data.branch.sector,
-        cell: response.data.data.branch.cell,
-        village: response.data.data.branch.village,
-        createdAt: response.data.data.branch.createdAt,
-      };
-      setBranches(prev =>
-        prev.map(branch => (branch.id === updatedBranch.id ? updatedBranch : branch))
-      );
+    if (!currentBranch?.id) return;
+
+    setActionLoading(true);
+    const success = await updateBranch(currentBranch.id, {
+      branchName: currentBranch.branchName,
+      district: currentBranch.district,
+      sector: currentBranch.sector,
+      cell: currentBranch.cell,
+      village: currentBranch.village,
+    });
+    if (success) {
+      setBranches(prev => prev.map(b => (b.id === currentBranch.id ? currentBranch : b)));
       setIsUpdateDialogOpen(false);
       setCurrentBranch(null);
-      toast({
-        title: 'Success',
-        description: 'Branch updated successfully!',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update branch: ' + (error.response?.data?.message || error.message),
-        variant: 'destructive',
-      });
-    } finally {
-      setActionLoading(false);
     }
+    setActionLoading(false);
   };
 
-  // Handle delete branch
+  // Delete single branch
   const handleDeleteBranch = async () => {
     if (!branchToDelete) return;
-    try {
-      setActionLoading(true);
-      await axios.delete(`${BRANCH_API_URL}/${branchToDelete}`, { withCredentials: true });
-      setBranches(prev => prev.filter(branch => branch.id !== branchToDelete));
+    setActionLoading(true);
+    const success = await deleteBranch(branchToDelete);
+    if (success) {
+      setBranches(prev => prev.filter(b => b.id !== branchToDelete));
       setSelectedBranches(prev => prev.filter(id => id !== branchToDelete));
       setBranchToDelete(null);
       setIsDeleteConfirmOpen(false);
-      toast({
-        title: 'Success',
-        description: 'Branch permanently deleted!',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete branch: ' + (error.response?.data?.message || error.message),
-        variant: 'destructive',
-      });
-    } finally {
-      setActionLoading(false);
     }
+    setActionLoading(false);
   };
 
-  // Handle delete selected branches
-  const handleDeleteSelected = () => {
-    if (selectedBranches.length === 0) {
-      toast({
-        title: 'No Branches Selected',
-        description: 'Please select at least one branch to delete.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    setIsDeleteSelectedConfirmOpen(true);
-  };
-
-  // Confirm delete selected branches
-  const handleConfirmDeleteSelected = async () => {
-    try {
-      setActionLoading(true);
-      await Promise.all(
-        selectedBranches.map(id =>
-          axios.delete(`${BRANCH_API_URL}/${id}`, { withCredentials: true })
-        )
-      );
-      setBranches(prev => prev.filter(branch => !selectedBranches.includes(branch.id)));
+  // Delete multiple branches
+  const handleDeleteSelected = async () => {
+    if (selectedBranches.length === 0) return;
+    setActionLoading(true);
+    const success = await deleteMultipleBranches(selectedBranches);
+    if (success) {
+      setBranches(prev => prev.filter(b => !selectedBranches.includes(b.id!)));
       setSelectedBranches([]);
       setIsDeleteSelectedConfirmOpen(false);
-      toast({
-        title: 'Success',
-        description: `${selectedBranches.length} branch(es) permanently deleted!`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete branches: ' + (error.response?.data?.message || error.message),
-        variant: 'destructive',
-      });
-    } finally {
-      setActionLoading(false);
+    }
+    setActionLoading(false);
+  };
+
+  const handleSelectBranch = (id: string) => {
+    setSelectedBranches(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAll = () => {
+    if (selectedBranches.length === filteredBranches.length) {
+      setSelectedBranches([]);
+    } else {
+      setSelectedBranches(filteredBranches.map(b => b.id!).filter(Boolean));
     }
   };
 
-  // Handle branch selection
-  const handleSelectBranch = (branchId: string) => {
-    setSelectedBranches(prev =>
-      prev.includes(branchId)
-        ? prev.filter(id => id !== branchId)
-        : [...prev, branchId]
-    );
-  };
-
-  // Open update dialog
-  const openUpdateDialog = (branch: Branch) => {
-    setCurrentBranch(branch);
-    setIsUpdateDialogOpen(true);
-  };
-
-  // Open details dialog
-  const openDetailsDialog = (branch: Branch) => {
-    setCurrentBranch(branch);
-    setIsDetailsDialogOpen(true);
-  };
-
-  // Open delete confirmation dialog
-  const openDeleteConfirmDialog = (branchId: string) => {
-    setBranchToDelete(branchId);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  // Render unauthorized card for staff users
-  if (!isAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] p-4">
-        <Card className="bg-white dark:bg-gray-800 shadow-lg rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-white">Access Denied</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-gray-600 dark:text-gray-400">
-              You are not authorized to access this page. Only admins can manage branches.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <LoadingSpinner size="lg" className="text-blue-600" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  return (
-    <>
-      <SEOHelmet
-        title="Branches"
-        description="Manage branches for the system, including creating, updating, and deleting branches."
-        canonical="https://pixelmartrw.pages.dev/branches"
-      />
-      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Branches</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Create, update, or delete branches</p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
-              disabled={actionLoading}
-            >
-              {actionLoading ? (
-                <LoadingSpinner size="sm" className="text-white mr-2" />
-              ) : (
-                <PlusCircle size={18} />
-              )}
-              Branch
-            </Button>
-            <Button
-              onClick={handleDeleteSelected}
-              className="flex items-center gap-2 bg-red-600 text-white hover:bg-red-700"
-              disabled={selectedBranches.length === 0 || actionLoading}
-            >
-              {actionLoading ? (
-                <LoadingSpinner size="sm" className="text-white mr-2" />
-              ) : (
-                <Trash2 size={18} />
-              )}
-             Selected
-            </Button>
-          </div>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-          <Input
-            placeholder="Search by name, district, sector, cell, or village..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500 rounded-lg"
-            disabled={actionLoading}
-          />
-        </div>
-        <hr className="my-6 border-gray-200 dark:border-gray-700" />
-        {filteredBranches.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-            <p>No branches found. Create one to get started!</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+  // Staff view - only list
+  if (!isAdmin) {
+    return (
+      <>
+        <SEOHelmet title="Branches" description="View all branches" />
+        <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Branches</h1>
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox
-                      checked={selectedBranches.length === filteredBranches.length && filteredBranches.length > 0}
-                      onCheckedChange={() => {
-                        if (selectedBranches.length === filteredBranches.length) {
-                          setSelectedBranches([]);
-                        } else {
-                          setSelectedBranches(filteredBranches.map(b => b.id));
-                        }
-                      }}
-                      disabled={actionLoading}
-                    />
-                  </TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="sm:hidden w-[50px]">View</TableHead>
-                  <TableHead className="hidden sm:table-cell">District</TableHead>
-                  <TableHead className="hidden sm:table-cell">Sector</TableHead>
-                  <TableHead className="hidden sm:table-cell">Cell</TableHead>
-                  <TableHead className="hidden sm:table-cell">Village</TableHead>
-                  <TableHead className="hidden sm:table-cell">Created At</TableHead>
-                  <TableHead className="hidden sm:table-cell w-[120px]">Actions</TableHead>
+                  <TableHead>Branch Name</TableHead>
+                  <TableHead>District</TableHead>
+                  <TableHead>Sector</TableHead>
+                  <TableHead>Cell</TableHead>
+                  <TableHead>Village</TableHead>
+                  <TableHead>Created At</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBranches.map(branch => (
+                {filteredBranches.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      No branches found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredBranches.map(branch => (
+                    <TableRow key={branch.id}>
+                      <TableCell className="font-medium">{branch.branchName}</TableCell>
+                      <TableCell>{branch.district}</TableCell>
+                      <TableCell>{branch.sector}</TableCell>
+                      <TableCell>{branch.cell}</TableCell>
+                      <TableCell>{branch.village}</TableCell>
+                      <TableCell>{formatDate(branch.createdAt || '')}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Admin full view
+  return (
+    <>
+      <SEOHelmet title="Manage Branches" description="Create, update, delete branches" />
+      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manage Branches</h1>
+            <p className="text-gray-600 dark:text-gray-400">Create, update, or delete branches</p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={() => setIsCreateDialogOpen(true)} disabled={actionLoading}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Branch
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => setIsDeleteSelectedConfirmOpen(true)}
+              disabled={selectedBranches.length === 0 || actionLoading}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Input
+            placeholder="Search branches..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto rounded-lg border bg-white dark:bg-gray-800">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedBranches.length === filteredBranches.length && filteredBranches.length > 0}
+                    onCheckedChange={selectAll}
+                  />
+                </TableHead>
+                <TableHead>Branch Name</TableHead>
+                <TableHead>District</TableHead>
+                <TableHead>Sector</TableHead>
+                <TableHead>Cell</TableHead>
+                <TableHead>Village</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredBranches.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-12 text-gray-500">
+                    No branches found. Click "Add Branch" to create one.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredBranches.map(branch => (
                   <TableRow key={branch.id}>
-                    <TableCell onClick={e => e.stopPropagation()}>
+                    <TableCell>
                       <Checkbox
-                        checked={selectedBranches.includes(branch.id)}
-                        onCheckedChange={() => handleSelectBranch(branch.id)}
-                        disabled={actionLoading}
+                        checked={selectedBranches.includes(branch.id!)}
+                        onCheckedChange={() => handleSelectBranch(branch.id!)}
                       />
                     </TableCell>
                     <TableCell className="font-medium">{branch.branchName}</TableCell>
-                    <TableCell className="sm:hidden" onClick={e => e.stopPropagation()}>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openDetailsDialog(branch)}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900"
-                        title="View Details"
-                        disabled={actionLoading}
-                      >
-                        <Eye size={14} />
-                      </Button>
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">{branch.district}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{branch.sector}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{branch.cell}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{branch.village}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{formatDate(branch.createdAt)}</TableCell>
-                    <TableCell className="hidden sm:table-cell" onClick={e => e.stopPropagation()}>
-                      <div className="flex gap-1">
+                    <TableCell>{branch.district}</TableCell>
+                    <TableCell>{branch.sector}</TableCell>
+                    <TableCell>{branch.cell}</TableCell>
+                    <TableCell>{branch.village}</TableCell>
+                    <TableCell>{formatDate(branch.createdAt || '')}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
                         <Button
+                          size="sm"
                           variant="ghost"
-                          size="icon"
-                          onClick={() => openDetailsDialog(branch)}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900"
-                          title="View Details"
-                          disabled={actionLoading}
+                          onClick={() => {
+                            setCurrentBranch(branch);
+                            setIsDetailsDialogOpen(true);
+                          }}
                         >
-                          <Eye size={14} />
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button
+                          size="sm"
                           variant="ghost"
-                          size="icon"
-                          onClick={() => openUpdateDialog(branch)}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900"
-                          title="Edit"
-                          disabled={actionLoading}
+                          onClick={() => {
+                            setCurrentBranch(branch);
+                            setIsUpdateDialogOpen(true);
+                          }}
                         >
-                          <Edit size={14} />
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
+                          size="sm"
                           variant="ghost"
-                          size="icon"
-                          onClick={() => openDeleteConfirmDialog(branch.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
-                          title="Delete"
-                          disabled={actionLoading}
+                          onClick={() => {
+                            setBranchToDelete(branch.id!);
+                            setIsDeleteConfirmOpen(true);
+                          }}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Create Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Branch</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="branchName">Branch Name</Label>
+                <Label>Branch Name</Label>
                 <Input
-                  id="branchName"
                   value={newBranch.branchName}
                   onChange={e => setNewBranch(prev => ({ ...prev, branchName: e.target.value }))}
                   placeholder="e.g., Main Branch"
-                  required
-                  disabled={actionLoading}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="district">District</Label>
+                <Label>District</Label>
                 <Input
-                  id="district"
                   value={newBranch.district}
                   onChange={e => setNewBranch(prev => ({ ...prev, district: e.target.value }))}
-                  placeholder="e.g., Kigali"
-                  required
-                  disabled={actionLoading}
+                  placeholder="e.g., Gasabo"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="sector">Sector</Label>
+                <Label>Sector</Label>
                 <Input
-                  id="sector"
                   value={newBranch.sector}
                   onChange={e => setNewBranch(prev => ({ ...prev, sector: e.target.value }))}
                   placeholder="e.g., Kacyiru"
-                  required
-                  disabled={actionLoading}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="cell">Cell</Label>
+                <Label>Cell</Label>
                 <Input
-                  id="cell"
                   value={newBranch.cell}
                   onChange={e => setNewBranch(prev => ({ ...prev, cell: e.target.value }))}
-                  placeholder="e.g., Kamutwa"
-                  required
-                  disabled={actionLoading}
+                  placeholder="e.g., Kamatamu"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="village">Village</Label>
+                <Label>Village</Label>
                 <Input
-                  id="village"
                   value={newBranch.village}
                   onChange={e => setNewBranch(prev => ({ ...prev, village: e.target.value }))}
                   placeholder="e.g., Kibaza"
-                  required
-                  disabled={actionLoading}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsCreateDialogOpen(false)}
-                disabled={actionLoading}
-              >
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                className="bg-blue-600 text-white hover:bg-blue-700"
-                onClick={handleCreateBranch}
-                disabled={actionLoading}
-              >
-                {actionLoading && <LoadingSpinner size="sm" className="text-white mr-2" />}
+              <Button onClick={handleCreateBranch} disabled={actionLoading}>
+                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
                 Create Branch
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Update Dialog */}
         <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Update Branch</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="branchName">Branch Name</Label>
+                <Label>Branch Name</Label>
                 <Input
-                  id="branchName"
                   value={currentBranch?.branchName || ''}
-                  onChange={e =>
-                    setCurrentBranch(prev => (prev ? { ...prev, branchName: e.target.value } : null))
-                  }
-                  placeholder="e.g., Main Branch"
-                  required
-                  disabled={actionLoading}
+                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, branchName: e.target.value } : null)}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="district">District</Label>
+                <Label>District</Label>
                 <Input
-                  id="district"
                   value={currentBranch?.district || ''}
-                  onChange={e =>
-                    setCurrentBranch(prev => (prev ? { ...prev, district: e.target.value } : null))
-                  }
-                  placeholder="e.g., Kigali"
-                  required
-                  disabled={actionLoading}
+                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, district: e.target.value } : null)}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="sector">Sector</Label>
+                <Label>Sector</Label>
                 <Input
-                  id="sector"
                   value={currentBranch?.sector || ''}
-                  onChange={e =>
-                    setCurrentBranch(prev => (prev ? { ...prev, sector: e.target.value } : null))
-                  }
-                  placeholder="e.g., Kacyiru"
-                  required
-                  disabled={actionLoading}
+                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, sector: e.target.value } : null)}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="cell">Cell</Label>
+                <Label>Cell</Label>
                 <Input
-                  id="cell"
                   value={currentBranch?.cell || ''}
-                  onChange={e =>
-                    setCurrentBranch(prev => (prev ? { ...prev, cell: e.target.value } : null))
-                  }
-                  placeholder="e.g., Kamutwa"
-                  required
-                  disabled={actionLoading}
+                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, cell: e.target.value } : null)}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="village">Village</Label>
+                <Label>Village</Label>
                 <Input
-                  id="village"
                   value={currentBranch?.village || ''}
-                  onChange={e =>
-                    setCurrentBranch(prev => (prev ? { ...prev, village: e.target.value } : null))
-                  }
-                  placeholder="e.g., Kibaza"
-                  required
-                  disabled={actionLoading}
+                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, village: e.target.value } : null)}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsUpdateDialogOpen(false)}
-                disabled={actionLoading}
-              >
+              <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                className="bg-blue-600 text-white hover:bg-blue-700"
-                onClick={handleUpdateBranch}
-                disabled={actionLoading}
-              >
-                {actionLoading && <LoadingSpinner size="sm" className="text-white mr-2" />}
+              <Button onClick={handleUpdateBranch} disabled={actionLoading}>
+                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
                 Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Details Dialog */}
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Branch Details: {currentBranch?.branchName}</DialogTitle>
+              <DialogTitle>Branch Details</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {currentBranch && (
-                <>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium flex items-center gap-1">
-                      <MapPin size={16} /> District:
-                    </span>{' '}
-                    {currentBranch.district}
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium flex items-center gap-1">
-                      <MapPin size={16} /> Sector:
-                    </span>{' '}
-                    {currentBranch.sector}
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium flex items-center gap-1">
-                      <MapPin size={16} /> Cell:
-                    </span>{' '}
-                    {currentBranch.cell}
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium flex items-center gap-1">
-                      <MapPin size={16} /> Village:
-                    </span>{' '}
-                    {currentBranch.village}
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium flex items-center gap-1">
-                      <Clock size={16} /> Created At:
-                    </span>{' '}
-                    {formatDate(currentBranch.createdAt)}
-                  </p>
-                </>
-              )}
-            </div>
-            <DialogFooter className="flex flex-col sm:flex-row justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsDetailsDialogOpen(false)}
-                disabled={actionLoading}
-              >
+            {currentBranch && (
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-2">
+                  <strong>Branch Name:</strong> {currentBranch.branchName}
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> <strong>District:</strong> {currentBranch.district}
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> <strong>Sector:</strong> {currentBranch.sector}
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> <strong>Cell:</strong> {currentBranch.cell}
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> <strong>Village:</strong> {currentBranch.village}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> <strong>Created:</strong> {formatDate(currentBranch.createdAt || '')}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
                 Close
               </Button>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsDetailsDialogOpen(false);
-                    if (currentBranch) openUpdateDialog(currentBranch);
-                  }}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900"
-                  title="Edit"
-                  disabled={actionLoading}
-                >
-                  <Edit size={14} className="mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setIsDetailsDialogOpen(false);
-                    if (currentBranch) openDeleteConfirmDialog(currentBranch.id);
-                  }}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-900"
-                  title="Delete"
-                  disabled={actionLoading}
-                >
-                  <Trash2 size={14} className="mr-1" />
-                  Delete
-                </Button>
-              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Single Confirm */}
         <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm Permanent Deletion</DialogTitle>
+              <DialogTitle>Delete Branch?</DialogTitle>
               <DialogDescription>
-                Are you sure you want to permanently delete this branch? This action cannot be undone.
+                This action cannot be undone. This branch will be permanently deleted.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteConfirmOpen(false)}
-                disabled={actionLoading}
-              >
+              <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                className="bg-red-600 text-white hover:bg-blue-700"
-                onClick={handleDeleteBranch}
-                disabled={actionLoading}
-              >
-                {actionLoading && <LoadingSpinner size="sm" className="text-white mr-2" />}
-                Delete Permanently
+              <Button variant="destructive" onClick={handleDeleteBranch} disabled={actionLoading}>
+                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
+                Delete
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Selected Confirm */}
         <Dialog open={isDeleteSelectedConfirmOpen} onOpenChange={setIsDeleteSelectedConfirmOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Confirm Permanent Deletion of Selected Branches</DialogTitle>
+              <DialogTitle>Delete Selected Branches?</DialogTitle>
               <DialogDescription>
-                Are you sure you want to permanently delete {selectedBranches.length} selected branch(es)? This action cannot be undone.
+                {selectedBranches.length} branch(es) will be permanently deleted. This cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteSelectedConfirmOpen(false)}
-                disabled={actionLoading}
-              >
+              <Button variant="outline" onClick={() => setIsDeleteSelectedConfirmOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                className="bg-red-600 text-white hover:bg-blue-700"
-                onClick={handleConfirmDeleteSelected}
-                disabled={actionLoading}
-              >
-                {actionLoading && <LoadingSpinner size="sm" className="text-white mr-2" />}
-                Delete Permanently
+              <Button variant="destructive" onClick={handleDeleteSelected} disabled={actionLoading}>
+                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
+                Delete Selected
               </Button>
             </DialogFooter>
           </DialogContent>

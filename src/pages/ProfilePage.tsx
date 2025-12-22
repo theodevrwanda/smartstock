@@ -40,6 +40,9 @@ import {
   sendPasswordResetEmail,
   deleteUser,
 } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/firebase/firebase';
+import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
 
 const ProfilePage: React.FC = () => {
   const { toast } = useToast();
@@ -113,21 +116,77 @@ const ProfilePage: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
+
+      // Instant preview (works offline)
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
-        toast({ title: 'Success', description: 'Profile image preview updated.' });
       };
       reader.readAsDataURL(file);
+
+      toast({
+        title: 'Image Selected',
+        description: 'Preview updated. Will upload when you save.',
+      });
     }
   };
 
   const handleSave = async () => {
+    if (!user) return;
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({ title: 'Success', description: 'Profile updated successfully!' });
-    setIsEditing(false);
-    setIsSaving(false);
+
+    try {
+      let newImageUrl = user.profileImage;
+
+      // Upload new image if selected
+      if (selectedFile) {
+        if (!navigator.onLine) {
+          toast({
+            title: 'Offline',
+            description: 'Cannot upload image while offline. Save other changes only.',
+            variant: 'destructive',
+          });
+        } else {
+          try {
+            toast({ title: 'Uploading...', description: 'Uploading profile image...' });
+            newImageUrl = await uploadToCloudinary(selectedFile);
+            toast({ title: 'Success', description: 'Image uploaded!' });
+          } catch (error) {
+            toast({
+              title: 'Upload Failed',
+              description: 'Could not upload image. Other changes saved.',
+              variant: 'destructive',
+            });
+            // Continue saving other fields even if image fails
+          }
+        }
+      }
+
+      // Update Firestore user document
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        district: formData.district,
+        sector: formData.sector,
+        cell: formData.cell,
+        village: formData.village,
+        profileImage: newImageUrl,
+      });
+
+      toast({ title: 'Success', description: 'Profile updated successfully!' });
+      setIsEditing(false);
+      setSelectedFile(null);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save profile changes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -159,14 +218,14 @@ const ProfilePage: React.FC = () => {
   const toggleOfflineMode = () => {
     setIsOfflineMode(prev => !prev);
     toast({
-      title: isOfflineMode ? 'Online Mode' : 'Offline Mode',
+      title: isOfflineMode ? 'Back Online' : 'Offline Mode',
       description: isOfflineMode 
-        ? 'App is now using live data.' 
-        : 'App is now in offline mode (using mock data).',
+        ? 'App is now connected to live data.' 
+        : 'App is now in offline mode (changes saved locally when possible).',
     });
   };
 
-  // Step 1: Verify current password with clear error message
+  // Step 1: Verify current password
   const handleVerifyCurrentPassword = async () => {
     if (!currentPassword.trim()) {
       setCurrentPasswordError('Please enter your current password.');
@@ -186,38 +245,37 @@ const ProfilePage: React.FC = () => {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
       
-      // Success — go to next step
       setPasswordStep(2);
-      toast({ title: 'Verified ✓', description: 'Current password is correct. Now set your new password.' });
+      toast({ title: 'Verified ✓', description: 'Current password correct. Set new one.' });
     } catch (error: any) {
       let message = 'Failed to verify password.';
       if (error.code === 'auth/wrong-password') {
-        message = 'Incorrect current password. Please try again.';
+        message = 'Incorrect current password.';
       } else if (error.code === 'auth/too-many-requests') {
-        message = 'Too many failed attempts. Please try again later.';
+        message = 'Too many attempts. Try again later.';
       }
       setCurrentPasswordError(message);
-      toast({ title: 'Verification Failed', description: message, variant: 'destructive' });
+      toast({ title: 'Failed', description: message, variant: 'destructive' });
     } finally {
       setIsVerifyingCurrent(false);
     }
   };
 
-  // Step 2: Update new password
+  // Step 2: Update password
   const handleUpdateNewPassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast({ title: 'Error', description: 'New passwords do not match.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
       return;
     }
     if (newPassword.length < 6) {
-      toast({ title: 'Error', description: 'New password must be at least 6 characters.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Password must be at least 6 characters.', variant: 'destructive' });
       return;
     }
 
     setIsUpdatingPassword(true);
     try {
       await updatePassword(auth.currentUser!, newPassword);
-      toast({ title: 'Success ✓', description: 'Your password has been changed successfully!' });
+      toast({ title: 'Success', description: 'Password changed successfully!' });
       setChangePasswordOpen(false);
       setPasswordStep(1);
       setCurrentPassword('');
@@ -225,31 +283,24 @@ const ProfilePage: React.FC = () => {
       setConfirmPassword('');
       setCurrentPasswordError('');
     } catch (error: any) {
-      toast({ 
-        title: 'Error', 
-        description: error.message || 'Failed to update password. Please try again.', 
-        variant: 'destructive' 
-      });
+      toast({ title: 'Error', description: 'Failed to update password.', variant: 'destructive' });
     } finally {
       setIsUpdatingPassword(false);
     }
   };
 
-  // Reset password via email
+  // Reset password email
   const handleResetPassword = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
-      toast({ title: 'Error', description: 'Please enter a valid email address.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Valid email required.', variant: 'destructive' });
       return;
     }
 
     try {
       await sendPasswordResetEmail(auth, resetEmail);
-      toast({ 
-        title: 'Email Sent', 
-        description: 'A password reset link has been sent to your email. Check your inbox and spam folder.' 
-      });
+      toast({ title: 'Sent', description: 'Check your email for reset link.' });
       setResetPasswordOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       toast({ title: 'Error', description: 'Failed to send reset email.', variant: 'destructive' });
     }
   };
@@ -260,12 +311,12 @@ const ProfilePage: React.FC = () => {
 
     try {
       await deleteUser(auth.currentUser);
-      toast({ title: 'Account Deleted', description: 'Your account has been permanently deleted.' });
+      toast({ title: 'Deleted', description: 'Account permanently deleted.' });
     } catch (error: any) {
       if (error.code === 'auth/requires-recent-login') {
         toast({ 
-          title: 'Re-login Required', 
-          description: 'For security, please log in again before deleting your account.', 
+          title: 'Re-login Needed', 
+          description: 'Please sign in again before deleting account.', 
           variant: 'destructive' 
         });
       } else {
@@ -299,7 +350,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="My Profile - EMS" description="View and manage your profile" />
+      <SEOHelmet title="My Profile" description="View and manage your profile" />
       <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -310,16 +361,16 @@ const ProfilePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             {!isEditing ? (
               <Button onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
-                <Edit size={16} className="mr-2" /> Edit Profile
+                <Edit className="mr-2 h-4 w-4" /> Edit Profile
               </Button>
             ) : (
               <>
                 <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save size={16} className="mr-2" />}
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                   Save Changes
                 </Button>
                 <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
-                  <X size={16} className="mr-2" /> Cancel
+                  <X className="mr-2 h-4 w-4" /> Cancel
                 </Button>
               </>
             )}
@@ -342,12 +393,12 @@ const ProfilePage: React.FC = () => {
                     <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <UserIcon size={48} className="text-gray-400" />
+                      <UserIcon className="h-16 w-16 text-gray-400" />
                     </div>
                   )}
                   {isEditing && (
-                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                      <Edit size={24} className="text-white" />
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <Edit className="h-8 w-8 text-white" />
                     </div>
                   )}
                   <input
@@ -365,7 +416,9 @@ const ProfilePage: React.FC = () => {
                   <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
                   <div className="flex gap-2 mt-3">
                     {getRoleBadge(user.role)}
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</Badge>
+                    <Badge variant={user.isActive ? "default" : "secondary"}>
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -390,7 +443,7 @@ const ProfilePage: React.FC = () => {
                 <div>
                   <Label>Email</Label>
                   <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
-                    <Mail size={16} className="text-gray-500" />
+                    <Mail className="h-4 w-4 text-gray-500" />
                     {user.email}
                   </p>
                 </div>
@@ -400,7 +453,7 @@ const ProfilePage: React.FC = () => {
                     <Input value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} />
                   ) : (
                     <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
-                      <Phone size={16} className="text-gray-500" />
+                      <Phone className="h-4 w-4 text-gray-500" />
                       {user.phone || 'Not set'}
                     </p>
                   )}
@@ -411,7 +464,7 @@ const ProfilePage: React.FC = () => {
                     <Input value={formData.district} onChange={e => handleInputChange('district', e.target.value)} />
                   ) : (
                     <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
-                      <MapPin size={16} className="text-gray-500" />
+                      <MapPin className="h-4 w-4 text-gray-500" />
                       {user.district || 'Not set'}
                     </p>
                   )}
@@ -444,7 +497,7 @@ const ProfilePage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Account Settings Sidebar */}
+          {/* Settings Sidebar */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -454,14 +507,14 @@ const ProfilePage: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Offline Mode</p>
-                    <p className="text-sm text-gray-500">Use mock data (no internet needed)</p>
+                    <p className="text-sm text-gray-500">Preview changes without internet</p>
                   </div>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={toggleOfflineMode}
                   >
-                    {isOfflineMode ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
+                    {isOfflineMode ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
                   </Button>
                 </div>
               </CardContent>
@@ -484,7 +537,7 @@ const ProfilePage: React.FC = () => {
                     setCurrentPasswordError('');
                   }}
                 >
-                  <Key size={16} className="mr-2" />
+                  <Key className="mr-2 h-4 w-4" />
                   Change Password
                 </Button>
 
@@ -493,8 +546,8 @@ const ProfilePage: React.FC = () => {
                   className="w-full justify-start"
                   onClick={() => setResetPasswordOpen(true)}
                 >
-                  <Mail size={16} className="mr-2" />
-                  Reset Password via Email
+                  <Mail className="mr-2 h-4 w-4" />
+                  Reset via Email
                 </Button>
 
                 <Button
@@ -502,7 +555,7 @@ const ProfilePage: React.FC = () => {
                   className="w-full justify-start"
                   onClick={() => setDeleteAccountOpen(true)}
                 >
-                  <Trash2 size={16} className="mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete Account
                 </Button>
 
@@ -511,7 +564,7 @@ const ProfilePage: React.FC = () => {
                   className="w-full justify-start"
                   onClick={handleLogout}
                 >
-                  <LogOut size={16} className="mr-2" />
+                  <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </Button>
               </CardContent>
@@ -519,151 +572,73 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Multi-Step Change Password Dialog */}
+        {/* Password Change Dialog */}
         <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
-          <DialogContent className="max-w-[90vw] sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                {passwordStep === 1 ? 'Verify Your Identity' : 'Create New Password'}
-              </DialogTitle>
-              <DialogDescription>
-                {passwordStep === 1
-                  ? 'Enter your current password to proceed.'
-                  : 'Your new password must be at least 6 characters long.'}
-              </DialogDescription>
+              <DialogTitle>{passwordStep === 1 ? 'Verify Identity' : 'New Password'}</DialogTitle>
             </DialogHeader>
-
-            <div className="py-4">
-              {passwordStep === 1 ? (
-                <div className="space-y-4">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input
-                    id="current-password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => {
-                      setCurrentPassword(e.target.value);
-                      setCurrentPasswordError('');
-                    }}
-                    placeholder="Enter your current password"
-                    autoFocus
-                  />
-                  {currentPasswordError && (
-                    <p className="text-sm text-red-600 dark:text-red-400">{currentPasswordError}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    autoFocus
-                  />
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm your new password"
-                  />
-                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-sm text-red-600 dark:text-red-400">Passwords do not match.</p>
-                  )}
-                  {newPassword && newPassword.length < 6 && (
-                    <p className="text-sm text-red-600 dark:text-red-400">Password must be at least 6 characters.</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>
-                Cancel
-              </Button>
-              {passwordStep === 1 ? (
-                <Button
-                  onClick={handleVerifyCurrentPassword}
-                  disabled={isVerifyingCurrent || !currentPassword.trim()}
-                >
-                  {isVerifyingCurrent ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                  )}
-                  Continue
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleUpdateNewPassword}
-                  disabled={
-                    isUpdatingPassword ||
-                    newPassword.length < 6 ||
-                    newPassword !== confirmPassword
-                  }
-                >
-                  {isUpdatingPassword ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="mr-2 h-4 w-4" />
-                  )}
-                  Update Password
-                </Button>
-              )}
-            </DialogFooter>
+            {passwordStep === 1 ? (
+              <>
+                <Label>Current Password</Label>
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => {
+                    setCurrentPassword(e.target.value);
+                    setCurrentPasswordError('');
+                  }}
+                />
+                {currentPasswordError && <p className="text-red-600 text-sm">{currentPasswordError}</p>}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
+                  <Button onClick={handleVerifyCurrentPassword} disabled={isVerifyingCurrent}>
+                    {isVerifyingCurrent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Continue'}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <>
+                <Label>New Password</Label>
+                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                <Label>Confirm Password</Label>
+                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPasswordStep(1)}>Back</Button>
+                  <Button onClick={handleUpdateNewPassword} disabled={isUpdatingPassword || newPassword !== confirmPassword || newPassword.length < 6}>
+                    {isUpdatingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Update'}
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
 
-        {/* Reset Password via Email Dialog */}
+        {/* Reset Password Dialog */}
         <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
-          <DialogContent className="max-w-[90vw] sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Reset Password</DialogTitle>
-              <DialogDescription>
-                We will send a password reset link to your email address.
-              </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Label htmlFor="reset-email">Email Address</Label>
-              <Input
-                id="reset-email"
-                type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="Enter your email"
-              />
-            </div>
+            <Label>Email</Label>
+            <Input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} />
             <DialogFooter>
-              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleResetPassword}>
-                Send Reset Link
-              </Button>
+              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>Cancel</Button>
+              <Button onClick={handleResetPassword}>Send Reset Link</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Account Confirmation Dialog */}
+        {/* Delete Account Dialog */}
         <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
-          <DialogContent className="max-w-[90vw] sm:max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Account</DialogTitle>
-              <DialogDescription>
-                This action is permanent and cannot be undone. All your data will be deleted.
-              </DialogDescription>
+              <DialogTitle>Delete Account?</DialogTitle>
+              <DialogDescription>This action is permanent.</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteAccount}>
-                Delete My Account
-              </Button>
+              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteAccount}>Delete</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
