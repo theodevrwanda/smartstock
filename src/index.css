@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Primary Blue & Smooth White Theme */
+    --background: 0 0% 99%;
+    --foreground: 220 10% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 10% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 15%;
+
+    --primary: 214 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 214 20% 97%;
+    --secondary-foreground: 220 10% 20%;
+
+    --muted: 214 15% 96%;
+    --muted-foreground: 220 8% 50%;
+
+    --accent: 214 30% 95%;
+    --accent-foreground: 214 100% 50%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 90%;
+    --input: 214 20% 94%;
+    --ring: 214 100% 50%;
+
+    --radius: 0.75rem;
+    
+    /* Premium shadows with blue tint */
+    --shadow-sm: 0 1px 2px 0 hsl(214 100% 50% / 0.04);
+    --shadow: 0 1px 3px 0 hsl(214 100% 50% / 0.08), 0 1px 2px -1px hsl(214 100% 50% / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(214 100% 50% / 0.08), 0 2px 4px -2px hsl(214 100% 50% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(214 100% 50% / 0.08), 0 4px 6px -4px hsl(214 100% 50% / 0.06);
+    --shadow-xl: 0 20px 25px -5px hsl(214 100% 50% / 0.08), 0 8px 10px -6px hsl(214 100% 50% / 0.06);
+
+    /* Sidebar theme - blue gradient */
+    --sidebar-background: 214 30% 98%;
+    --sidebar-foreground: 220 10% 20%;
+    --sidebar-primary: 214 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 20% 96%;
+    --sidebar-accent-foreground: 214 100% 50%;
+    --sidebar-border: 214 20% 88%;
+    --sidebar-ring: 214 100% 50%;
+  }
+
+  .dark {
+    /* Dark Blue Theme */
+    --background: 220 30% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 25% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 25% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 214 100% 60%;
+    --primary-foreground: 220 30% 8%;
+
+    --secondary: 220 25% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 25% 15%;
+    --muted-foreground: 220 10% 70%;
+
+    --accent: 220 25% 18%;
+    --accent-foreground: 214 100% 60%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 25% 18%;
+    --input: 220 25% 18%;
+    --ring: 214 100% 60%;
+    
+    /* Dark mode shadows with blue tint */
+    --shadow-sm: 0 1px 2px 0 hsl(214 100% 60% / 0.12);
+    --shadow: 0 1px 3px 0 hsl(214 100% 60% / 0.15), 0 1px 2px -1px hsl(214 100% 60% / 0.12);
+    --shadow-md: 0 4px 6px -1px hsl(214 100% 60% / 0.15), 0 2px 4px -2px hsl(214 100% 60% / 0.12);
+    --shadow-lg: 0 10px 15px -3px hsl(214 100% 60% / 0.15), 0 4px 6px -4px hsl(214 100% 60% / 0.12);
+    --shadow-xl: 0 20px 25px -5px hsl(214 100% 60% / 0.15), 0 8px 10px -6px hsl(214 100% 60% / 0.12);
+    
+    /* Dark sidebar */
+    --sidebar-background: 220 30% 10%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 214 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 25% 16%;
+    --sidebar-accent-foreground: 214 100% 60%;
+    --sidebar-border: 220 25% 16%;
+    --sidebar-ring: 214 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+}
+
+@layer components {
+  /* Mobile app style cards */
+  .mobile-card {
+    @apply bg-card text-card-foreground rounded-xl border border-border/50;
+    box-shadow: var(--shadow-lg);
+  }
+  
+  /* Smooth buttons */
+  .smooth-button {
+    @apply rounded-xl transition-all duration-200 ease-in-out;
+    box-shadow: var(--shadow);
+  }
+  
+  .smooth-button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  /* Mobile app container */
+  .mobile-container {
+    @apply bg-background/95 backdrop-blur-sm border border-border/50 rounded-2xl;
+    box-shadow: var(--shadow-xl);
+  }
+}
