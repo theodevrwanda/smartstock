@@ -16,10 +16,7 @@ export default defineConfig(({ mode }) => ({
 
     VitePWA({
       registerType: "autoUpdate",
-
-      // Use only one image
       includeAssets: ["pixelmart.png"],
-
       manifest: {
         name: "PixelMart",
         short_name: "PixelMart",
@@ -28,17 +25,28 @@ export default defineConfig(({ mode }) => ({
         display: "standalone",
         background_color: "#ffffff",
         theme_color: "#0f172a",
-
         icons: [
+          {
+            src: "/pixelmart.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any maskable", // ensures OS can apply rounded corners
+          },
           {
             src: "/pixelmart.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
           },
+          // Optional: include higher-res icon for retina displays
+          {
+            src: "/pixelmart.png",
+            sizes: "1024x1024",
+            type: "image/png",
+            purpose: "any maskable",
+          },
         ],
       },
-
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
