@@ -622,7 +622,7 @@ const ManageEmployeesPage: React.FC = () => {
                 <Checkbox
                   id="isActive"
                   checked={currentEmployee?.isActive || false}
-                  onCheckedChange={checked => setCurrentEmployee(prev => prev ? { ...prev, isActive: checked } : null)}
+                  onCheckedChange={checked => setCurrentEmployee(prev => prev ? { ...prev, isActive: Boolean(checked) } : null)}
                   disabled={actionLoading}
                 />
               </div>

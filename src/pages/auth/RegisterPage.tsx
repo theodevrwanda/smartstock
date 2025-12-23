@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
   Mail, Lock, Eye, EyeOff, Loader2, User, Phone, 
-  Building2, Camera
+  Building2, Camera, MapPin, ArrowLeft, ArrowRight, Check
 } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
@@ -24,17 +24,22 @@ import { toast } from 'sonner';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 
-const registerSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  gender: z.string().min(1, 'Please select your gender'),
+// Step 1 schema: Business & Location info
+const step1Schema = z.object({
+  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
   district: z.string().min(1, 'Please enter your district'),
   sector: z.string().min(1, 'Please enter your sector'),
   cell: z.string().min(1, 'Please enter your cell'),
   village: z.string().min(1, 'Please enter your village'),
+});
+
+// Step 2 schema: User info
+const step2Schema = z.object({
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  email: z.string().email('Please enter a valid email address'),
+  gender: z.string().min(1, 'Please select your gender'),
   phoneNumber: z.string().min(10, 'Please enter a valid phone number'),
-  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -42,21 +47,31 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+type Step1Data = z.infer<typeof step1Schema>;
+type Step2Data = z.infer<typeof step2Schema>;
 
 export default function RegisterPage() {
+  const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
 
-  const { register, handleSubmit, setValue, setError, clearErrors, formState: { errors } } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  // Step 1 form
+  const step1Form = useForm<Step1Data>({
+    resolver: zodResolver(step1Schema),
+    defaultValues: step1Data || undefined,
+  });
+
+  // Step 2 form
+  const step2Form = useForm<Step2Data>({
+    resolver: zodResolver(step2Schema),
   });
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,49 +92,74 @@ export default function RegisterPage() {
     reader.readAsDataURL(file);
   };
 
-  const checkUnique = async (field: 'email' | 'phoneNumber' | 'businessName', value: string): Promise<boolean> => {
-    const trimmedValue = value.trim();
-    if (!trimmedValue) return true;
-
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where(field, '==', trimmedValue));
+  const checkBusinessExists = async (businessName: string): Promise<boolean> => {
+    const businessRef = collection(db, 'businesses');
+    const q = query(businessRef, where('businessName', '==', businessName.trim()));
     const snapshot = await getDocs(q);
-    return snapshot.empty;
+    return !snapshot.empty;
   };
 
-  const onSubmit = async (data: RegisterFormData) => {
+  const checkUserExists = async (field: 'email' | 'phone', value: string): Promise<boolean> => {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where(field, '==', value.trim()));
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  };
+
+  const handleStep1Submit = async (data: Step1Data) => {
     setIsLoading(true);
-    clearErrors();
+    
+    try {
+      // Check if business name already exists
+      const businessExists = await checkBusinessExists(data.businessName);
+      if (businessExists) {
+        step1Form.setError('businessName', { 
+          message: 'This business name is already registered.' 
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      setStep1Data(data);
+      setCurrentStep(2);
+    } catch (error) {
+      toast.error('Error checking business name. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStep2Submit = async (data: Step2Data) => {
+    if (!step1Data) {
+      toast.error('Please complete step 1 first.');
+      return;
+    }
+
+    setIsLoading(true);
+    step2Form.clearErrors();
 
     try {
-      // Step 1: Check all three fields for uniqueness in Firestore
-      const isEmailUnique = await checkUnique('email', data.email);
-      if (!isEmailUnique) {
-        setError('email', { message: 'This email is already registered.' });
+      // Check if email exists
+      const emailExists = await checkUserExists('email', data.email);
+      if (emailExists) {
+        step2Form.setError('email', { message: 'This email is already registered.' });
         setIsLoading(false);
         return;
       }
 
-      const isPhoneUnique = await checkUnique('phoneNumber', data.phoneNumber);
-      if (!isPhoneUnique) {
-        setError('phoneNumber', { message: 'This phone number is already registered.' });
+      // Check if phone exists
+      const phoneExists = await checkUserExists('phone', data.phoneNumber);
+      if (phoneExists) {
+        step2Form.setError('phoneNumber', { message: 'This phone number is already registered.' });
         setIsLoading(false);
         return;
       }
 
-      const isBusinessUnique = await checkUnique('businessName', data.businessName);
-      if (!isBusinessUnique) {
-        setError('businessName', { message: 'This business name is already taken.' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Step 2: Only now upload image (if selected)
+      // Upload image to Cloudinary if selected
       let profileImageUrl: string | undefined = undefined;
       if (selectedFile) {
         try {
           profileImageUrl = await uploadToCloudinary(selectedFile);
-          toast.success('Profile image uploaded successfully!');
         } catch (error) {
           toast.error('Failed to upload profile image. Please try again.');
           setIsLoading(false);
@@ -127,232 +167,179 @@ export default function RegisterPage() {
         }
       }
 
-      // Step 3: Create user in Firebase Auth + save profile to Firestore
-      await registerUser({
+      // Register user with all data
+      const success = await registerUser({
         email: data.email,
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
         gender: data.gender,
-        district: data.district,
-        sector: data.sector,
-        cell: data.cell,
-        village: data.village,
+        district: step1Data.district,
+        sector: step1Data.sector,
+        cell: step1Data.cell,
+        village: step1Data.village,
         phoneNumber: data.phoneNumber,
-        businessName: data.businessName,
-        profileImage: profileImageUrl || undefined,
-        role: 'admin',
-        isActive: false,
+        businessName: step1Data.businessName,
+        profileImage: profileImageUrl,
       });
 
-      toast.success('Your account has been created successfully! Please sign in to continue.');
-      navigate('/login');
+      if (success) {
+        toast.success(
+          'Account created successfully! Please wait for central admin to approve your account.',
+          { duration: 6000 }
+        );
+        navigate('/login');
+      }
     } catch (error: any) {
-      console.error('Registration error:', error);
-
       let message = 'Registration failed. Please try again.';
       if (error.code === 'auth/email-already-in-use') {
         message = 'This email is already registered.';
-        setError('email', { message });
+        step2Form.setError('email', { message });
       } else if (error.code === 'auth/weak-password') {
         message = 'Password is too weak.';
-      } else if (error.code === 'auth/invalid-email') {
-        message = 'Invalid email address.';
-      } else if (error.code === 'auth/too-many-requests') {
-        message = 'Too many attempts. Please try again later.';
       } else if (error.message) {
         message = error.message;
       }
-
       toast.error(message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const goBack = () => {
+    setCurrentStep(1);
+  };
+
   return (
     <AuthLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
-            Sign up
+            Create Account
           </h1>
           <p className="text-slate-600">
-            Create your account. It's free and only takes a minute.
+            {currentStep === 1 
+              ? 'Enter your business details to get started.'
+              : 'Complete your personal information.'
+            }
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Profile Image Upload - Preview Only */}
-          <div className="flex justify-center">
-            <div className="relative">
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
-              >
-                {previewImage ? (
-                  <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <Camera className="h-8 w-8 text-slate-400" />
-                )}
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-              <p className="text-xs text-slate-500 text-center mt-2">Upload photo</p>
-            </div>
+        {/* Step Indicator */}
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+            currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+          }`}>
+            {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
           </div>
+          <div className={`flex-1 h-1 rounded ${currentStep > 1 ? 'bg-blue-600' : 'bg-slate-200'}`} />
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+            currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+          }`}>
+            2
+          </div>
+        </div>
 
-          {/* Name Fields */}
-          <div className="grid grid-cols-2 gap-4">
+        {/* Step 1: Business & Location */}
+        {currentStep === 1 && (
+          <form onSubmit={step1Form.handleSubmit(handleStep1Submit)} className="space-y-5">
+            {/* Profile Image Upload */}
+            <div className="flex justify-center">
+              <div className="relative">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-24 h-24 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+                >
+                  {previewImage ? (
+                    <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <Camera className="h-8 w-8 text-slate-400" />
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <p className="text-xs text-slate-500 text-center mt-2">Upload Logo/Photo</p>
+              </div>
+            </div>
+
+            {/* Business Name */}
             <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-slate-700 font-medium">
-                First Name
+              <Label htmlFor="businessName" className="text-slate-700 font-medium">
+                Business Name
               </Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  id="firstName"
-                  placeholder="Enter first name"
+                  id="businessName"
+                  placeholder="Enter your business name"
                   className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                  {...register('firstName')}
+                  {...step1Form.register('businessName')}
                 />
               </div>
-              {errors.firstName && (
-                <p className="text-xs text-red-500">{errors.firstName.message}</p>
+              {step1Form.formState.errors.businessName && (
+                <p className="text-xs text-red-500">{step1Form.formState.errors.businessName.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-slate-700 font-medium">
-                Last Name
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="lastName"
-                  placeholder="Enter last name"
-                  className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                  {...register('lastName')}
-                />
-              </div>
-              {errors.lastName && (
-                <p className="text-xs text-red-500">{errors.lastName.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-700 font-medium">
-              Email
-            </Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter email address"
-                className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                {...register('email')}
-              />
-            </div>
-            {errors.email && (
-              <p className="text-xs text-red-500">{errors.email.message}</p>
-            )}
-          </div>
-
-          {/* Gender & Phone */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Gender</Label>
-              <Select onValueChange={(value) => setValue('gender', value)}>
-                <SelectTrigger className="h-11 bg-white border-slate-200 text-slate-900">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.gender && (
-                <p className="text-xs text-red-500">{errors.gender.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber" className="text-slate-700 font-medium">
-                Phone Number
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="phoneNumber"
-                  placeholder="Enter phone number"
-                  className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                  {...register('phoneNumber')}
-                />
-              </div>
-              {errors.phoneNumber && (
-                <p className="text-xs text-red-500">{errors.phoneNumber.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Location Fields */}
-          <div className="grid grid-cols-2 gap-4">
+            {/* District */}
             <div className="space-y-2">
               <Label htmlFor="district" className="text-slate-700 font-medium">
                 District
               </Label>
-              <Input
-                id="district"
-                placeholder="Enter district"
-                className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                {...register('district')}
-              />
-              {errors.district && (
-                <p className="text-xs text-red-500">{errors.district.message}</p>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  id="district"
+                  placeholder="Enter district"
+                  className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                  {...step1Form.register('district')}
+                />
+              </div>
+              {step1Form.formState.errors.district && (
+                <p className="text-xs text-red-500">{step1Form.formState.errors.district.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="sector" className="text-slate-700 font-medium">
-                Sector
-              </Label>
-              <Input
-                id="sector"
-                placeholder="Enter sector"
-                className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                {...register('sector')}
-              />
-              {errors.sector && (
-                <p className="text-xs text-red-500">{errors.sector.message}</p>
-              )}
-            </div>
-          </div>
+            {/* Sector & Cell */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sector" className="text-slate-700 font-medium">
+                  Sector
+                </Label>
+                <Input
+                  id="sector"
+                  placeholder="Enter sector"
+                  className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                  {...step1Form.register('sector')}
+                />
+                {step1Form.formState.errors.sector && (
+                  <p className="text-xs text-red-500">{step1Form.formState.errors.sector.message}</p>
+                )}
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cell" className="text-slate-700 font-medium">
-                Cell
-              </Label>
-              <Input
-                id="cell"
-                placeholder="Enter cell"
-                className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                {...register('cell')}
-              />
-              {errors.cell && (
-                <p className="text-xs text-red-500">{errors.cell.message}</p>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="cell" className="text-slate-700 font-medium">
+                  Cell
+                </Label>
+                <Input
+                  id="cell"
+                  placeholder="Enter cell"
+                  className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                  {...step1Form.register('cell')}
+                />
+                {step1Form.formState.errors.cell && (
+                  <p className="text-xs text-red-500">{step1Form.formState.errors.cell.message}</p>
+                )}
+              </div>
             </div>
 
+            {/* Village */}
             <div className="space-y-2">
               <Label htmlFor="village" className="text-slate-700 font-medium">
                 Village
@@ -361,126 +348,229 @@ export default function RegisterPage() {
                 id="village"
                 placeholder="Enter village"
                 className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                {...register('village')}
+                {...step1Form.register('village')}
               />
-              {errors.village && (
-                <p className="text-xs text-red-500">{errors.village.message}</p>
+              {step1Form.formState.errors.village && (
+                <p className="text-xs text-red-500">{step1Form.formState.errors.village.message}</p>
               )}
             </div>
-          </div>
 
-          {/* Business Name */}
-          <div className="space-y-2">
-            <Label htmlFor="businessName" className="text-slate-700 font-medium">
-              Business Name
-            </Label>
-            <div className="relative">
-              <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                id="businessName"
-                placeholder="Enter business name"
-                className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                {...register('businessName')}
-              />
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  Next Step
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+
+            <div className="text-center">
+              <p className="text-slate-600">
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-700">
+                  Sign in
+                </Link>
+              </p>
             </div>
-            {errors.businessName && (
-              <p className="text-xs text-red-500">{errors.businessName.message}</p>
-            )}
-          </div>
+          </form>
+        )}
 
-          {/* Password Fields */}
-          <div className="grid grid-cols-2 gap-4">
+        {/* Step 2: User Information */}
+        {currentStep === 2 && (
+          <form onSubmit={step2Form.handleSubmit(handleStep2Submit)} className="space-y-5">
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-slate-700 font-medium">
+                  First Name
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="firstName"
+                    placeholder="First name"
+                    className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                    {...step2Form.register('firstName')}
+                  />
+                </div>
+                {step2Form.formState.errors.firstName && (
+                  <p className="text-xs text-red-500">{step2Form.formState.errors.firstName.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-slate-700 font-medium">
+                  Last Name
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="lastName"
+                    placeholder="Last name"
+                    className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                    {...step2Form.register('lastName')}
+                  />
+                </div>
+                {step2Form.formState.errors.lastName && (
+                  <p className="text-xs text-red-500">{step2Form.formState.errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700 font-medium">
-                Password
+              <Label htmlFor="email" className="text-slate-700 font-medium">
+                Email Address
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter password"
-                  className="pl-9 pr-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                  {...register('password')}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                  {...step2Form.register('email')}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
               </div>
-              {errors.password && (
-                <p className="text-xs text-red-500">{errors.password.message}</p>
+              {step2Form.formState.errors.email && (
+                <p className="text-xs text-red-500">{step2Form.formState.errors.email.message}</p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-700 font-medium">
-                Confirm Password
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm password"
-                  className="pl-9 pr-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
-                  {...register('confirmPassword')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {/* Gender & Phone */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-700 font-medium">Gender</Label>
+                <Select onValueChange={(value) => step2Form.setValue('gender', value)}>
+                  <SelectTrigger className="h-11 bg-white border-slate-200 text-slate-900">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {step2Form.formState.errors.gender && (
+                  <p className="text-xs text-red-500">{step2Form.formState.errors.gender.message}</p>
+                )}
               </div>
-              {errors.confirmPassword && (
-                <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>
-              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber" className="text-slate-700 font-medium">
+                  Phone Number
+                </Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="phoneNumber"
+                    placeholder="07X XXX XXXX"
+                    className="pl-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                    {...step2Form.register('phoneNumber')}
+                  />
+                </div>
+                {step2Form.formState.errors.phoneNumber && (
+                  <p className="text-xs text-red-500">{step2Form.formState.errors.phoneNumber.message}</p>
+                )}
+              </div>
             </div>
-          </div>
 
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-          >
-            {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              'Create Account'
-            )}
-          </Button>
-        </form>
+            {/* Password Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-slate-700 font-medium">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create password"
+                    className="pl-9 pr-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                    {...step2Form.register('password')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {step2Form.formState.errors.password && (
+                  <p className="text-xs text-red-500">{step2Form.formState.errors.password.message}</p>
+                )}
+              </div>
 
-        <div className="text-center">
-          <p className="text-slate-600">
-            Already have an account?{' '}
-            <Link 
-              to="/login" 
-              className="font-medium text-blue-600 hover:text-blue-700"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-slate-700 font-medium">
+                  Confirm Password
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm password"
+                    className="pl-9 pr-9 h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400"
+                    {...step2Form.register('confirmPassword')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {step2Form.formState.errors.confirmPassword && (
+                  <p className="text-xs text-red-500">{step2Form.formState.errors.confirmPassword.message}</p>
+                )}
+              </div>
+            </div>
 
-        <div className="text-center text-xs text-slate-500">
-          <p>
-            Developed by{' '}
-            <a 
-              href="https://theodevrw.netlify.app" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline font-medium"
-            >
-              RwandaScratch Developer Team
-            </a>
-          </p>
-        </div>
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goBack}
+                disabled={isLoading}
+                className="flex-1 h-12 border-slate-300"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </div>
+
+            <div className="text-center">
+              <p className="text-slate-600">
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-700">
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </form>
+        )}
       </div>
     </AuthLayout>
   );

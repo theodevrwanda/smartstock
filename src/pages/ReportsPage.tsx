@@ -185,8 +185,8 @@ const ReportsPage: React.FC = () => {
       let branchesData: Branch[] = [];
       if (response.data.success && response.data.data?.branches) {
         branchesData = response.data.data.branches;
-      } else if (response.data.success && response.data.branches) {
-        branchesData = response.data.branches;
+      } else if (response.data.success && (response.data as any).branches) {
+        branchesData = (response.data as any).branches;
       } else if (Array.isArray(response.data)) {
         branchesData = response.data;
       } else {
@@ -472,8 +472,8 @@ const ReportsPage: React.FC = () => {
     const selectedDateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
     return dateFields.some(field => {
       const productDate = product[field];
-      if (!productDate) return false;
-      const productDateStr = new Date(productDate).toISOString().split('T')[0];
+      if (!productDate || typeof productDate === 'boolean' || typeof productDate === 'object') return false;
+      const productDateStr = new Date(String(productDate)).toISOString().split('T')[0];
       return productDateStr === selectedDateStr;
     });
   };

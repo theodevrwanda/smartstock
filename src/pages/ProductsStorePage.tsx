@@ -184,7 +184,7 @@ const ProductsStorePage: React.FC = () => {
     model: '',
     quantity: 0,
     costPrice: 0,
-    branch: userBranch || '',
+    branch: (typeof userBranch === 'string' ? userBranch : '') || '',
     confirm: isAdmin,
   });
 
@@ -316,7 +316,7 @@ const ProductsStorePage: React.FC = () => {
         sellingPrice: null,
         status: 'store',
         quantity: newProduct.quantity!,
-        branch: userBranch,
+        branch: typeof userBranch === 'string' ? userBranch : '',
         addedDate: new Date(),
         confirm: isAdmin,
       };
@@ -637,7 +637,7 @@ const ProductsStorePage: React.FC = () => {
                                 setProductToSell(product);
                                 setSellForm({
                                   quantity: '',
-                                  sellingPrice: product.sellingPrice?.toString() || '',
+                                  sellingPrice: product.sellingPrice ? Number(product.sellingPrice) : '',
                                   deadline: product.deadline ? product.deadline.toISOString().split('T')[0] : '',
                                   error: '',
                                   totalAmount: 0,
