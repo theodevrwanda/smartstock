@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import SEOHelmet from '@/components/SEOHelmet';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Download, ShoppingBasket, Eye, Trash2, Loader2 } from 'lucide-react';
-import SEOHelmet from '@/components/SEOHelmet';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, ShoppingCart } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,591 +15,511 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  getRestoredProducts,
+  deleteRestoredProduct,
+  sellRestoredProduct,
+  RestoredProduct,
+} from '@/functions/restored';
+import { getBranches, Branch } from '@/functions/branch';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Interfaces
-interface Product {
-  id: string;
-  productName: string;
-  category: string;
-  model?: string;
-  quantity: number;
-  branch: {
-    id: string;
-    branchName: string;
-    district: string;
-    sector: string;
-    cell: string;
-    village: string;
-  };
-  status: 'store' | 'sold' | 'restored' | 'deleted';
-  costPrice: number;
-  sellingPrice: number | null;
-  addedDate?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
-  restoreComment?: string;
-}
-
-interface Branch {
-  id: string;
-  branchName: string;
-  district: string;
-  sector: string;
-  cell: string;
-  village: string;
-}
-
-type SortableProductKeys = 'productName' | 'category' | 'model' | 'quantity' | 'branch' | 'status' | 'costPrice' | 'sellingPrice';
-type SortDirection = 'asc' | 'desc';
-
-// Mock Data
-const mockBranches: Branch[] = [
-  { id: '1', branchName: 'Kigali Main', district: 'Nyarugenge', sector: 'Kigali', cell: 'City Center', village: 'Downtown' },
-  { id: '2', branchName: 'Nyamirambo Branch', district: 'Nyarugenge', sector: 'Nyamirambo', cell: 'Rweza', village: 'Market' },
-  { id: '3', branchName: 'Gisozi Branch', district: 'Gasabo', sector: 'Gisozi', cell: 'Kacyiru', village: 'Memorial' },
-  { id: '4', branchName: 'Remera Branch', district: 'Gasabo', sector: 'Remera', cell: 'Airport Road', village: 'Kisimenti' },
-];
-
-const mockRestoredProducts: Product[] = [
-  {
-    id: 'r1',
-    productName: 'Samsung Galaxy A55',
-    category: 'Smartphones',
-    model: 'A55 5G',
-    quantity: 3,
-    branch: mockBranches[0],
-    status: 'restored',
-    costPrice: 520000,
-    sellingPrice: null,
-    addedDate: new Date('2025-12-18'),
-    restoreComment: 'Customer returned - minor screen scratch',
-  },
-  {
-    id: 'r2',
-    productName: 'iPhone 14 Pro',
-    category: 'Smartphones',
-    model: '256GB',
-    quantity: 1,
-    branch: mockBranches[1],
-    status: 'restored',
-    costPrice: 1350000,
-    sellingPrice: 1400000,
-    addedDate: new Date('2025-12-20'),
-    restoreComment: 'Returned within 7-day policy - changed mind',
-  },
-  {
-    id: 'r3',
-    productName: 'Tecno Camon 30',
-    category: 'Smartphones',
-    model: 'Premier 5G',
-    quantity: 4,
-    branch: mockBranches[2],
-    status: 'restored',
-    costPrice: 350000,
-    sellingPrice: null,
-    addedDate: new Date('2025-12-19'),
-    restoreComment: 'Defective camera - replaced under warranty',
-  },
-  {
-    id: 'r4',
-    productName: 'MacBook Air M2',
-    category: 'Laptops',
-    model: '13-inch 2024',
-    quantity: 2,
-    branch: mockBranches[3],
-    status: 'restored',
-    costPrice: 1450000,
-    sellingPrice: null,
-    addedDate: new Date('2025-12-21'),
-    restoreComment: 'Customer upgraded to Pro model',
-  },
-];
-
-// Sell Product Dialog Component
-interface SellProductDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  product: Product | null;
-  onConfirm: (id: string, newQuantity: number, newSellingPrice: number) => void;
-  actionLoading: boolean;
-}
-
-const SellProductDialog: React.FC<SellProductDialogProps> = ({ open, onOpenChange, product, onConfirm, actionLoading }) => {
-  const [quantity, setQuantity] = useState<number | ''>('');
-  const [sellingPrice, setSellingPrice] = useState<number | ''>('');
-  const [error, setError] = useState('');
-  const [totalAmount, setTotalAmount] = useState<number>(0);
-
-  useEffect(() => {
-    if (open && product) {
-      setQuantity('');
-      setSellingPrice(product.sellingPrice || '');
-      setError('');
-      setTotalAmount(0);
-    }
-  }, [open, product]);
-
-  useEffect(() => {
-    const qty = Number(quantity);
-    const price = Number(sellingPrice);
-    if (!isNaN(qty) && !isNaN(price) && qty > 0 && price > 0) {
-      setTotalAmount(qty * price);
-    } else {
-      setTotalAmount(0);
-    }
-  }, [quantity, sellingPrice]);
-
-  const handleConfirm = () => {
-    if (!product) return;
-
-    const qty = Number(quantity);
-    if (qty <= 0 || qty > product.quantity) {
-      setError(`Quantity must be between 1 and ${product.quantity}.`);
-      return;
-    }
-
-    if (Number(sellingPrice) <= 0) {
-      setError('Selling price must be greater than 0.');
-      return;
-    }
-
-    setError('');
-    onConfirm(product.id, qty, Number(sellingPrice));
-  };
-
-  const formatAmount = (amount: number) => `Rwf ${amount.toLocaleString('en-US')}`;
-
-  if (!product) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Sell Restored Product: {product.productName}</DialogTitle>
-          <DialogDescription>
-            Available quantity: {product.quantity}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label>Quantity to Sell</Label>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-              min={1}
-              max={product.quantity}
-              placeholder="Enter quantity"
-            />
-          </div>
-          <div>
-            <Label>Selling Price (RWF)</Label>
-            <Input
-              type="number"
-              value={sellingPrice}
-              onChange={(e) => setSellingPrice(e.target.value === '' ? '' : Number(e.target.value))}
-              placeholder="Enter selling price"
-            />
-          </div>
-          {totalAmount > 0 && (
-            <p className="font-bold text-lg">Total Amount: {formatAmount(totalAmount)}</p>
-          )}
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={actionLoading || quantity === '' || sellingPrice === '' || !!error}>
-            {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Sale
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Main Component
 const ProductsRestoredPage: React.FC = () => {
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
-  const isStaff = user?.role === 'staff';
-  const canSell = isAdmin || isStaff;
+  const userBranch = user?.branch || null;
+  const businessId = user?.businessId;
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [branches] = useState<Branch[]>(mockBranches);
+  const [restoredProducts, setRestoredProducts] = useState<RestoredProduct[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchMap, setBranchMap] = useState<Map<string, string>>(new Map());
   const [searchTerm, setSearchTerm] = useState('');
-  const [branchFilter, setBranchFilter] = useState<string>('All');
-  const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [sortField, setSortField] = useState<SortableProductKeys>('productName');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-
-  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [sellDialogOpen, setSellDialogOpen] = useState(false);
-  const [productForAction, setProductForAction] = useState<Product | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
-  // Load mock data
+  // Filters
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [branchFilter, setBranchFilter] = useState<string>('All');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [minQty, setMinQty] = useState<string>('');
+  const [maxQty, setMaxQty] = useState<string>('');
+
+  // Sorting
+  const [sortColumn, setSortColumn] = useState<keyof RestoredProduct | 'branchName'>('restoredDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Dialogs
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [sellDialogOpen, setSellDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState<RestoredProduct | null>(null);
+
+  // Sell form
+  const [sellForm, setSellForm] = useState({
+    quantity: 1,
+    sellingPrice: 0,
+    deadline: '',
+  });
+
+  // Load data
   useEffect(() => {
-    setTimeout(() => {
-      setProducts(mockRestoredProducts);
+    if (!businessId) {
       setLoading(false);
-    }, 800);
-  }, []);
+      return;
+    }
 
-  // Mobile detection
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [restoredProds, branchList] = await Promise.all([
+          getRestoredProducts(businessId, user?.role || 'staff', userBranch),
+          getBranches(businessId),
+        ]);
 
-  // Simulate async action
-  const simulateAsync = async (action: () => void) => {
-    setActionLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    action();
-    setActionLoading(false);
-  };
+        setRestoredProducts(restoredProds);
+        setBranches(branchList);
 
-  const getBranchName = (branch: Product['branch']): string => branch?.branchName || 'Unknown';
-
-  const formatAmount = (amount: number | null) => amount ? `Rwf ${amount.toLocaleString('en-US')}` : '–';
-
-  const calculateTotalAmount = (quantity: number, sellingPrice: number | null) =>
-    sellingPrice ? `Rwf ${(quantity * sellingPrice).toLocaleString('en-US')}` : '–';
-
-  const formatDate = (date: Date | undefined) =>
-    date ? date.toLocaleDateString('en-RW', { year: 'numeric', month: 'short', day: 'numeric' }) : '–';
-
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      store: 'bg-green-100 text-green-800',
-      sold: 'bg-yellow-100 text-yellow-800',
-      restored: 'bg-blue-100 text-blue-800',
-      deleted: 'bg-red-100 text-red-800',
+        const map = new Map<string, string>();
+        branchList.forEach(b => map.set(b.id!, b.branchName));
+        setBranchMap(map);
+      } catch {
+        toast({ title: 'Error', description: 'Failed to load restored products', variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
     };
-    return <Badge className={colors[status] || 'bg-gray-100 text-gray-800'}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
-  };
 
-  const handleSort = (field: SortableProductKeys) => {
-    setSortField(field);
-    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-  };
+    load();
+  }, [businessId, user?.role, userBranch]);
 
-  const handleExport = () => {
-    const csv = [
-      ['Product Name', 'Category', 'Model', 'Quantity', 'Branch', 'Status', 'Cost Price', 'Selling Price', 'Total Amount', 'Date Added', 'Restore Comment'],
-      ...filteredProducts.map(p => [
-        p.productName,
-        p.category,
-        p.model || '',
-        p.quantity,
-        getBranchName(p.branch),
-        p.status,
-        formatAmount(p.costPrice),
-        formatAmount(p.sellingPrice),
-        calculateTotalAmount(p.quantity, p.sellingPrice),
-        formatDate(p.addedDate),
-        p.restoreComment || '',
-      ])
-    ]
-      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+  const getBranchName = (id: string) => branchMap.get(id) || 'Unknown';
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'restored_products.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const categories = ['All', ...Array.from(new Set(restoredProducts.map(p => p.category)))];
 
-  const handleViewDetails = (product: Product) => {
-    setProductForAction(product);
-    setViewDetailsDialogOpen(true);
-  };
+  // Filtering
+  const filteredProducts = useMemo(() => {
+    return restoredProducts
+      .filter(p =>
+        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.restoreComment || '').toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
+      .filter(p => branchFilter === 'All' || p.branch === branchFilter)
+      .filter(p => minPrice === '' || (p.sellingPrice || p.costPrice) >= Number(minPrice))
+      .filter(p => maxPrice === '' || (p.sellingPrice || p.costPrice) <= Number(maxPrice))
+      .filter(p => minQty === '' || p.quantity >= Number(minQty))
+      .filter(p => maxQty === '' || p.quantity <= Number(maxQty));
+  }, [restoredProducts, searchTerm, categoryFilter, branchFilter, minPrice, maxPrice, minQty, maxQty]);
 
-  const handleDelete = (product: Product) => {
-    if (!isAdmin) {
-      toast({ title: 'Error', description: 'Only admins can delete products.', variant: 'destructive' });
-      return;
+  // Sorting
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      let aVal: any = a[sortColumn as keyof RestoredProduct];
+      let bVal: any = b[sortColumn as keyof RestoredProduct];
+
+      if (sortColumn === 'branchName') {
+        aVal = getBranchName(a.branch);
+        bVal = getBranchName(b.branch);
+      }
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredProducts, sortColumn, sortDirection]);
+
+  const handleSort = (column: keyof RestoredProduct | 'branchName') => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
-    setProductForAction(product);
-    setDeleteDialogOpen(true);
   };
 
-  const handleSell = (product: Product) => {
-    if (!canSell) {
-      toast({ title: 'Error', description: 'Only admin/staff can sell.', variant: 'destructive' });
-      return;
+  const getPriceColor = (price: number) => {
+    if (price < 100000) return 'text-blue-600 font-bold';
+    if (price < 500000) return 'text-green-600 font-bold';
+    if (price < 1000000) return 'text-yellow-600 font-bold';
+    if (price < 2000000) return 'text-orange-600 font-bold';
+    return 'text-red-600 font-bold';
+  };
+
+  const getProfitLossColor = (profit: number) => {
+    if (profit > 0) return 'text-green-600 font-bold';
+    if (profit < 0) return 'text-red-600 font-bold';
+    return 'text-gray-600 font-bold';
+  };
+
+  const calculateProfitLoss = (p: RestoredProduct) => {
+    const sellPrice = p.sellingPrice || p.costPrice;
+    return (sellPrice - p.costPrice) * p.quantity;
+  };
+
+  const calculateTotalProfitLoss = () => {
+    return filteredProducts.reduce((sum, p) => sum + calculateProfitLoss(p), 0);
+  };
+
+  const handleSell = async () => {
+    if (!currentProduct) return;
+    setActionLoading(true);
+    try {
+      const success = await sellRestoredProduct(
+        currentProduct.id,
+        sellForm.quantity,
+        sellForm.sellingPrice,
+        sellForm.deadline || undefined,
+        userBranch
+      );
+      if (success) {
+        setRestoredProducts(prev => {
+          const remaining = currentProduct.quantity - sellForm.quantity;
+          if (remaining <= 0) {
+            return prev.filter(p => p.id !== currentProduct.id);
+          }
+          return prev.map(p => p.id === currentProduct.id ? { ...p, quantity: remaining } : p);
+        });
+        toast({ title: 'Success', description: `Sold ${sellForm.quantity} unit(s)` });
+        setSellDialogOpen(false);
+        setCurrentProduct(null);
+        setSellForm({ quantity: 1, sellingPrice: 0, deadline: '' });
+      }
+    } finally {
+      setActionLoading(false);
     }
-    setProductForAction(product);
+  };
+
+  const handleDelete = async () => {
+    if (!currentProduct) return;
+    setActionLoading(true);
+    try {
+      const success = await deleteRestoredProduct(currentProduct.id);
+      if (success) {
+        setRestoredProducts(prev => prev.filter(p => p.id !== currentProduct.id));
+        setDeleteConfirmOpen(false);
+        setCurrentProduct(null);
+      }
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const openDetails = (product: RestoredProduct) => {
+    setCurrentProduct(product);
+    setDetailsDialogOpen(true);
+  };
+
+  const openSell = (product: RestoredProduct) => {
+    setCurrentProduct(product);
+    setSellForm({ quantity: 1, sellingPrice: product.costPrice * 1.2, deadline: '' });
     setSellDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (!productForAction) return;
-    simulateAsync(() => {
-      setProducts(prev => prev.filter(p => p.id !== productForAction.id));
-      setDeleteDialogOpen(false);
-      setProductForAction(null);
-      toast({ title: 'Success', description: 'Product deleted.' });
-    });
+  const openDelete = (product: RestoredProduct) => {
+    setCurrentProduct(product);
+    setDeleteConfirmOpen(true);
   };
 
-  const confirmSell = (id: string, newQuantity: number, newSellingPrice: number) => {
-    simulateAsync(() => {
-      setProducts(prev => prev.map(p =>
-        p.id === id
-          ? { ...p, quantity: p.quantity - newQuantity, sellingPrice: newSellingPrice }
-          : p
-      ));
-      toast({ title: 'Success', description: `Sold ${newQuantity} unit(s).` });
-    });
-  };
-
-  const filteredProducts = products
-    .filter(p =>
-      (p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       (p.model || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-       getBranchName(p.branch).toLowerCase().includes(searchTerm.toLowerCase()) ||
-       (p.restoreComment || '').toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (branchFilter === 'All' || getBranchName(p.branch) === branchFilter) &&
-      (categoryFilter === 'All' || p.category === categoryFilter)
-    )
-    .sort((a, b) => {
-      const aVal = sortField === 'branch' ? getBranchName(a.branch) : (a[sortField] ?? '');
-      const bVal = sortField === 'branch' ? getBranchName(b.branch) : (b[sortField] ?? '');
-      if (typeof aVal === 'number' && typeof bVal === 'number') return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
-      return sortDirection === 'asc'
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
-    });
-
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
-  const branchesList = ['All', ...branches.map(b => b.branchName)];
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] text-gray-500">
-        <p>Please log in to view restored products.</p>
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-12 w-96" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-4">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      <SEOHelmet
-        title="Restored Products - EMS"
-        description="View and manage restored products"
-        canonical="/products/restored"
-      />
-      <div className="space-y-6 p-4 sm:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+      <SEOHelmet title="Restored Products" description="View and sell restored products" />
+      <div className="space-y-6 p-4 md:p-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Restored Products</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Products returned and restored to inventory</p>
+            <h1 className="text-3xl font-bold">Restored Products</h1>
+            <p className="text-muted-foreground">
+              {isAdmin ? 'All restored products across branches' : userBranch ? `Restored products in ${getBranchName(userBranch)}` : 'No branch assigned'}
+            </p>
           </div>
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download size={16} className="mr-2" /> Export CSV
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export
           </Button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow border p-4">
-          <div className="flex flex-col gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <Input
-                placeholder="Search by name, category, model, branch, comment..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Branch</Label>
-                <Select value={branchFilter} onValueChange={setBranchFilter}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{branchesList.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Category</Label>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
+        {/* Profit/Loss Summary */}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Expected Profit/Loss (if sold at current price)</h2>
+          <p className={getProfitLossColor(calculateTotalProfitLoss())}>
+            {calculateTotalProfitLoss().toLocaleString()} RWF
+          </p>
+        </div>
+
+        {/* Professional Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+            <Input
+              placeholder="Search restored products..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Categories</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {isAdmin && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Branches</SelectItem>
+                {branches.map(b => (
+                  <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+            <Input type="number" placeholder="Max Price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Input type="number" placeholder="Min Qty" value={minQty} onChange={e => setMinQty(e.target.value)} />
+            <Input type="number" placeholder="Max Qty" value={maxQty} onChange={e => setMaxQty(e.target.value)} />
           </div>
         </div>
 
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No restored products found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
+                  <div className="flex items-center gap-1">
+                    Product Name
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
+                  <div className="flex items-center gap-1">
+                    Category
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead>Model</TableHead>
+                <TableHead className="cursor-pointer text-center" onClick={() => handleSort('quantity')}>
+                  <div className="flex items-center gap-1 justify-center">
+                    Quantity
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                {isAdmin && (
+                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
+                    <div className="flex items-center gap-1 justify-center">
+                      Branch
+                      <ArrowUpDown className="h-4 w-4" />
+                    </div>
+                  </TableHead>
+                )}
+                <TableHead>Cost Price</TableHead>
+                <TableHead>Selling Price</TableHead>
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Profit/Loss</TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('restoredDate')}>
+                  <div className="flex items-center gap-1">
+                    Restored Date
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
+                <TableHead>Comment</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableHead><button onClick={() => handleSort('productName')}>Product Name {sortField === 'productName' && (sortDirection === 'asc' ? '↑' : '↓')}</button></TableHead>
-                  {!isMobile && (
-                    <>
-                      <TableHead><button onClick={() => handleSort('category')}>Category</button></TableHead>
-                      <TableHead><button onClick={() => handleSort('model')}>Model</button></TableHead>
-                    </>
-                  )}
-                  <TableHead><button onClick={() => handleSort('quantity')}>Qty</button></TableHead>
-                  {!isMobile && <TableHead><button onClick={() => handleSort('branch')}>Branch</button></TableHead>}
-                  <TableHead><button onClick={() => handleSort('status')}>Status</button></TableHead>
-                  {!isMobile && (
-                    <>
-                      <TableHead><button onClick={() => handleSort('costPrice')}>Cost Price</button></TableHead>
-                      <TableHead><button onClick={() => handleSort('sellingPrice')}>Selling Price</button></TableHead>
-                      <TableHead>Total Amount</TableHead>
-                      <TableHead>Date Added</TableHead>
-                      <TableHead>Restore Comment</TableHead>
-                    </>
-                  )}
-                  <TableHead>Actions</TableHead>
+                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-12 text-muted-foreground">
+                    No restored products found.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map(product => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.productName}</TableCell>
-                    {!isMobile && (
-                      <>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>{product.model || '–'}</TableCell>
-                      </>
-                    )}
-                    <TableCell>{product.quantity}</TableCell>
-                    {!isMobile && <TableCell>{getBranchName(product.branch)}</TableCell>}
-                    <TableCell>{getStatusBadge(product.status)}</TableCell>
-                    {!isMobile && (
-                      <>
-                        <TableCell>{formatAmount(product.costPrice)}</TableCell>
-                        <TableCell>{formatAmount(product.sellingPrice)}</TableCell>
-                        <TableCell>{calculateTotalAmount(product.quantity, product.sellingPrice)}</TableCell>
-                        <TableCell>{formatDate(product.addedDate)}</TableCell>
-                        <TableCell className="truncate max-w-xs">{product.restoreComment || '–'}</TableCell>
-                      </>
-                    )}
-                    <TableCell className="flex gap-2">
-                      {isMobile ? (
-                        <Button variant="ghost" size="sm" onClick={() => handleViewDetails(product)}>
-                          <Eye size={18} /> View
+              ) : (
+                sortedProducts.map(p => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.productName}</TableCell>
+                    <TableCell>{p.category}</TableCell>
+                    <TableCell>{p.model || '-'}</TableCell>
+                    <TableCell className="text-center">{p.quantity}</TableCell>
+                    {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
+                    <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
+                    <TableCell className={getPriceColor(p.sellingPrice || p.costPrice)}>
+                      {(p.sellingPrice || p.costPrice).toLocaleString()} RWF
+                    </TableCell>
+                    <TableCell>{(p.quantity * (p.sellingPrice || p.costPrice)).toLocaleString()} RWF</TableCell>
+                    <TableCell className={getProfitLossColor(calculateProfitLoss(p))}>
+                      {calculateProfitLoss(p).toLocaleString()} RWF
+                    </TableCell>
+                    <TableCell>{new Date(p.restoredDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="max-w-xs truncate">{p.restoreComment || '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      ) : (
-                        <>
-                          <Button variant="ghost" size="icon" onClick={() => handleViewDetails(product)} title="View"><Eye size={18} /></Button>
-                          {canSell && (
-                            <Button variant="ghost" size="icon" onClick={() => handleSell(product)} title="Sell"><ShoppingBasket size={18} /></Button>
-                          )}
-                          {isAdmin && (
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(product)} title="Delete"><Trash2 size={18} /></Button>
-                          )}
-                        </>
-                      )}
+                        {p.quantity > 0 && p.branch === userBranch && (
+                          <Button size="sm" variant="ghost" onClick={() => openSell(p)}>
+                            <ShoppingCart className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button size="sm" variant="ghost" onClick={() => openDelete(p)}>
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
 
-        {/* View Details Dialog */}
-        <Dialog open={viewDetailsDialogOpen} onOpenChange={setViewDetailsDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader><DialogTitle>Product Details</DialogTitle></DialogHeader>
-            {productForAction && (
-              <div className="space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-4">
+        {/* Details Dialog */}
+        <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Restored Product Details</DialogTitle>
+            </DialogHeader>
+            {currentProduct && (
+              <div className="space-y-3">
+                <p><strong>Name:</strong> {currentProduct.productName}</p>
+                <p><strong>Category:</strong> {currentProduct.category}</p>
+                <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
+                <p><strong>Quantity:</strong> {currentProduct.quantity}</p>
+                <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
+                <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
+                <p><strong>Selling Price:</strong> {(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
+                <p><strong>Total Amount:</strong> {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF</p>
+                <p><strong>Profit/Loss:</strong> {calculateProfitLoss(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>Restored Date:</strong> {new Date(currentProduct.restoredDate).toLocaleDateString()}</p>
+                {currentProduct.restoreComment && (
                   <div>
-                    <p><strong>Name:</strong> {productForAction.productName}</p>
-                    <p><strong>Category:</strong> {productForAction.category}</p>
-                    <p><strong>Model:</strong> {productForAction.model || '–'}</p>
-                    <p><strong>Quantity:</strong> {productForAction.quantity}</p>
-                  </div>
-                  <div>
-                    <p><strong>Branch:</strong> {getBranchName(productForAction.branch)}</p>
-                    <p><strong>Cost Price:</strong> {formatAmount(productForAction.costPrice)}</p>
-                    <p><strong>Selling Price:</strong> {formatAmount(productForAction.sellingPrice)}</p>
-                    <p><strong>Date Added:</strong> {formatDate(productForAction.addedDate)}</p>
-                  </div>
-                </div>
-                {productForAction.restoreComment && (
-                  <div>
-                    <p><strong>Restore Comment:</strong></p>
-                    <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">{productForAction.restoreComment}</p>
-                  </div>
-                )}
-                {isMobile && (
-                  <div className="flex flex-col gap-2">
-                    {canSell && (
-                      <Button variant="outline" size="sm" onClick={() => { setViewDetailsDialogOpen(false); handleSell(productForAction); }}>
-                        <ShoppingBasket size={16} className="mr-2" /> Sell
-                      </Button>
-                    )}
-                    {isAdmin && (
-                      <Button variant="outline" size="sm" onClick={() => { setViewDetailsDialogOpen(false); handleDelete(productForAction); }}>
-                        <Trash2 size={16} className="mr-2" /> Delete
-                      </Button>
-                    )}
+                    <p><strong>Restore Reason:</strong></p>
+                    <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">{currentProduct.restoreComment}</p>
                   </div>
                 )}
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setViewDetailsDialogOpen(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Dialog */}
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Confirm Delete</DialogTitle></DialogHeader>
-            <DialogDescription>Delete <strong>{productForAction?.productName}</strong> permanently?</DialogDescription>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={confirmDelete} disabled={actionLoading}>
-                {actionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Delete
-              </Button>
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* Sell Dialog */}
-        <SellProductDialog
-          open={sellDialogOpen}
-          onOpenChange={setSellDialogOpen}
-          product={productForAction}
-          onConfirm={confirmSell}
-          actionLoading={actionLoading}
-        />
+        <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Sell Restored Product</DialogTitle>
+            </DialogHeader>
+            {currentProduct && (
+              <div className="space-y-4 py-4">
+                <p className="font-medium">{currentProduct.productName}</p>
+                <p className="text-sm text-muted-foreground">Available: {currentProduct.quantity}</p>
+                <div className="grid gap-2">
+                  <Label>Quantity to Sell</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={currentProduct.quantity}
+                    value={sellForm.quantity}
+                    onChange={e => setSellForm(s => ({ ...s, quantity: Number(e.target.value) || 1 }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Selling Price (RWF)</Label>
+                  <Input
+                    type="number"
+                    value={sellForm.sellingPrice}
+                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: Number(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Return Deadline (optional)</Label>
+                  <Input
+                    type="date"
+                    value={sellForm.deadline}
+                    onChange={e => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+                  />
+                </div>
+                {sellForm.sellingPrice > 0 && sellForm.quantity > 0 && (
+                  <p className="font-bold">
+                    Total: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF
+                  </p>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSell} disabled={actionLoading}>
+                {actionLoading ? 'Selling...' : 'Sell'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirm Dialog */}
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Restored Product?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
+                {actionLoading ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );
