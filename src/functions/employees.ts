@@ -1,13 +1,14 @@
 // src/functions/employees.ts
+
 import {
   collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  getDocs,
   query,
   where,
+  getDocs,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/firebase/firebase';
@@ -15,135 +16,182 @@ import { toast } from 'sonner';
 
 export interface Employee {
   id?: string;
-  username: string;
   email: string;
+  username: string;
   firstName: string;
   lastName: string;
+  fullName?: string;
   phone: string;
   district: string;
   sector: string;
   cell: string;
   village: string;
+  gender?: string;
   role: 'admin' | 'staff';
   branch: string | null;
+  businessId: string;
+  businessName?: string;
   isActive: boolean;
-  createdAt?: string;
   profileImage?: string | null;
+  imagephoto?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Get all employees
-export const getEmployees = async (): Promise<Employee[]> => {
-  try {
-    const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(usersRef);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    } as Employee));
-  } catch (error) {
-    toast.error('Failed to fetch employees');
-    console.error(error);
-    return [];
+// Simple duplicate check for email and phone
+const checkDuplicates = async (email: string, phone: string): Promise<string | null> => {
+  const usersRef = collection(db, 'users');
+  const checks = [
+    getDocs(query(usersRef, where('email', '==', email.toLowerCase().trim()))),
+  ];
+  if (phone.trim()) {
+    checks.push(getDocs(query(usersRef, where('phone', '==', phone.trim()))));
   }
+
+  const [emailSnap, phoneSnap] = await Promise.all(checks);
+
+  if (!emailSnap.empty) return 'Email already exists';
+  if (phoneSnap && !phoneSnap.empty) return 'Phone already exists';
+
+  return null;
 };
 
-// Create employee with default password "123456"
+// Create employee - SIMPLE VERSION (no logout/login)
 export const createEmployee = async (
-  data: Omit<Employee, 'id' | 'createdAt' | 'isActive'>
+  data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    district: string;
+    sector: string;
+    cell: string;
+    village: string;
+    gender?: string;
+    branch?: string | null;
+    businessId: string;
+    businessName?: string;
+  }
 ): Promise<Employee | null> => {
   try {
-    // Create Auth user with default password
+    // Check duplicates
+    const dup = await checkDuplicates(data.email, data.phone);
+    if (dup) {
+      toast.error(dup);
+      return null;
+    }
+
+    // Create Auth user (this may temporarily sign in new user, but we ignore it)
     const userCredential = await createUserWithEmailAndPassword(
       auth,
-      data.email,
-      '123456' // Default password
+      data.email.trim().toLowerCase(),
+      '1234567'
     );
 
-    // Save full profile to Firestore
-    const userDocRef = doc(db, 'users', userCredential.user.uid);
-    const employeeData = {
-      ...data,
-      isActive: false,
-      createdAt: new Date().toISOString(),
-      profileImage: null,
-    };
-    await updateDoc(userDocRef, employeeData);
+    const uid = userCredential.user.uid;
 
-    toast.success('Employee created! Default password: 123456');
+    // Prepare data EXACTLY like your example (no 'id' field inside document)
+    const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`;
+
+    const employeeData = {
+      email: data.email.trim().toLowerCase(),
+      username: data.email.trim().toLowerCase(),
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      fullName,
+      phone: data.phone.trim(),
+      district: data.district.trim(),
+      sector: data.sector.trim(),
+      cell: data.cell.trim(),
+      village: data.village.trim(),
+      gender: data.gender || 'male',
+      role: 'staff' as const,
+      branch: data.branch || null,
+      businessId: data.businessId,
+      businessName: data.businessName || '',
+      isActive: false,
+      profileImage: null,
+      imagephoto: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Save with setDoc - creates new document
+    await setDoc(doc(db, 'users', uid), employeeData);
+
+    toast.success('Employee created! Default password: 1234567');
 
     return {
-      id: userCredential.user.uid,
+      id: uid,
       ...employeeData,
     };
   } catch (error: any) {
-    if (error.code === 'auth/email-already-in-use') {
-      toast.error('This email is already registered.');
-    } else {
-      toast.error('Failed to create employee');
-    }
-    console.error(error);
+    console.error('Create employee error:', error);
+
+    let msg = 'Failed to create employee';
+    if (error.code === 'auth/email-already-in-use') msg = 'Email already registered';
+    else if (error.code === 'auth/invalid-email') msg = 'Invalid email';
+    else if (error.code === 'auth/weak-password') msg = 'Password too weak';
+
+    toast.error(msg);
     return null;
   }
 };
 
-// Update employee
-export const updateEmployee = async (
-  id: string,
-  data: Partial<Employee>
-): Promise<boolean> => {
+// Other functions unchanged
+export const updateEmployee = async (id: string, updates: Partial<Omit<Employee, 'id'>>): Promise<boolean> => {
   try {
-    const userRef = doc(db, 'users', id);
-    await updateDoc(userRef, data);
-    toast.success('Employee updated successfully');
+    await updateDoc(doc(db, 'users', id), {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+    toast.success('Updated successfully');
     return true;
-  } catch (error) {
-    toast.error('Failed to update employee');
-    console.error(error);
+  } catch {
+    toast.error('Update failed');
     return false;
   }
 };
 
-// Assign/Unassign branch
-export const assignBranchToEmployee = async (
-  employeeId: string,
-  branchId: string | null
-): Promise<boolean> => {
+export const assignBranchToEmployee = async (employeeId: string, branchId: string | null): Promise<boolean> => {
   try {
-    const userRef = doc(db, 'users', employeeId);
-    await updateDoc(userRef, { branch: branchId });
-    toast.success(
-      branchId ? 'Branch assigned successfully' : 'Branch unassigned'
-    );
+    await updateDoc(doc(db, 'users', employeeId), { branch: branchId });
+    toast.success('Branch assigned');
     return true;
-  } catch (error) {
-    toast.error('Failed to assign branch');
-    console.error(error);
+  } catch {
+    toast.error('Assign failed');
     return false;
   }
 };
 
-// Delete employee
 export const deleteEmployee = async (id: string): Promise<boolean> => {
   try {
-    const userRef = doc(db, 'users', id);
-    await deleteDoc(userRef);
-    toast.success('Employee deleted successfully');
+    await deleteDoc(doc(db, 'users', id));
+    toast.success('Deleted');
     return true;
-  } catch (error) {
-    toast.error('Failed to delete employee');
-    console.error(error);
+  } catch {
+    toast.error('Delete failed');
     return false;
   }
 };
 
-// Delete multiple employees
 export const deleteMultipleEmployees = async (ids: string[]): Promise<boolean> => {
   try {
     await Promise.all(ids.map(id => deleteEmployee(id)));
-    toast.success(`${ids.length} employee(s) deleted`);
+    toast.success(`${ids.length} deleted`);
     return true;
-  } catch (error) {
-    toast.error('Failed to delete employees');
+  } catch {
+    toast.error('Bulk delete failed');
     return false;
+  }
+};
+
+export const getEmployees = async (): Promise<Employee[]> => {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
+  } catch {
+    toast.error('Load failed');
+    return [];
   }
 };

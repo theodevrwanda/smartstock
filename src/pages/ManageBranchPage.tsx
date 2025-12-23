@@ -4,11 +4,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye } from 'lucide-react';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -20,6 +26,69 @@ import {
   Branch,
 } from '@/functions/branch';
 
+// Skeleton for a single table row (admin view)
+const BranchRowSkeleton = () => (
+  <TableRow>
+    <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+    <TableCell><Skeleton className="h-5 w-36" /></TableCell>
+    <TableCell className="text-right">
+      <div className="flex justify-end gap-2">
+        <Skeleton className="h-8 w-8 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-md" />
+      </div>
+    </TableCell>
+  </TableRow>
+);
+
+// Full page skeleton loader
+const PageSkeleton = () => (
+  <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <Skeleton className="h-9 w-72 mb-2" />
+        <Skeleton className="h-5 w-96" />
+      </div>
+      <div className="flex gap-3">
+        <Skeleton className="h-10 w-36 rounded-md" />
+        <Skeleton className="h-10 w-40 rounded-md" />
+      </div>
+    </div>
+
+    {/* Search bar */}
+    <Skeleton className="h-10 w-full max-w-md rounded-md" />
+
+    {/* Table */}
+    <div className="overflow-x-auto border rounded-lg">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12"><Skeleton className="h-4 w-4" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+            <TableHead><Skeleton className="h-5 w-28" /></TableHead>
+            <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {[...Array(10)].map((_, i) => (
+            <BranchRowSkeleton key={i} />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  </div>
+);
+
 const ManageBranchPage: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -28,6 +97,7 @@ const ManageBranchPage: React.FC = () => {
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -51,20 +121,45 @@ const ManageBranchPage: React.FC = () => {
   const isAdmin = user?.role === 'admin';
   const businessId = user?.businessId;
 
-  // Fetch branches for user's business
+  // Online/offline detection for UI feedback
   useEffect(() => {
-    const fetchBranches = async () => {
-      if (!businessId) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      const data = await getBranches(businessId);
-      setBranches(data);
-      setLoading(false);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
+  }, []);
+
+  // Fetch branches from Firestore
+  useEffect(() => {
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchBranches = async () => {
+      setLoading(true);
+      try {
+        const data = await getBranches(businessId);
+        setBranches(data);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load branches',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchBranches();
-  }, [businessId]);
+  }, [businessId, toast]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -78,33 +173,55 @@ const ManageBranchPage: React.FC = () => {
     }
   };
 
-  const filteredBranches = branches.filter(branch =>
+  const filteredBranches = branches.filter((branch) =>
     [branch.branchName, branch.district, branch.sector, branch.cell, branch.village]
       .join(' ')
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
 
-  // Create branch
+  // Create branch – Firebase handles offline automatically
   const handleCreateBranch = async () => {
     const { branchName, district, sector, cell, village } = newBranch;
     if (!branchName || !district || !sector || !cell || !village) {
       toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' });
       return;
     }
-    if (!businessId) {
-      toast({ title: 'Error', description: 'No business associated with your account', variant: 'destructive' });
-      return;
-    }
 
     setActionLoading(true);
-    const createdBranch = await addBranch({ ...newBranch, businessId });
-    if (createdBranch) {
-      setBranches(prev => [...prev, createdBranch]);
-      setNewBranch({ branchName: '', district: '', sector: '', cell: '', village: '', businessId });
+
+    try {
+      const createdBranch = await addBranch({ ...newBranch, businessId: businessId! });
+
+      if (createdBranch) {
+        setBranches((prev) => [...prev, createdBranch]);
+
+        toast({
+          title: 'Branch Created',
+          description: isOnline
+            ? 'Branch added successfully'
+            : 'Saved offline – will sync when back online',
+        });
+      }
+
+      setNewBranch({
+        branchName: '',
+        district: '',
+        sector: '',
+        cell: '',
+        village: '',
+        businessId: '',
+      });
       setIsCreateDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create branch',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   // Update branch
@@ -112,79 +229,107 @@ const ManageBranchPage: React.FC = () => {
     if (!currentBranch?.id) return;
 
     setActionLoading(true);
-    const success = await updateBranch(currentBranch.id, {
-      branchName: currentBranch.branchName,
-      district: currentBranch.district,
-      sector: currentBranch.sector,
-      cell: currentBranch.cell,
-      village: currentBranch.village,
-    });
-    if (success) {
-      setBranches(prev => prev.map(b => (b.id === currentBranch.id ? currentBranch : b)));
-      setIsUpdateDialogOpen(false);
-      setCurrentBranch(null);
+    try {
+      const success = await updateBranch(currentBranch.id, {
+        branchName: currentBranch.branchName,
+        district: currentBranch.district,
+        sector: currentBranch.sector,
+        cell: currentBranch.cell,
+        village: currentBranch.village,
+      });
+
+      if (success) {
+        setBranches((prev) =>
+          prev.map((b) => (b.id === currentBranch.id ? currentBranch : b))
+        );
+        toast({ title: 'Success', description: 'Branch updated successfully' });
+        setIsUpdateDialogOpen(false);
+        setCurrentBranch(null);
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update branch', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   // Delete single branch
   const handleDeleteBranch = async () => {
     if (!branchToDelete) return;
+
     setActionLoading(true);
-    const success = await deleteBranch(branchToDelete);
-    if (success) {
-      setBranches(prev => prev.filter(b => b.id !== branchToDelete));
-      setSelectedBranches(prev => prev.filter(id => id !== branchToDelete));
+    try {
+      await deleteBranch(branchToDelete);
+      setBranches((prev) => prev.filter((b) => b.id !== branchToDelete));
+      setSelectedBranches((prev) => prev.filter((id) => id !== branchToDelete));
+      toast({ title: 'Deleted', description: 'Branch removed successfully' });
       setBranchToDelete(null);
       setIsDeleteConfirmOpen(false);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to delete branch', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   // Delete multiple branches
   const handleDeleteSelected = async () => {
     if (selectedBranches.length === 0) return;
+
     setActionLoading(true);
-    const success = await deleteMultipleBranches(selectedBranches);
-    if (success) {
-      setBranches(prev => prev.filter(b => !selectedBranches.includes(b.id!)));
+    try {
+      await deleteMultipleBranches(selectedBranches);
+      setBranches((prev) => prev.filter((b) => !selectedBranches.includes(b.id!)));
       setSelectedBranches([]);
+      toast({
+        title: 'Deleted',
+        description: `${selectedBranches.length} branch(es) removed successfully`,
+      });
       setIsDeleteSelectedConfirmOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete selected branches',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleSelectBranch = (id: string) => {
-    setSelectedBranches(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    setSelectedBranches((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
   const selectAll = () => {
-    if (selectedBranches.length === filteredBranches.length) {
+    if (selectedBranches.length === filteredBranches.length && filteredBranches.length > 0) {
       setSelectedBranches([]);
     } else {
-      setSelectedBranches(filteredBranches.map(b => b.id!).filter(Boolean));
+      setSelectedBranches(filteredBranches.map((b) => b.id!).filter(Boolean));
     }
   };
 
-  // Loading state
+  // Loading state with custom skeleton
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <LoadingSpinner size="lg" />
-      </div>
+      <>
+        <SEOHelmet title="Manage Branches" description="Loading branches..." />
+        <PageSkeleton />
+      </>
     );
   }
 
-  // Staff view - only list
+  // Staff view (read-only)
   if (!isAdmin) {
     return (
       <>
         <SEOHelmet title="Branches" description="View all branches" />
-        <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Branches</h1>
-          <div className="overflow-x-auto rounded-lg border">
+        <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
+          <h1 className="text-3xl font-bold">Branches</h1>
+
+          <div className="overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -199,12 +344,12 @@ const ManageBranchPage: React.FC = () => {
               <TableBody>
                 {filteredBranches.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No branches found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredBranches.map(branch => (
+                  filteredBranches.map((branch) => (
                     <TableRow key={branch.id}>
                       <TableCell className="font-medium">{branch.branchName}</TableCell>
                       <TableCell>{branch.district}</TableCell>
@@ -223,16 +368,22 @@ const ManageBranchPage: React.FC = () => {
     );
   }
 
-  // Admin full view
+  // Admin full management view
   return (
     <>
       <SEOHelmet title="Manage Branches" description="Create, update, delete branches" />
-      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+      <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manage Branches</h1>
-            <p className="text-gray-600 dark:text-gray-400">Create, update, or delete branches</p>
+            <h1 className="text-3xl font-bold">Manage Branches</h1>
+            <p className="text-muted-foreground">Create, update, or delete branches</p>
+            {!isOnline && (
+              <p className="text-orange-600 text-sm mt-2 flex items-center gap-2">
+                <CloudOff className="h-4 w-4" />
+                You are offline – changes will sync automatically when back online
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setIsCreateDialogOpen(true)} disabled={actionLoading}>
@@ -252,23 +403,25 @@ const ManageBranchPage: React.FC = () => {
 
         {/* Search */}
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
           <Input
             placeholder="Search branches..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg border bg-white dark:bg-gray-800">
+        {/* Full-width Table */}
+        <div className="overflow-x-auto border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
                   <Checkbox
-                    checked={selectedBranches.length === filteredBranches.length && filteredBranches.length > 0}
+                    checked={
+                      selectedBranches.length === filteredBranches.length && filteredBranches.length > 0
+                    }
                     onCheckedChange={selectAll}
                   />
                 </TableHead>
@@ -284,12 +437,12 @@ const ManageBranchPage: React.FC = () => {
             <TableBody>
               {filteredBranches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     No branches found. Click "Add Branch" to create one.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredBranches.map(branch => (
+                filteredBranches.map((branch) => (
                   <TableRow key={branch.id}>
                     <TableCell>
                       <Checkbox
@@ -349,45 +502,61 @@ const ManageBranchPage: React.FC = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Branch</DialogTitle>
+              <DialogDescription>Fill in the details for the new branch.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Branch Name</Label>
+                <Label htmlFor="create-branchName">Branch Name</Label>
                 <Input
+                  id="create-branchName"
                   value={newBranch.branchName}
-                  onChange={e => setNewBranch(prev => ({ ...prev, branchName: e.target.value }))}
+                  onChange={(e) =>
+                    setNewBranch((prev) => ({ ...prev, branchName: e.target.value }))
+                  }
                   placeholder="e.g., Main Branch"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>District</Label>
+                <Label htmlFor="create-district">District</Label>
                 <Input
+                  id="create-district"
                   value={newBranch.district}
-                  onChange={e => setNewBranch(prev => ({ ...prev, district: e.target.value }))}
+                  onChange={(e) =>
+                    setNewBranch((prev) => ({ ...prev, district: e.target.value }))
+                  }
                   placeholder="e.g., Gasabo"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Sector</Label>
+                <Label htmlFor="create-sector">Sector</Label>
                 <Input
+                  id="create-sector"
                   value={newBranch.sector}
-                  onChange={e => setNewBranch(prev => ({ ...prev, sector: e.target.value }))}
+                  onChange={(e) =>
+                    setNewBranch((prev) => ({ ...prev, sector: e.target.value }))
+                  }
                   placeholder="e.g., Kacyiru"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Cell</Label>
+                <Label htmlFor="create-cell">Cell</Label>
                 <Input
+                  id="create-cell"
                   value={newBranch.cell}
-                  onChange={e => setNewBranch(prev => ({ ...prev, cell: e.target.value }))}
+                  onChange={(e) =>
+                    setNewBranch((prev) => ({ ...prev, cell: e.target.value }))
+                  }
                   placeholder="e.g., Kamatamu"
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Village</Label>
+                <Label htmlFor="create-village">Village</Label>
                 <Input
+                  id="create-village"
                   value={newBranch.village}
-                  onChange={e => setNewBranch(prev => ({ ...prev, village: e.target.value }))}
+                  onChange={(e) =>
+                    setNewBranch((prev) => ({ ...prev, village: e.target.value }))
+                  }
                   placeholder="e.g., Kibaza"
                 />
               </div>
@@ -397,8 +566,7 @@ const ManageBranchPage: React.FC = () => {
                 Cancel
               </Button>
               <Button onClick={handleCreateBranch} disabled={actionLoading}>
-                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
-                Create Branch
+                {actionLoading ? 'Creating...' : 'Create Branch'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -409,41 +577,67 @@ const ManageBranchPage: React.FC = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Update Branch</DialogTitle>
+              <DialogDescription>Edit the branch information.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Branch Name</Label>
+                <Label htmlFor="update-branchName">Branch Name</Label>
                 <Input
+                  id="update-branchName"
                   value={currentBranch?.branchName || ''}
-                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, branchName: e.target.value } : null)}
+                  onChange={(e) =>
+                    setCurrentBranch((prev) =>
+                      prev ? { ...prev, branchName: e.target.value } : null
+                    )
+                  }
                 />
               </div>
               <div className="grid gap-2">
-                <Label>District</Label>
+                <Label htmlFor="update-district">District</Label>
                 <Input
+                  id="update-district"
                   value={currentBranch?.district || ''}
-                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, district: e.target.value } : null)}
+                  onChange={(e) =>
+                    setCurrentBranch((prev) =>
+                      prev ? { ...prev, district: e.target.value } : null
+                    )
+                  }
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Sector</Label>
+                <Label htmlFor="update-sector">Sector</Label>
                 <Input
+                  id="update-sector"
                   value={currentBranch?.sector || ''}
-                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, sector: e.target.value } : null)}
+                  onChange={(e) =>
+                    setCurrentBranch((prev) =>
+                      prev ? { ...prev, sector: e.target.value } : null
+                    )
+                  }
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Cell</Label>
+                <Label htmlFor="update-cell">Cell</Label>
                 <Input
+                  id="update-cell"
                   value={currentBranch?.cell || ''}
-                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, cell: e.target.value } : null)}
+                  onChange={(e) =>
+                    setCurrentBranch((prev) =>
+                      prev ? { ...prev, cell: e.target.value } : null
+                    )
+                  }
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Village</Label>
+                <Label htmlFor="update-village">Village</Label>
                 <Input
+                  id="update-village"
                   value={currentBranch?.village || ''}
-                  onChange={e => setCurrentBranch(prev => prev ? { ...prev, village: e.target.value } : null)}
+                  onChange={(e) =>
+                    setCurrentBranch((prev) =>
+                      prev ? { ...prev, village: e.target.value } : null
+                    )
+                  }
                 />
               </div>
             </div>
@@ -452,8 +646,7 @@ const ManageBranchPage: React.FC = () => {
                 Cancel
               </Button>
               <Button onClick={handleUpdateBranch} disabled={actionLoading}>
-                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
-                Save Changes
+                {actionLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -471,19 +664,24 @@ const ManageBranchPage: React.FC = () => {
                   <strong>Branch Name:</strong> {currentBranch.branchName}
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> <strong>District:</strong> {currentBranch.district}
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <strong>District:</strong> {currentBranch.district}
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> <strong>Sector:</strong> {currentBranch.sector}
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <strong>Sector:</strong> {currentBranch.sector}
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> <strong>Cell:</strong> {currentBranch.cell}
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <strong>Cell:</strong> {currentBranch.cell}
                 </div>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> <strong>Village:</strong> {currentBranch.village}
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <strong>Village:</strong> {currentBranch.village}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> <strong>Created:</strong> {formatDate(currentBranch.createdAt || '')}
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <strong>Created:</strong> {formatDate(currentBranch.createdAt || '')}
                 </div>
               </div>
             )}
@@ -495,7 +693,7 @@ const ManageBranchPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Single Confirm */}
+        {/* Delete Single Confirm Dialog */}
         <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
@@ -509,20 +707,19 @@ const ManageBranchPage: React.FC = () => {
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleDeleteBranch} disabled={actionLoading}>
-                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
-                Delete
+                {actionLoading ? 'Deleting...' : 'Delete'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Selected Confirm */}
+        {/* Delete Selected Confirm Dialog */}
         <Dialog open={isDeleteSelectedConfirmOpen} onOpenChange={setIsDeleteSelectedConfirmOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Selected Branches?</DialogTitle>
               <DialogDescription>
-                {selectedBranches.length} branch(es) will be permanently deleted. This cannot be undone.
+                {selectedBranches.length} branch(es) will be permanently deleted. This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -530,8 +727,7 @@ const ManageBranchPage: React.FC = () => {
                 Cancel
               </Button>
               <Button variant="destructive" onClick={handleDeleteSelected} disabled={actionLoading}>
-                {actionLoading && <LoadingSpinner size="sm" className="mr-2" />}
-                Delete Selected
+                {actionLoading ? 'Deleting...' : 'Delete Selected'}
               </Button>
             </DialogFooter>
           </DialogContent>
