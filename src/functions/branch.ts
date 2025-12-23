@@ -10,13 +10,20 @@ export interface Branch {
   sector: string;
   cell: string;
   village: string;
+  businessId: string;
   createdAt?: string;
 }
-// Get all branches
-export const getBranches = async (): Promise<Branch[]> => {
+
+// Get all branches for a specific business
+export const getBranches = async (businessId: string): Promise<Branch[]> => {
   try {
+    if (!businessId) {
+      console.error('No businessId provided');
+      return [];
+    }
     const branchesRef = collection(db, 'branches');
-    const snapshot = await getDocs(branchesRef);
+    const q = query(branchesRef, where('businessId', '==', businessId));
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
@@ -27,9 +34,14 @@ export const getBranches = async (): Promise<Branch[]> => {
     return [];
   }
 };
-// Add new branch
+
+// Add new branch with businessId
 export const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>): Promise<Branch | null> => {
   try {
+    if (!branchData.businessId) {
+      toast.error('Business ID is required');
+      return null;
+    }
     const branchesRef = collection(db, 'branches');
     const docRef = await addDoc(branchesRef, {
       ...branchData,
@@ -43,6 +55,7 @@ export const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>): P
     return null;
   }
 };
+
 // Update existing branch
 export const updateBranch = async (id: string, branchData: Partial<Branch>): Promise<boolean> => {
   try {
@@ -56,6 +69,7 @@ export const updateBranch = async (id: string, branchData: Partial<Branch>): Pro
     return false;
   }
 };
+
 // Delete single branch
 export const deleteBranch = async (id: string): Promise<boolean> => {
   try {
@@ -69,6 +83,7 @@ export const deleteBranch = async (id: string): Promise<boolean> => {
     return false;
   }
 };
+
 // Delete multiple branches
 export const deleteMultipleBranches = async (ids: string[]): Promise<boolean> => {
   try {

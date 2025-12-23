@@ -60,18 +60,23 @@ const ManageEmployeesPage: React.FC = () => {
   const [assignBranchId, setAssignBranchId] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin';
+  const businessId = user?.businessId;
 
   // Fetch employees and branches
   useEffect(() => {
     const fetchData = async () => {
+      if (!businessId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const [empData, branchData] = await Promise.all([getEmployees(), getBranches()]);
+      const [empData, branchData] = await Promise.all([getEmployees(), getBranches(businessId)]);
       setEmployees(empData);
       setBranches(branchData);
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [businessId]);
 
   const formatDate = (dateStr: string) => {
     try {
