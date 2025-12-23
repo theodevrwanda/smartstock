@@ -9,7 +9,8 @@ import {
   Eye, 
   EyeOff, 
   Loader2, 
-  AlertCircle 
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -29,6 +31,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   
   const { login, loginWithGoogle, user, isAuthenticated, logout, errorMessage, clearError } = useAuth();
   const navigate = useNavigate();
@@ -37,49 +40,59 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Handle Redirection and Messages based on active status
+  // Handle redirection and messages based on active status
   useEffect(() => {
     if (isAuthenticated && user) {
-      if (!user.isActive) {
-        // Show ONLY the inactive message
-        toast.error('Your account is pending approval. Please wait for the central admin to verify your account.');
-        logout(); 
+      // Check business active status first
+      if (user.businessActive === false) {
+        setLoginError('Your business is not active. Please wait for central admin to approve your business.');
+        logout();
         setIsLoading(false);
         setIsGoogleLoading(false);
-      } else {
-        // Show success message ONLY if account is active
-        toast.success('Login successful! Redirecting...');
-        navigate('/dashboard', { replace: true });
+        return;
       }
+
+      // Check user active status
+      if (!user.isActive) {
+        setLoginError('Your account is not active. Please wait for business admin to approve your account.');
+        logout();
+        setIsLoading(false);
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      // Both are active, proceed to dashboard
+      toast.success('Login successful! Redirecting...');
+      navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, user, navigate, logout]);
 
   const handleEmailLogin = async (data: LoginFormData) => {
     setIsLoading(true);
+    setLoginError(null);
     toast.dismiss();
 
     const success = await login(data.email.trim(), data.password);
 
     if (!success) {
-      toast.error(errorMessage || 'Invalid email or password. Please try again.');
+      setLoginError(errorMessage || 'Invalid email or password. Please try again.');
       clearError();
-      setIsLoading(false); 
+      setIsLoading(false);
     }
-    // If successful, the useEffect above handles the messages
   };
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
+    setLoginError(null);
     toast.dismiss();
 
     const success = await loginWithGoogle();
 
     if (!success) {
-      toast.error(errorMessage || 'Google sign-in failed. Please try again.');
+      setLoginError(errorMessage || 'Google sign-in failed. Please try again.');
       clearError();
       setIsGoogleLoading(false);
     }
-    // If successful, the useEffect above handles the messages
   };
 
   return (
@@ -93,6 +106,16 @@ export default function LoginPage() {
             Welcome back! Please enter your details.
           </p>
         </div>
+
+        {/* Error Alert */}
+        {loginError && (
+          <Alert variant="destructive" className="bg-red-50 border-red-200">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-red-700">
+              {loginError}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit(handleEmailLogin)} className="space-y-6">
           <div className="space-y-4">
@@ -142,7 +165,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-end">
             <Link 
               to="/forgot-password" 
               className="text-sm font-medium text-blue-600 hover:text-blue-700"

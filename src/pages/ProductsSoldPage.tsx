@@ -41,7 +41,7 @@ interface Branch {
   branchName: string;
 }
 
-type SortableProductKeys = 'productName' | 'category' | 'model' | 'quantity' | 'status' | 'costPrice' | 'sellingPrice' | 'deadline' | 'soldDate';
+type SortableProductKeys = 'productName' | 'category' | 'model' | 'quantity' | 'status' | 'costPrice' | 'sellingPrice' | 'deadline' | 'soldDate' | 'branch';
 type SortDirection = 'asc' | 'desc';
 
 // Mock Data

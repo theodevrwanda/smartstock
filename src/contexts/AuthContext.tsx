@@ -9,30 +9,15 @@ import {
   createUserWithEmailAndPassword,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebase';
 import { AuthState, User } from '@/types';
 import axios from 'axios';
 
 // Extended User interface for auth context
-interface AuthUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  role: 'admin' | 'staff';
-  branch: string | null;
-  isActive: boolean;
-  profileImage: string | null;
-  username?: string;
-  phone?: string;
-  district?: string;
-  sector?: string;
-  cell?: string;
-  village?: string;
-  businessName?: string;
-  gender?: string;
+interface AuthUser extends User {
+  businessId?: string;
+  businessActive?: boolean;
 }
 
 export interface RegisterData {
@@ -51,6 +36,7 @@ export interface RegisterData {
 }
 
 interface AuthContextType extends AuthState {
+  user: AuthUser | null;
   login: (identifier: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
@@ -76,7 +62,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>({
+  const [authState, setAuthState] = useState<AuthState & { user: AuthUser | null }>({
     user: null,
     isAuthenticated: false,
     loading: true,
@@ -85,14 +71,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Function to get business status
+  const getBusinessStatus = async (businessId: string): Promise<boolean> => {
+    try {
+      const businessDoc = await getDoc(doc(db, 'businesses', businessId));
+      if (businessDoc.exists()) {
+        return businessDoc.data().isActive !== false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error fetching business status:', error);
+      return true;
+    }
+  };
+
   // Function to get user data from Firestore
-  const getUserFromFirestore = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+  const getUserFromFirestore = async (firebaseUser: FirebaseUser): Promise<AuthUser | null> => {
     try {
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        
+        // Get business status if user has businessId
+        let businessActive = true;
+        if (userData.businessId) {
+          businessActive = await getBusinessStatus(userData.businessId);
+        }
 
-        const fullUser: User = {
+        const fullUser: AuthUser = {
           id: firebaseUser.uid,
           email: firebaseUser.email || userData.email || '',
           firstName: userData.firstName || '',
@@ -111,6 +117,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profileImage: userData.profileImage || userData.imagephoto || null,
           businessName: userData.businessName || '',
           gender: userData.gender || '',
+          businessId: userData.businessId || null,
+          businessActive,
         };
 
         return fullUser;
@@ -177,12 +185,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error: any) {
-      let message = 'Login failed. Please check your credentials.';
+      let message = 'Invalid email or password. Please try again.';
       
-      if (error.code === 'auth/user-not-found') message = 'No account found with this email.';
-      else if (error.code === 'auth/wrong-password') message = 'Incorrect password.';
+      if (error.code === 'auth/user-not-found') message = 'Invalid email or password. Please try again.';
+      else if (error.code === 'auth/wrong-password') message = 'Invalid email or password. Please try again.';
       else if (error.code === 'auth/invalid-email') message = 'Invalid email address.';
       else if (error.code === 'auth/too-many-requests') message = 'Too many failed attempts. Please try again later.';
+      else if (error.code === 'auth/invalid-credential') message = 'Invalid email or password. Please try again.';
       
       setErrorMessage(message);
       setAuthState((prev) => ({ ...prev, loading: false }));
@@ -231,7 +240,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = (userData: Partial<User>) => {
+  const updateUser = (userData: Partial<AuthUser>) => {
     if (authState.user) {
       const updatedUser = { ...authState.user, ...userData };
       setAuthState((prev) => ({ ...prev, user: updatedUser }));
@@ -243,9 +252,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setErrorMessage(null);
 
     try {
+      // Step 1: Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       
-      const userDataToSave: Partial<User> = {
+      // Step 2: Create business document in businesses collection
+      const businessData = {
+        businessName: data.businessName,
+        district: data.district,
+        sector: data.sector,
+        cell: data.cell,
+        village: data.village,
+        ownerId: userCredential.user.uid,
+        isActive: false, // Business is inactive by default, needs central admin approval
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const businessRef = await addDoc(collection(db, 'businesses'), businessData);
+      
+      // Step 3: Create user document in users collection with businessId
+      const userDataToSave = {
         email: data.email,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -256,17 +282,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         sector: data.sector,
         cell: data.cell,
         village: data.village,
-        role: 'admin',
+        role: 'admin', // Default role for business owner
         branch: null,
-        isActive: false,
+        isActive: false, // User is inactive by default
         profileImage: data.profileImage || null,
         imagephoto: data.profileImage || null,
         businessName: data.businessName,
+        businessId: businessRef.id,
         gender: data.gender,
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userDataToSave);
+      
+      // Sign out immediately after registration
+      await signOut(auth);
+      
       return true;
     } catch (error: any) {
       let message = 'Registration failed. Please try again.';

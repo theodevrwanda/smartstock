@@ -12,6 +12,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ProductsStorePage from "@/pages/ProductsStorePage";
 import ProductsSoldPage from "@/pages/ProductsSoldPage";
@@ -38,6 +39,7 @@ const App = () => (
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route
                     path="/"
                     element={
