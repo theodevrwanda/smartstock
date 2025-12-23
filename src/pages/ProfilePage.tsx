@@ -78,23 +78,31 @@ const ProfilePage: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    fullName: '',
     phone: '',
     district: '',
     sector: '',
     cell: '',
     village: '',
+    gender: '',
+    businessName: '',
   });
+
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (!authLoading && user) {
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
+        fullName: user.fullName || '',
         phone: user.phone || '',
         district: user.district || '',
         sector: user.sector || '',
         cell: user.cell || '',
         village: user.village || '',
+        gender: user.gender || '',
+        businessName: user.businessName || '',
       });
       setPreviewImage(user.profileImage || '');
       setResetEmail(user.email || '');
@@ -117,7 +125,6 @@ const ProfilePage: React.FC = () => {
       const file = e.target.files[0];
       setSelectedFile(file);
 
-      // Instant preview (works offline)
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
@@ -136,14 +143,13 @@ const ProfilePage: React.FC = () => {
     setIsSaving(true);
 
     try {
-      let newImageUrl = user.profileImage;
+      let newImageUrl = user.profileImage || null;
 
-      // Upload new image if selected
       if (selectedFile) {
         if (!navigator.onLine) {
           toast({
             title: 'Offline',
-            description: 'Cannot upload image while offline. Save other changes only.',
+            description: 'Cannot upload image offline. Other changes saved.',
             variant: 'destructive',
           });
         } else {
@@ -154,26 +160,33 @@ const ProfilePage: React.FC = () => {
           } catch (error) {
             toast({
               title: 'Upload Failed',
-              description: 'Could not upload image. Other changes saved.',
+              description: 'Image not uploaded. Other changes saved.',
               variant: 'destructive',
             });
-            // Continue saving other fields even if image fails
           }
         }
       }
 
-      // Update Firestore user document
-      const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, {
+      const updateData: any = {
         firstName: formData.firstName,
         lastName: formData.lastName,
+        fullName: `${formData.firstName} ${formData.lastName}`.trim(),
         phone: formData.phone,
         district: formData.district,
         sector: formData.sector,
         cell: formData.cell,
         village: formData.village,
+        gender: formData.gender,
         profileImage: newImageUrl,
-      });
+      };
+
+      // Only admin can update businessName
+      if (isAdmin) {
+        updateData.businessName = formData.businessName;
+      }
+
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, updateData);
 
       toast({ title: 'Success', description: 'Profile updated successfully!' });
       setIsEditing(false);
@@ -181,7 +194,7 @@ const ProfilePage: React.FC = () => {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save profile changes.',
+        description: 'Failed to save profile.',
         variant: 'destructive',
       });
     } finally {
@@ -194,11 +207,14 @@ const ProfilePage: React.FC = () => {
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
+        fullName: user.fullName || '',
         phone: user.phone || '',
         district: user.district || '',
         sector: user.sector || '',
         cell: user.cell || '',
         village: user.village || '',
+        gender: user.gender || '',
+        businessName: user.businessName || '',
       });
       setPreviewImage(user.profileImage || '');
     }
@@ -209,7 +225,7 @@ const ProfilePage: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      toast({ title: 'Logged Out', description: 'You have been signed out successfully.' });
+      toast({ title: 'Logged Out', description: 'Signed out successfully.' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to log out.', variant: 'destructive' });
     }
@@ -218,10 +234,10 @@ const ProfilePage: React.FC = () => {
   const toggleOfflineMode = () => {
     setIsOfflineMode(prev => !prev);
     toast({
-      title: isOfflineMode ? 'Back Online' : 'Offline Mode',
+      title: isOfflineMode ? 'Online Mode' : 'Offline Mode',
       description: isOfflineMode 
-        ? 'App is now connected to live data.' 
-        : 'App is now in offline mode (changes saved locally when possible).',
+        ? 'Connected to live data.' 
+        : 'Offline mode active (preview only).',
     });
   };
 
@@ -350,7 +366,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="My Profile" description="View and manage your profile" />
+      <SEOHelmet title="My Profile" description="View and edit your profile" />
       <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -411,13 +427,13 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {user.firstName} {user.lastName}
+                    {user.fullName || `${user.firstName} ${user.lastName}`}
                   </h2>
                   <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
                   <div className="flex gap-2 mt-3">
                     {getRoleBadge(user.role)}
                     <Badge variant={user.isActive ? "default" : "secondary"}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {user.isActive ? 'Active' : 'Pending Approval'}
                     </Badge>
                   </div>
                 </div>
@@ -438,6 +454,18 @@ const ProfilePage: React.FC = () => {
                     <Input value={formData.lastName} onChange={e => handleInputChange('lastName', e.target.value)} />
                   ) : (
                     <p className="mt-2 text-gray-900 dark:text-white">{user.lastName || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Full Name</Label>
+                  <p className="mt-2 text-gray-900 dark:text-white">{user.fullName || 'Not set'}</p>
+                </div>
+                <div>
+                  <Label>Gender</Label>
+                  {isEditing ? (
+                    <Input value={formData.gender} onChange={e => handleInputChange('gender', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.gender || 'Not set'}</p>
                   )}
                 </div>
                 <div>
@@ -493,6 +521,20 @@ const ProfilePage: React.FC = () => {
                     <p className="mt-2 text-gray-900 dark:text-white">{user.village || 'Not set'}</p>
                   )}
                 </div>
+                <div className="md:col-span-2">
+                  <Label>Business Name {isAdmin ? '' : '(Admin only)'}</Label>
+                  {isEditing && isAdmin ? (
+                    <Input 
+                      value={formData.businessName} 
+                      onChange={e => handleInputChange('businessName', e.target.value)} 
+                      placeholder="Enter business name"
+                    />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">
+                      {user.businessName || 'Not set'}
+                    </p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -509,11 +551,7 @@ const ProfilePage: React.FC = () => {
                     <p className="font-medium">Offline Mode</p>
                     <p className="text-sm text-gray-500">Preview changes without internet</p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={toggleOfflineMode}
-                  >
+                  <Button variant="outline" size="icon" onClick={toggleOfflineMode}>
                     {isOfflineMode ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
                   </Button>
                 </div>
@@ -525,120 +563,168 @@ const ProfilePage: React.FC = () => {
                 <CardTitle>Account Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setChangePasswordOpen(true);
-                    setPasswordStep(1);
-                    setCurrentPassword('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                    setCurrentPasswordError('');
-                  }}
-                >
-                  <Key className="mr-2 h-4 w-4" />
-                  Change Password
+                <Button variant="outline" className="w-full justify-start" onClick={() => setChangePasswordOpen(true)}>
+                  <Key className="mr-2 h-4 w-4" /> Change Password
                 </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setResetPasswordOpen(true)}
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Reset via Email
+                <Button variant="outline" className="w-full justify-start" onClick={() => setResetPasswordOpen(true)}>
+                  <Mail className="mr-2 h-4 w-4" /> Reset via Email
                 </Button>
-
-                <Button
-                  variant="destructive"
-                  className="w-full justify-start"
-                  onClick={() => setDeleteAccountOpen(true)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
+                <Button variant="destructive" className="w-full justify-start" onClick={() => setDeleteAccountOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Account
                 </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
                 </Button>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Password Change Dialog */}
+        {/* Multi-Step Change Password Dialog */}
         <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{passwordStep === 1 ? 'Verify Identity' : 'New Password'}</DialogTitle>
+              <DialogTitle>
+                {passwordStep === 1 ? 'Verify Your Identity' : 'Create New Password'}
+              </DialogTitle>
+              <DialogDescription>
+                {passwordStep === 1
+                  ? 'Enter your current password to proceed.'
+                  : 'Your new password must be at least 6 characters long.'}
+              </DialogDescription>
             </DialogHeader>
-            {passwordStep === 1 ? (
-              <>
-                <Label>Current Password</Label>
-                <Input
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => {
-                    setCurrentPassword(e.target.value);
-                    setCurrentPasswordError('');
-                  }}
-                />
-                {currentPasswordError && <p className="text-red-600 text-sm">{currentPasswordError}</p>}
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
-                  <Button onClick={handleVerifyCurrentPassword} disabled={isVerifyingCurrent}>
-                    {isVerifyingCurrent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Continue'}
-                  </Button>
-                </DialogFooter>
-              </>
-            ) : (
-              <>
-                <Label>New Password</Label>
-                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-                <Label>Confirm Password</Label>
-                <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setPasswordStep(1)}>Back</Button>
-                  <Button onClick={handleUpdateNewPassword} disabled={isUpdatingPassword || newPassword !== confirmPassword || newPassword.length < 6}>
-                    {isUpdatingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Update'}
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
 
-        {/* Reset Password Dialog */}
-        <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Reset Password</DialogTitle>
-            </DialogHeader>
-            <Label>Email</Label>
-            <Input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} />
+            <div className="py-4">
+              {passwordStep === 1 ? (
+                <div className="space-y-4">
+                  <Label htmlFor="current-password">Current Password</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      setCurrentPasswordError('');
+                    }}
+                    placeholder="Enter your current password"
+                    autoFocus
+                  />
+                  {currentPasswordError && (
+                    <p className="text-sm text-red-600 dark:text-red-400">{currentPasswordError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    autoFocus
+                  />
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your new password"
+                  />
+                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-sm text-red-600 dark:text-red-400">Passwords do not match.</p>
+                  )}
+                  {newPassword && newPassword.length < 6 && (
+                    <p className="text-sm text-red-600 dark:text-red-400">Password must be at least 6 characters.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>Cancel</Button>
-              <Button onClick={handleResetPassword}>Send Reset Link</Button>
+              <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>
+                Cancel
+              </Button>
+              {passwordStep === 1 ? (
+                <Button
+                  onClick={handleVerifyCurrentPassword}
+                  disabled={isVerifyingCurrent || !currentPassword.trim()}
+                >
+                  {isVerifyingCurrent ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  )}
+                  Continue
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleUpdateNewPassword}
+                  disabled={
+                    isUpdatingPassword ||
+                    newPassword.length < 6 ||
+                    newPassword !== confirmPassword
+                  }
+                >
+                  {isUpdatingPassword ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  Update Password
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Delete Account Dialog */}
-        <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
-          <DialogContent>
+        {/* Reset Password via Email Dialog */}
+        <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Delete Account?</DialogTitle>
-              <DialogDescription>This action is permanent.</DialogDescription>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                We will send a password reset link to your email address.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="reset-email">Email Address</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Enter your email"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleResetPassword}>
+                Send Reset Link
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Account Confirmation Dialog */}
+        <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Account</DialogTitle>
+              <DialogDescription>
+                This action is permanent and cannot be undone. All your data will be deleted.
+              </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDeleteAccount}>Delete</Button>
+              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteAccount}>
+                Delete My Account
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
