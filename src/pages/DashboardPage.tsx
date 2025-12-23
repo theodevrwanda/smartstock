@@ -1,71 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Package, Layers, Box, Clock, PlusCircle, RefreshCw, 
   Archive, AlertTriangle, XCircle, TrendingUp, TrendingDown, 
   CheckCircle, Zap, ShieldCheck 
 } from 'lucide-react';
 import SEOHelmet from '@/components/SEOHelmet';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-
-interface DashboardStats {
-  totalProducts: number;
-  totalCategories: number;
-  totalModels: number;
-  productsAddedToday: number;
-  productsAddedThisWeek: number;
-  productsAddedThisMonth: number;
-  productsAddedCustomRange: number;
-  productsUpdatedToday: number;
-  productsUpdatedThisMonth: number;
-  productsNeverUpdated: number;
-  activeProducts: number;
-  soldProducts: number;
-  restoredProducts: number;
-  deletedProducts: number;
-  lowStockProducts: number;
-  outOfStockProducts: number;
-  mostStockedProduct: { name: string; quantity: number };
-  leastStockedProduct: { name: string; quantity: number };
-  averageStockPerProduct: number;
-  totalStockQuantity: number;
-  damagedProducts: number;
-  productsWithSupplier: number;
-  productsWithoutSupplier: number;
-}
-
-const MOCK_DATA: DashboardStats = {
-  totalProducts: 1,
-  totalCategories: 1,
-  totalModels: 1,
-  productsAddedToday: 1,
-  productsAddedThisWeek: 1,
-  productsAddedThisMonth: 1,
-  productsAddedCustomRange: 0,
-  productsUpdatedToday: 0,
-  productsUpdatedThisMonth: 0,
-  productsNeverUpdated: 1,
-  activeProducts: 1,
-  soldProducts: 0,
-  restoredProducts: 0,
-  deletedProducts: 0,
-  lowStockProducts: 0,
-  outOfStockProducts: 0,
-  mostStockedProduct: { name: "macbook", quantity: 100 },
-  leastStockedProduct: { name: "macbook", quantity: 100 },
-  averageStockPerProduct: 100,
-  totalStockQuantity: 100,
-  damagedProducts: 0,
-  productsWithSupplier: 1,
-  productsWithoutSupplier: 0,
-};
+import { getDashboardStats, DashboardStats } from '@/functions/dashboard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,20 +28,37 @@ const DashboardPage: React.FC = () => {
   }, [authLoading, user, toast, navigate]);
 
   useEffect(() => {
-    const load = async () => {
-      await new Promise(r => setTimeout(r, 600));
-      setStats(MOCK_DATA);
-      setLoading(false);
+    const loadStats = async () => {
+      if (!user?.businessId) return;
+      setLoading(true);
+      try {
+        const data = await getDashboardStats(user.businessId, user.role, user.branch || null);
+        setStats(data);
+      } catch (err) {
+        toast({ title: 'Error', description: 'Failed to load dashboard data', variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
     };
-    if (user) load();
+
+    if (user) loadStats();
   }, [user]);
 
   if (loading || authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-[#0f172a]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-indigo-600 border-t-indigo-600"></div>
-          <p className="text-indigo-600 font-bold animate-pulse text-sm uppercase tracking-widest">Pixelmart Loading...</p>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] p-8">
+        <div className="space-y-8">
+          <Skeleton className="h-12 w-96" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-40 rounded-xl" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(12)].map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-lg" />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -100,7 +68,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Dashboard - Pixelmart EMS" description="Inventory Management" canonical="https://pixelmartrw.pages.dev/dashboard" />
+      <SEOHelmet title="Dashboard - Pixelmart EMS" description="Inventory Management" />
 
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] p-4 md:p-8 space-y-8 transition-colors duration-300">
         {/* Header Section */}
@@ -122,50 +90,50 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Primary Row: Essential Growth Stats - Big Top Cards */}
+        {/* Primary Row: Essential Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <BigProCard 
             title="Total Products" 
             value={stats.totalProducts} 
-            subtitle="Products in branch" 
+            subtitle="All products" 
             icon={<Package />} 
             color="indigo" 
           />
           <BigProCard 
-            title="Total Categories" 
+            title="Categories" 
             value={stats.totalCategories} 
-            subtitle="Product categories" 
+            subtitle="Unique categories" 
             icon={<Layers />} 
             color="blue" 
           />
           <BigProCard 
-            title="Total Models" 
+            title="Models" 
             value={stats.totalModels} 
-            subtitle="Product variants" 
+            subtitle="Unique models" 
             icon={<Box />} 
             color="violet" 
           />
         </div>
 
-        {/* Secondary Grid: Detailed Metrics */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <SmallProCard title="Added Today" value={stats.productsAddedToday} subtitle="Added today" icon={<PlusCircle className="text-emerald-500" />} highlight />
-          <SmallProCard title="Added This Week" value={stats.productsAddedThisWeek} subtitle="Added this week" icon={<TrendingUp className="text-blue-500" />} />
-          <SmallProCard title="Added This Month" value={stats.productsAddedThisMonth} subtitle="Added this month" icon={<TrendingUp className="text-violet-500" />} />
+        {/* Secondary Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <SmallProCard title="Added Today" value={stats.productsAddedToday} subtitle="New today" icon={<PlusCircle className="text-emerald-500" />} highlight />
+          <SmallProCard title="Added This Week" value={stats.productsAddedThisWeek} subtitle="This week" icon={<TrendingUp className="text-blue-500" />} />
+          <SmallProCard title="Added This Month" value={stats.productsAddedThisMonth} subtitle="This month" icon={<TrendingUp className="text-violet-500" />} />
           <SmallProCard title="Updated Today" value={stats.productsUpdatedToday} subtitle="Updated today" icon={<RefreshCw className="text-orange-500" />} />
-          
-          <SmallProCard title="Never Updated" value={stats.productsNeverUpdated} subtitle="Never updated" icon={<Clock className="text-slate-400" />} />
-          <SmallProCard title="Active Products" value={stats.activeProducts} subtitle="In stock" icon={<CheckCircle className="text-emerald-500" />} />
-          <SmallProCard title="Sold Products" value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-500" />} />
-          <SmallProCard title="Restored Products" value={stats.restoredProducts} subtitle="Restored" icon={<Archive className="text-indigo-500" />} />
-          
-          <SmallProCard title="Deleted Products" value={stats.deletedProducts} subtitle="Archived" icon={<XCircle className="text-rose-500" />} />
-          <SmallProCard title="Low Stock" value={stats.lowStockProducts} subtitle="Below threshold" icon={<AlertTriangle className="text-amber-500" />} danger={stats.lowStockProducts > 0} />
-          <SmallProCard title="Out of Stock" value={stats.outOfStockProducts} subtitle="No stock" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
-          <SmallProCard title="System Health" value="100%" subtitle="Optimized" icon={<ShieldCheck className="text-emerald-500" />} />
+
+          <SmallProCard title="Never Updated" value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
+          <SmallProCard title="In Stock" value={stats.activeProducts} subtitle="Available" icon={<CheckCircle className="text-emerald-500" />} />
+          <SmallProCard title="Sold" value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-500" />} />
+          <SmallProCard title="Restored" value={stats.restoredProducts} subtitle="Returned" icon={<Archive className="text-indigo-500" />} />
+
+          <SmallProCard title="Deleted" value={stats.deletedProducts} subtitle="In trash" icon={<XCircle className="text-rose-500" />} />
+          <SmallProCard title="Low Stock" value={stats.lowStockProducts} subtitle="≤5 units" icon={<AlertTriangle className="text-amber-500" />} danger={stats.lowStockProducts > 0} />
+          <SmallProCard title="Out of Stock" value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
+          <SmallProCard title="Avg Stock" value={stats.averageStockPerProduct} subtitle="Per product" icon={<Package className="text-cyan-500" />} />
         </div>
 
-        {/* Bottom Section: Most/Least Stocked Highlights */}
+        {/* Stock Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <HighlightCard 
             type="MOST STOCKED PRODUCT" 
@@ -187,7 +155,7 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-/* --- Sub-Components with Solid Colors & Smooth Pro Look --- */
+/* --- Reusable Pro Components --- */
 
 const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
   const colors: any = {
