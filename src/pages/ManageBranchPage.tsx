@@ -44,21 +44,27 @@ const ManageBranchPage: React.FC = () => {
     sector: '',
     cell: '',
     village: '',
+    businessId: user?.businessId || '',
   });
   const [branchToDelete, setBranchToDelete] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin';
+  const businessId = user?.businessId;
 
-  // Fetch branches
+  // Fetch branches for user's business
   useEffect(() => {
     const fetchBranches = async () => {
+      if (!businessId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const data = await getBranches();
+      const data = await getBranches(businessId);
       setBranches(data);
       setLoading(false);
     };
     fetchBranches();
-  }, []);
+  }, [businessId]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -86,12 +92,16 @@ const ManageBranchPage: React.FC = () => {
       toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' });
       return;
     }
+    if (!businessId) {
+      toast({ title: 'Error', description: 'No business associated with your account', variant: 'destructive' });
+      return;
+    }
 
     setActionLoading(true);
-    const createdBranch = await addBranch(newBranch);
+    const createdBranch = await addBranch({ ...newBranch, businessId });
     if (createdBranch) {
       setBranches(prev => [...prev, createdBranch]);
-      setNewBranch({ branchName: '', district: '', sector: '', cell: '', village: '' });
+      setNewBranch({ branchName: '', district: '', sector: '', cell: '', village: '', businessId });
       setIsCreateDialogOpen(false);
     }
     setActionLoading(false);

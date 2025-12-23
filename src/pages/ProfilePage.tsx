@@ -19,6 +19,7 @@ import {
   Trash2,
   ArrowRight,
   Check,
+  Building2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,9 +41,20 @@ import {
   sendPasswordResetEmail,
   deleteUser,
 } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
+
+interface BusinessInfo {
+  id: string;
+  businessName: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
+  isActive: boolean;
+  createdAt?: any;
+}
 
 const ProfilePage: React.FC = () => {
   const { toast } = useToast();
@@ -57,6 +69,12 @@ const ProfilePage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string>('');
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+
+  // Business info state
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
+  const [businessFormData, setBusinessFormData] = useState({
+    businessName: '',
+  });
 
   // Dialogs
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -90,8 +108,36 @@ const ProfilePage: React.FC = () => {
 
   const isAdmin = user?.role === 'admin';
 
+  // Fetch business info
   useEffect(() => {
+    const fetchBusinessInfo = async () => {
+      if (user?.businessId) {
+        try {
+          const businessDoc = await getDoc(doc(db, 'businesses', user.businessId));
+          if (businessDoc.exists()) {
+            const data = businessDoc.data();
+            setBusinessInfo({
+              id: businessDoc.id,
+              businessName: data.businessName || '',
+              district: data.district || '',
+              sector: data.sector || '',
+              cell: data.cell || '',
+              village: data.village || '',
+              isActive: data.isActive !== false,
+              createdAt: data.createdAt,
+            });
+            setBusinessFormData({
+              businessName: data.businessName || '',
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching business info:', error);
+        }
+      }
+    };
+
     if (!authLoading && user) {
+      fetchBusinessInfo();
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
@@ -180,13 +226,15 @@ const ProfilePage: React.FC = () => {
         profileImage: newImageUrl,
       };
 
-      // Only admin can update businessName
-      if (isAdmin) {
-        updateData.businessName = formData.businessName;
-      }
-
       const userRef = doc(db, 'users', user.id);
       await updateDoc(userRef, updateData);
+
+      // Only admin can update business name
+      if (isAdmin && businessInfo && businessFormData.businessName !== businessInfo.businessName) {
+        const businessRef = doc(db, 'businesses', businessInfo.id);
+        await updateDoc(businessRef, { businessName: businessFormData.businessName });
+        setBusinessInfo(prev => prev ? { ...prev, businessName: businessFormData.businessName } : null);
+      }
 
       toast({ title: 'Success', description: 'Profile updated successfully!' });
       setIsEditing(false);
@@ -521,23 +569,66 @@ const ProfilePage: React.FC = () => {
                     <p className="mt-2 text-gray-900 dark:text-white">{user.village || 'Not set'}</p>
                   )}
                 </div>
-                <div className="md:col-span-2">
-                  <Label>Business Name {isAdmin ? '' : '(Admin only)'}</Label>
-                  {isEditing && isAdmin ? (
-                    <Input 
-                      value={formData.businessName} 
-                      onChange={e => handleInputChange('businessName', e.target.value)} 
-                      placeholder="Enter business name"
-                    />
-                  ) : (
-                    <p className="mt-2 text-gray-900 dark:text-white">
-                      {user.businessName || 'Not set'}
-                    </p>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Business Information Card */}
+          {businessInfo && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Business Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <Label>Business Name {!isAdmin && '(Admin only can edit)'}</Label>
+                    {isEditing && isAdmin ? (
+                      <Input 
+                        value={businessFormData.businessName} 
+                        onChange={e => setBusinessFormData(prev => ({ ...prev, businessName: e.target.value }))} 
+                        placeholder="Enter business name"
+                      />
+                    ) : (
+                      <p className="mt-2 text-gray-900 dark:text-white font-medium">
+                        {businessInfo.businessName || 'Not set'}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>District</Label>
+                    <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      {businessInfo.district || 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Sector</Label>
+                    <p className="mt-2 text-gray-900 dark:text-white">{businessInfo.sector || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label>Cell</Label>
+                    <p className="mt-2 text-gray-900 dark:text-white">{businessInfo.cell || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label>Village</Label>
+                    <p className="mt-2 text-gray-900 dark:text-white">{businessInfo.village || 'Not set'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Business Status</Label>
+                    <div className="mt-2">
+                      <Badge variant={businessInfo.isActive ? "default" : "secondary"}>
+                        {businessInfo.isActive ? 'Active' : 'Pending Approval'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Settings Sidebar */}
           <div className="space-y-6">
