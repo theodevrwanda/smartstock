@@ -4,7 +4,6 @@ import {
   query,
   where,
   getDocs,
-  getCountFromServer,
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
@@ -29,6 +28,22 @@ export interface DashboardStats {
   leastStockedProduct: { name: string; quantity: number };
   averageStockPerProduct: number;
   totalStockQuantity: number;
+}
+
+interface ProductData {
+  id: string;
+  productName: string;
+  category: string;
+  model?: string;
+  costPrice: number;
+  sellingPrice?: number | null;
+  status: string;
+  addedDate?: string;
+  deletedDate?: string;
+  soldDate?: string;
+  quantity: number;
+  branch: string;
+  updatedAt?: string;
 }
 
 // Helper to get start of day/week/month
@@ -68,12 +83,22 @@ export const getDashboardStats = async (
 
     // Fetch all products
     const snapshot = await getDocs(baseQuery);
-    const products = snapshot.docs.map(doc => ({
+    const products: ProductData[] = snapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data(),
+      productName: doc.data().productName || '',
+      category: doc.data().category || '',
+      model: doc.data().model || '',
+      costPrice: doc.data().costPrice || 0,
+      sellingPrice: doc.data().sellingPrice || null,
+      status: doc.data().status || 'store',
+      addedDate: doc.data().addedDate || '',
+      deletedDate: doc.data().deletedDate || '',
+      soldDate: doc.data().soldDate || '',
+      quantity: doc.data().quantity || 0,
+      branch: doc.data().branch || '',
+      updatedAt: doc.data().updatedAt || '',
     }));
 
-    const now = new Date().toISOString();
     const todayStart = getStartOfDay();
     const weekStart = getStartOfWeek();
     const monthStart = getStartOfMonth();
@@ -85,9 +110,9 @@ export const getDashboardStats = async (
     const deletedProducts = products.filter(p => p.status === 'deleted').length;
 
     // Added/Updated counts
-    const productsAddedToday = products.filter(p => p.addedDate >= todayStart).length;
-    const productsAddedThisWeek = products.filter(p => p.addedDate >= weekStart).length;
-    const productsAddedThisMonth = products.filter(p => p.addedDate >= monthStart).length;
+    const productsAddedToday = products.filter(p => p.addedDate && p.addedDate >= todayStart).length;
+    const productsAddedThisWeek = products.filter(p => p.addedDate && p.addedDate >= weekStart).length;
+    const productsAddedThisMonth = products.filter(p => p.addedDate && p.addedDate >= monthStart).length;
 
     const productsUpdatedToday = products.filter(p => p.updatedAt && p.updatedAt >= todayStart).length;
     const productsUpdatedThisMonth = products.filter(p => p.updatedAt && p.updatedAt >= monthStart).length;
@@ -100,7 +125,7 @@ export const getDashboardStats = async (
     // Total stock quantity
     const totalStockQuantity = products
       .filter(p => p.status === 'store')
-      .reduce((sum, p) => sum + p.quantity, 0);
+      .reduce((sum, p) => sum + (p.quantity || 0), 0);
 
     // Categories & Models
     const categories = new Set(products.map(p => p.category)).size;
@@ -112,17 +137,17 @@ export const getDashboardStats = async (
     let leastStocked = { name: 'N/A', quantity: 0 };
 
     if (storeProducts.length > 0) {
-      storeProducts.sort((a, b) => b.quantity - a.quantity);
+      storeProducts.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
       mostStocked = {
         name: storeProducts[0].productName + (storeProducts[0].model ? ` (${storeProducts[0].model})` : ''),
-        quantity: storeProducts[0].quantity,
+        quantity: storeProducts[0].quantity || 0,
       };
-      const withStock = storeProducts.filter(p => p.quantity > 0);
+      const withStock = storeProducts.filter(p => (p.quantity || 0) > 0);
       if (withStock.length > 0) {
-        withStock.sort((a, b) => a.quantity - b.quantity);
+        withStock.sort((a, b) => (a.quantity || 0) - (b.quantity || 0));
         leastStocked = {
           name: withStock[0].productName + (withStock[0].model ? ` (${withStock[0].model})` : ''),
-          quantity: withStock[0].quantity,
+          quantity: withStock[0].quantity || 0,
         };
       }
     }

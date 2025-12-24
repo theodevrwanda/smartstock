@@ -1,12 +1,13 @@
 export interface Branch {
-  id: string;
+  id?: string;
   branchName: string;
   district: string;
   sector: string;
   cell: string;
   village: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  businessId: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface User {
@@ -21,35 +22,49 @@ export interface User {
   cell: string;
   village: string;
   role: "admin" | "staff";
-  branch?: string | Branch;
+  branch?: string | null;
   imagephoto?: string | null;
   profileImage?: string | null;
   email: string;
   isActive: boolean;
-  businessName?: string;
+  businessId?: string;
   gender?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Business {
+  id: string;
+  businessName: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
+  ownerId: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Product {
-  id: string;
+  id?: string;
   productName: string;
   category: string;
   model?: string;
   costPrice: number;
-  sellingPrice: number;
+  sellingPrice?: number | null;
   status: "store" | "sold" | "restored" | "deleted";
   restoreComment?: string;
-  addedDate?: Date;
-  deletedDate?: Date;
-  soldDate?: Date;
+  addedDate?: string;
+  deletedDate?: string;
+  soldDate?: string;
+  restoredDate?: string;
   quantity: number;
-  branch: string | Branch;
-  supplier?: string;
-  isDamaged?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
+  branch: string;
+  businessId: string;
+  deadline?: string;
+  confirm?: boolean;
+  updatedAt?: string;
 }
 
 export interface DashboardStats {
@@ -59,7 +74,6 @@ export interface DashboardStats {
   productsAddedToday: number;
   productsAddedThisWeek: number;
   productsAddedThisMonth: number;
-  productsAddedCustomRange: number;
   productsUpdatedToday: number;
   productsUpdatedThisMonth: number;
   productsNeverUpdated: number;
@@ -73,9 +87,6 @@ export interface DashboardStats {
   leastStockedProduct: { name: string; quantity: number };
   averageStockPerProduct: number;
   totalStockQuantity: number;
-  damagedProducts: number;
-  productsWithSupplier: number;
-  productsWithoutSupplier: number;
 }
 
 export interface AuthState {
@@ -113,4 +124,19 @@ export interface Notification {
   read: boolean;
   createdAt: string;
   userId: string;
+}
+
+// Offline sync types
+export interface PendingChange {
+  id: string;
+  collection: string;
+  docId: string;
+  action: 'create' | 'update' | 'delete';
+  data: any;
+  timestamp: string;
+}
+
+export interface OfflineState {
+  isOnline: boolean;
+  pendingChanges: number;
 }

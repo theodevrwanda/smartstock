@@ -15,6 +15,7 @@ import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
 
 export interface Product {
+  id?: string;
   productName: string;
   category: string;
   model?: string;
@@ -30,6 +31,7 @@ export interface Product {
   deadline?: string;
   confirm: boolean;
   businessId: string;
+  updatedAt?: string;
 }
 
 // Get products - admin sees all, staff sees only from assigned branch if branch exists
@@ -108,11 +110,12 @@ export const addOrUpdateProduct = async (
       return {
         id: existingDoc.id,
         ...existingDoc.data(),
-        quantity: existingDoc.data().quantity + data.quantity,
+        quantity: (existingDoc.data().quantity || 0) + data.quantity,
       } as Product;
     } else {
       const newRef = doc(productsRef);
-      const newProduct = {
+      const newProduct: Product = {
+        id: newRef.id,
         productName: data.productName.trim(),
         productNameLower: normalizedName,
         category: data.category.trim(),
@@ -129,11 +132,11 @@ export const addOrUpdateProduct = async (
         deadline: null,
         confirm: data.confirm,
         updatedAt: new Date().toISOString(),
-      };
+      } as any;
 
       await setDoc(newRef, newProduct);
       toast.success('New product added');
-      return { id: newRef.id, ...newProduct } as Product;
+      return newProduct;
     }
   } catch (error) {
     console.error('Error adding/updating product:', error);
