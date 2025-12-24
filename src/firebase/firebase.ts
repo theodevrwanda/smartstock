@@ -1,7 +1,7 @@
 // ----------------------
 // Firebase configuration
 // ----------------------
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
   setPersistence,
@@ -23,10 +23,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // ----------------------
-// Firebase Authentication
+// Firebase Authentication (Primary - for user login)
 // ----------------------
 export const auth = getAuth(app);
 
@@ -34,6 +34,13 @@ export const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch((error) => {
   console.error("Auth persistence error:", error);
 });
+
+// ----------------------
+// Secondary Firebase App for Employee Creation (prevents logout of current user)
+// ----------------------
+const secondaryApp = getApps().find(a => a.name === 'secondary') 
+  || initializeApp(firebaseConfig, 'secondary');
+export const secondaryAuth = getAuth(secondaryApp);
 
 // ----------------------
 // Firestore (Offline First)
