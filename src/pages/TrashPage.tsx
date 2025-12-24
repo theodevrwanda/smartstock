@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, Undo } from 'lucide-react';
+import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, Undo, FileSpreadsheet, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +33,7 @@ import {
 } from '@/functions/deleted';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsDeletedPage: React.FC = () => {
   const { toast } = useToast();
@@ -136,6 +143,43 @@ const ProductsDeletedPage: React.FC = () => {
       setSortColumn(column);
       setSortDirection('asc');
     }
+  };
+
+  // Export functionality
+  const deletedExportColumns: ExportColumn[] = [
+    { header: 'Product Name', key: 'productName', width: 25 },
+    { header: 'Category', key: 'category', width: 15 },
+    { header: 'Model', key: 'model', width: 15 },
+    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Branch', key: 'branchName', width: 20 },
+    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
+    { header: 'Total Loss', key: 'totalLoss', width: 15 },
+    { header: 'Deleted Date', key: 'deletedDateFormatted', width: 15 },
+    { header: 'Reason', key: 'restoreComment', width: 25 },
+  ];
+
+  const getDeletedExportData = () => {
+    return sortedProducts.map(p => ({
+      productName: p.productName,
+      category: p.category,
+      model: p.model || '-',
+      quantity: p.quantity,
+      branchName: getBranchName(p.branch),
+      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
+      totalLoss: `${(p.costPrice * p.quantity).toLocaleString()} RWF`,
+      deletedDateFormatted: new Date(p.deletedDate).toLocaleDateString(),
+      restoreComment: p.restoreComment || '-',
+    }));
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel(getDeletedExportData(), deletedExportColumns, 'deleted-products');
+    toast({ title: 'Success', description: 'Exported to Excel' });
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(getDeletedExportData(), deletedExportColumns, 'deleted-products', 'Deleted Products Report (Trash)');
+    toast({ title: 'Success', description: 'Exported to PDF' });
   };
 
   const getPriceColor = (price: number) => {
@@ -259,10 +303,24 @@ const ProductsDeletedPage: React.FC = () => {
               <Undo className="mr-2 h-4 w-4" />
               Restore Selected ({selectedProducts.length})
             </Button>
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export to Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

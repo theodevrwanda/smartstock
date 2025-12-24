@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, Undo } from 'lucide-react';
+import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, Undo, FileSpreadsheet, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +32,7 @@ import {
 } from '@/functions/sold';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsSoldPage: React.FC = () => {
   const { toast } = useToast();
@@ -148,6 +155,47 @@ const ProductsSoldPage: React.FC = () => {
     }
   };
 
+  // Export functionality
+  const soldExportColumns: ExportColumn[] = [
+    { header: 'Product Name', key: 'productName', width: 25 },
+    { header: 'Category', key: 'category', width: 15 },
+    { header: 'Model', key: 'model', width: 15 },
+    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Branch', key: 'branchName', width: 20 },
+    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
+    { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
+    { header: 'Total Amount', key: 'totalAmount', width: 15 },
+    { header: 'Profit/Loss', key: 'profitLoss', width: 15 },
+    { header: 'Sold Date', key: 'soldDateFormatted', width: 15 },
+    { header: 'Return Deadline', key: 'deadlineFormatted', width: 15 },
+  ];
+
+  const getSoldExportData = () => {
+    return sortedProducts.map(p => ({
+      productName: p.productName,
+      category: p.category,
+      model: p.model || '-',
+      quantity: p.quantity,
+      branchName: getBranchName(p.branch),
+      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
+      sellingPriceFormatted: `${p.sellingPrice.toLocaleString()} RWF`,
+      totalAmount: `${(p.quantity * p.sellingPrice).toLocaleString()} RWF`,
+      profitLoss: `${calculateProfitLoss(p).toLocaleString()} RWF`,
+      soldDateFormatted: new Date(p.soldDate).toLocaleDateString(),
+      deadlineFormatted: p.deadline ? new Date(p.deadline).toLocaleDateString() : '-',
+    }));
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel(getSoldExportData(), soldExportColumns, 'sold-products');
+    toast({ title: 'Success', description: 'Exported to Excel' });
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(getSoldExportData(), soldExportColumns, 'sold-products', `Sold Products Report - Total P/L: ${calculateTotalProfitLoss().toLocaleString()} RWF`);
+    toast({ title: 'Success', description: 'Exported to PDF' });
+  };
+
   const getPriceColor = (price: number) => {
     if (price < 100000) return 'text-blue-600 font-bold';
     if (price < 500000) return 'text-green-600 font-bold';
@@ -260,10 +308,24 @@ const ProductsSoldPage: React.FC = () => {
               {isAdmin ? 'All sold products across branches' : userBranch ? `Sold products from ${getBranchName(userBranch)}` : 'No branch assigned'}
             </p>
           </div>
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportExcel}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export to Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export to PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Profit/Loss Summary */}

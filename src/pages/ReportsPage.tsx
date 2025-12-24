@@ -5,6 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Search,
   Download,
   Package,
@@ -14,12 +20,16 @@ import {
   Box,
   DollarSign,
   X,
+  FileSpreadsheet,
+  FileText,
+  ArrowUpDown,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { auth } from '@/firebase/firebase';
 import { useNavigate } from 'react-router-dom';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -521,6 +531,46 @@ const ReportsPage: React.FC = () => {
     setSelectedDate(null);
   };
 
+  // Export functionality for reports
+  const reportExportColumns: ExportColumn[] = [
+    { header: 'Product Name', key: 'productName', width: 25 },
+    { header: 'Category', key: 'category', width: 15 },
+    { header: 'Model', key: 'model', width: 15 },
+    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Status', key: 'status', width: 12 },
+    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
+    { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
+    { header: 'Profit/Loss', key: 'profitLossFormatted', width: 15 },
+    { header: 'Branch', key: 'branchName', width: 20 },
+    { header: 'Date Added', key: 'addedDateFormatted', width: 15 },
+  ];
+
+  const getReportExportData = () => {
+    return filteredProducts.map(p => ({
+      productName: p.productName,
+      category: p.category,
+      model: p.model || '-',
+      quantity: p.quantity,
+      status: p.status,
+      costPriceFormatted: formatAmount(p.costPrice),
+      sellingPriceFormatted: formatAmount(p.sellingPrice),
+      profitLossFormatted: formatAmount(p.productProfitLoss),
+      branchName: getBranchName(p.branch),
+      addedDateFormatted: formatDate(p.addedDate),
+    }));
+  };
+
+  const handleReportExportExcel = () => {
+    exportToExcel(getReportExportData(), reportExportColumns, `report-${reportFilter}-products`);
+    toast({ title: 'Success', description: 'Exported to Excel' });
+  };
+
+  const handleReportExportPDF = () => {
+    const title = `${reportFilter.charAt(0).toUpperCase() + reportFilter.slice(1)} Products Report - Total: ${filteredProducts.length}`;
+    exportToPDF(getReportExportData(), reportExportColumns, `report-${reportFilter}-products`, title);
+    toast({ title: 'Success', description: 'Exported to PDF' });
+  };
+
   if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
@@ -559,6 +609,24 @@ const ReportsPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Inventory Reports</h1>
           <p className="text-gray-600 dark:text-gray-400">Insights into electronic store inventory</p>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export Report
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={handleReportExportExcel}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export to Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleReportExportPDF}>
+              <FileText className="mr-2 h-4 w-4" />
+              Export to PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card className="bg-white dark:bg-gray-800 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700">

@@ -10,8 +10,8 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/firebase/firebase';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { db, secondaryAuth } from '@/firebase/firebase';
 import { toast } from 'sonner';
 
 export interface Employee {
@@ -56,7 +56,7 @@ const checkDuplicates = async (email: string, phone: string): Promise<string | n
   return null;
 };
 
-// Create employee - SIMPLE VERSION (no logout/login)
+// Create employee using secondary auth instance (prevents admin logout)
 export const createEmployee = async (
   data: {
     email: string;
@@ -81,16 +81,19 @@ export const createEmployee = async (
       return null;
     }
 
-    // Create Auth user (this may temporarily sign in new user, but we ignore it)
+    // Create Auth user using SECONDARY auth instance (doesn't affect current user session)
     const userCredential = await createUserWithEmailAndPassword(
-      auth,
+      secondaryAuth,
       data.email.trim().toLowerCase(),
       '1234567'
     );
 
     const uid = userCredential.user.uid;
 
-    // Prepare data EXACTLY like your example (no 'id' field inside document)
+    // Sign out from secondary auth immediately (just cleanup, doesn't affect main auth)
+    await signOut(secondaryAuth);
+
+    // Prepare data
     const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`;
 
     const employeeData = {

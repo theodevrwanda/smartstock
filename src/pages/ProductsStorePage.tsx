@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Loader2, Download, CheckCircle, XCircle, ArrowUpDown } from 'lucide-react';
+import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Loader2, Download, CheckCircle, XCircle, ArrowUpDown, FileSpreadsheet, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +33,7 @@ import {
 } from '@/functions/store';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsStorePage: React.FC = () => {
   const { toast } = useToast();
@@ -160,6 +167,43 @@ const ProductsStorePage: React.FC = () => {
       setSortColumn(column);
       setSortDirection('asc');
     }
+  };
+
+  // Export handlers
+  const storeExportColumns: ExportColumn[] = [
+    { header: 'Product Name', key: 'productName', width: 25 },
+    { header: 'Category', key: 'category', width: 15 },
+    { header: 'Model', key: 'model', width: 15 },
+    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Branch', key: 'branchName', width: 20 },
+    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
+    { header: 'Status', key: 'status', width: 12 },
+    { header: 'Confirmed', key: 'confirmed', width: 10 },
+    { header: 'Added Date', key: 'addedDateFormatted', width: 15 },
+  ];
+
+  const getExportData = () => {
+    return sortedProducts.map(p => ({
+      productName: p.productName,
+      category: p.category,
+      model: p.model || '-',
+      quantity: p.quantity,
+      branchName: getBranchName(p.branch),
+      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
+      status: p.quantity === 0 ? 'Out of Stock' : p.quantity <= 5 ? 'Low Stock' : 'In Stock',
+      confirmed: p.confirm ? 'Yes' : 'No',
+      addedDateFormatted: p.addedDate ? new Date(p.addedDate).toLocaleDateString() : '-',
+    }));
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel(getExportData(), storeExportColumns, 'store-products');
+    toast({ title: 'Success', description: 'Exported to Excel' });
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF(getExportData(), storeExportColumns, 'store-products', 'Store Products Report');
+    toast({ title: 'Success', description: 'Exported to PDF' });
   };
 
   // Status based on quantity
@@ -321,10 +365,24 @@ const ProductsStorePage: React.FC = () => {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export to Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export to PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button onClick={() => setAddDialogOpen(true)} disabled={!userBranch}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Product {!userBranch && '(No Branch)'}
