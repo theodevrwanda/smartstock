@@ -255,7 +255,7 @@ const ReportsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Unified Table */}
+        {/* Unified Table - Real Data from DB */}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -326,12 +326,16 @@ const ReportsPage: React.FC = () => {
                         {p.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell className={getPriceColor(p.sellingPrice || p.costPrice)}>
-                      {(p.sellingPrice || p.costPrice).toLocaleString()} RWF
+                    <TableCell className={getPriceColor(p.costPrice)}>
+                      {p.costPrice.toLocaleString()} RWF
+                    </TableCell>
+                    <TableCell>
+                      {p.sellingPrice !== null 
+                        ? <span className={getPriceColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</span>
+                        : '-'}
                     </TableCell>
                     <TableCell className={getProfitColor(p.profitLoss)}>
-                      {p.profitLoss ? p.profitLoss.toLocaleString() : '-'} RWF
+                      {p.profitLoss !== null ? p.profitLoss.toLocaleString() + ' RWF' : '-'}
                     </TableCell>
                     <TableCell>{new Date(p.addedDate).toLocaleDateString()}</TableCell>
                     <TableCell>
