@@ -17,6 +17,7 @@ import axios from 'axios';
 // Extended User interface for auth context
 interface AuthUser extends User {
   businessId?: string;
+  businessName?: string;
   businessActive?: boolean;
 }
 

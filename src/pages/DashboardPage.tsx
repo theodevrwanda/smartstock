@@ -32,7 +32,8 @@ const DashboardPage: React.FC = () => {
       if (!user?.businessId) return;
       setLoading(true);
       try {
-        const data = await getDashboardStats(user.businessId, user.role, user.branch || null);
+        const branchId = typeof user.branch === 'string' ? user.branch : user.branch || null;
+        const data = await getDashboardStats(user.businessId, user.role, branchId);
         setStats(data);
       } catch (err) {
         toast({ title: 'Error', description: 'Failed to load dashboard data', variant: 'destructive' });

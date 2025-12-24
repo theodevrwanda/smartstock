@@ -33,7 +33,7 @@ const ProductsDeletedPage: React.FC = () => {
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
-  const userBranch = user?.branch || null;
+  const userBranch = typeof user?.branch === 'string' ? user.branch : null;
   const businessId = user?.businessId;
 
   const [deletedProducts, setDeletedProducts] = useState<DeletedProduct[]>([]);
@@ -92,7 +92,7 @@ const ProductsDeletedPage: React.FC = () => {
     load();
   }, [businessId, user?.role, userBranch]);
 
-  const getBranchName = (id: string) => branchMap.get(id) || 'Unknown';
+  const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 
   const categories = ['All', ...Array.from(new Set(deletedProducts.map(p => p.category)))];
 

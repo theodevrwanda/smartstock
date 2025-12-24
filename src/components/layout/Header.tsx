@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
-import { Bell, User as UserIcon, Moon, Sun, Menu } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, User as UserIcon, Moon, Sun, Menu, CloudOff, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
 import GlobalSearch from '@/components/GlobalSearch';
 import MobileMenu from './MobileMenu';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const { isOnline, pendingCount } = useOffline();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Derive fullName from firstName and lastName if fullName is not directly available
@@ -21,7 +24,7 @@ const Header: React.FC = () => {
     ? fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
     : 'OF';
 
-  // Use profileImage from user object, which is mapped from profilePhoto in backend
+  // Use profileImage from user object
   const profileImage = user?.profileImage || '';
 
   return (
@@ -45,6 +48,15 @@ const Header: React.FC = () => {
 
           {/* Right Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Online/Offline Status */}
+            <div className="flex items-center gap-1">
+              {isOnline ? (
+                <Wifi className="h-4 w-4 text-green-500" />
+              ) : (
+                <CloudOff className="h-4 w-4 text-red-500" />
+              )}
+            </div>
+
             {/* Theme Toggle */}
             <Button
               variant="ghost"
@@ -55,9 +67,17 @@ const Header: React.FC = () => {
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </Button>
 
-            {/* Notifications */}
+            {/* Notifications / Pending Changes */}
             <Button variant="ghost" size="sm" className="p-2 relative">
               <Bell size={20} />
+              {pendingCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                >
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </Badge>
+              )}
             </Button>
 
             {/* User Menu */}

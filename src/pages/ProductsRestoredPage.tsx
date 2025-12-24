@@ -31,7 +31,7 @@ const ProductsRestoredPage: React.FC = () => {
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
-  const userBranch = user?.branch || null;
+  const userBranch = typeof user?.branch === 'string' ? user.branch : null;
   const businessId = user?.businessId;
 
   const [restoredProducts, setRestoredProducts] = useState<RestoredProduct[]>([]);
@@ -97,7 +97,7 @@ const ProductsRestoredPage: React.FC = () => {
     load();
   }, [businessId, user?.role, userBranch]);
 
-  const getBranchName = (id: string) => branchMap.get(id) || 'Unknown';
+  const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 
   const categories = ['All', ...Array.from(new Set(restoredProducts.map(p => p.category)))];
 

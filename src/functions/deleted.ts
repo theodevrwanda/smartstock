@@ -1,4 +1,4 @@
-// src/functions/deleted.ts (Updated with Bulk Restore)
+// src/functions/deleted.ts
 
 import {
   collection,
@@ -132,7 +132,7 @@ export const bulkRestoreDeletedProducts = async (
       toast.success(`Restored ${successCount} product(s)`);
     }
     if (failedCount > 0) {
-      toast({ title: 'Warning', description: `${failedCount} product(s) could not be restored (branch mismatch)`, variant: 'destructive' });
+      toast.warning(`${failedCount} product(s) could not be restored (branch mismatch)`);
     }
 
     return { successCount, failedCount };
