@@ -7,7 +7,7 @@ interface AuthLayoutProps {
 
 const imageUrls = [
   'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200&h=250&fit=crop',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=300&fit=crop',
+  'https://www.dropguys.com/cdn/shop/products/screen-protector-popup.png?v=1620120201',
   'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=200&h=280&fit=crop',
   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=200&h=260&fit=crop',
   'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=200&h=240&fit=crop',
@@ -15,9 +15,9 @@ const imageUrls = [
   'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=270&fit=crop',
   'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=200&h=250&fit=crop',
   'https://images.unsplash.com/photo-1552664730-d307ca884978?w=200&h=280&fit=crop',
-  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=200&h=260&fit=crop',
+  'https://techcrunch.com/wp-content/uploads/2021/10/CMC_0556.jpg',
   'https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=200&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1524749292158-7540c2494485?w=200&h=240&fit=crop',
+  'https://techstreet.ae/cdn/shop/files/ClearScreenProtector04_c2750e47-2adf-4869-ac94-d951df6e1c24.jpg?v=1694792807&width=2048',
 ];
 
 export function AuthLayout({ children }: AuthLayoutProps) {
