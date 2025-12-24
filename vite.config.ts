@@ -4,20 +4,11 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-
-  plugins: [
+export default defineConfig(({ mode }) => {
+  const plugins = [
     react(),
-    mode === "development" && componentTagger(),
-
     VitePWA({
       registerType: "autoUpdate",
-
-      // ensure SW is generated correctly
       strategies: "generateSW",
 
       includeAssets: ["pixelmart.png"],
@@ -25,7 +16,7 @@ export default defineConfig(({ mode }) => ({
       manifest: {
         name: "PixelMart",
         short_name: "PixelMart",
-        description: "Offline-first inventory system",
+        description: "Offline-first stock management system",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
@@ -43,12 +34,6 @@ export default defineConfig(({ mode }) => ({
             type: "image/png",
             purpose: "any maskable",
           },
-          {
-            src: "/pixelmart.png",
-            sizes: "1024x1024",
-            type: "image/png",
-            purpose: "any maskable",
-          },
         ],
       },
 
@@ -56,16 +41,29 @@ export default defineConfig(({ mode }) => ({
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-
-        // 🔥 force new assets to be picked up
         navigateFallback: "/index.html",
+        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
       },
     }),
-  ].filter(Boolean),
+  ];
 
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+  // Only add tagger in development
+  if (mode === "development") {
+    plugins.push(componentTagger());
+  }
+
+  return {
+    server: {
+      host: "::",
+      port: 8080,
     },
-  },
-}));
+
+    plugins,
+
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+  };
+});
