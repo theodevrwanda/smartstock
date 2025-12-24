@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Loader2, Download, CheckCircle, XCircle, ArrowUpDown, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getProducts,
@@ -29,14 +28,15 @@ import {
   updateProduct,
   sellProduct,
   deleteProduct,
+  syncOfflineOperations,
   Product,
+  toast, // ← Imported toast from store.ts
 } from '@/functions/store';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsStorePage: React.FC = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
@@ -49,6 +49,7 @@ const ProductsStorePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
@@ -70,7 +71,7 @@ const ProductsStorePage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  // Form & current data
+  // Current product & forms
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
@@ -88,7 +89,38 @@ const ProductsStorePage: React.FC = () => {
     deadline: '',
   });
 
-  // Load data
+  // Online/Offline Detection + Toast Notifications
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast.success('📶 Back Online – Syncing your offline changes...');
+      syncOfflineOperations().then(() => {
+        if (businessId) {
+          getProducts(businessId, user?.role || 'staff', userBranch).then(setProducts);
+        }
+      });
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning('⚠️ You are Offline – Working locally. Changes will sync when you reconnect.');
+    };
+
+    // Initial check
+    if (!navigator.onLine) {
+      handleOffline();
+    }
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [businessId, user?.role, userBranch]);
+
+  // Load Products & Branches
   useEffect(() => {
     if (!businessId) {
       setLoading(false);
@@ -109,15 +141,19 @@ const ProductsStorePage: React.FC = () => {
         const map = new Map<string, string>();
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
-      } catch {
-        toast({ title: 'Error', description: 'Failed to load products', variant: 'destructive' });
+
+        if (!isOnline) {
+          toast.info('Offline Mode – Loaded local data. Changes will sync when online.');
+        }
+      } catch (err) {
+        toast.warning(isOnline ? 'Failed to load latest data' : 'Using cached local data (offline)');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [businessId, user?.role, userBranch]);
+  }, [businessId, user?.role, userBranch, isOnline]);
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 
@@ -154,9 +190,7 @@ const ProductsStorePage: React.FC = () => {
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
 
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+      return (aVal < bVal ? -1 : 1) * (sortDirection === 'asc' ? 1 : -1);
     });
   }, [filteredProducts, sortColumn, sortDirection]);
 
@@ -169,7 +203,7 @@ const ProductsStorePage: React.FC = () => {
     }
   };
 
-  // Export handlers
+  // Export
   const storeExportColumns: ExportColumn[] = [
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
@@ -198,29 +232,21 @@ const ProductsStorePage: React.FC = () => {
 
   const handleExportExcel = () => {
     exportToExcel(getExportData(), storeExportColumns, 'store-products');
-    toast({ title: 'Success', description: 'Exported to Excel' });
+    toast.success('Exported to Excel');
   };
 
   const handleExportPDF = () => {
     exportToPDF(getExportData(), storeExportColumns, 'store-products', 'Store Products Report');
-    toast({ title: 'Success', description: 'Exported to PDF' });
+    toast.success('Exported to PDF');
   };
 
-  // Status based on quantity
+  // UI Helpers
   const getStatusBadge = (quantity: number) => {
-    if (quantity === 0) {
-      return <Badge variant="destructive">OutStock</Badge>;
-    }
-    if (quantity <= 5) {
-      return <Badge variant="secondary">LowStock</Badge>;
-    }
-    if (quantity <= 20) {
-      return <Badge variant="default">InStock</Badge>;
-    }
-    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">ExcellentStock</Badge>;
+    if (quantity === 0) return <Badge variant="destructive">Out of Stock</Badge>;
+    if (quantity <= 5) return <Badge variant="secondary">Low Stock</Badge>;
+    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">In Stock</Badge>;
   };
 
-  // Color for cost price
   const getPriceColor = (price: number) => {
     if (price < 100000) return 'text-blue-600 font-bold';
     if (price < 500000) return 'text-green-600 font-bold';
@@ -229,107 +255,88 @@ const ProductsStorePage: React.FC = () => {
     return 'text-red-600 font-bold';
   };
 
+  // Handlers
   const handleAddProduct = async () => {
     if (!userBranch) {
-      toast({ title: 'Error', description: 'You are not assigned to any branch', variant: 'destructive' });
+      toast.error('You are not assigned to any branch');
       return;
     }
-
     if (!newProduct.productName || !newProduct.category || newProduct.costPrice <= 0 || newProduct.quantity <= 0) {
-      toast({ title: 'Error', description: 'Please fill all required fields correctly', variant: 'destructive' });
+      toast.error('Please fill all required fields correctly');
       return;
     }
 
     setActionLoading(true);
-    try {
-      const result = await addOrUpdateProduct({
-        productName: newProduct.productName,
-        category: newProduct.category,
-        model: newProduct.model || undefined,
-        costPrice: newProduct.costPrice,
-        quantity: newProduct.quantity,
-        branch: userBranch,
-        businessId: businessId!,
-        confirm: isAdmin,
-      });
+    const result = await addOrUpdateProduct({
+      ...newProduct,
+      branch: userBranch,
+      businessId: businessId!,
+      confirm: isAdmin,
+    });
 
-      if (result) {
-        setProducts(prev => {
-          const existing = prev.find(p => p.id === result.id);
-          if (existing) {
-            return prev.map(p => p.id === result.id ? result : p);
-          }
-          return [...prev, result];
-        });
-        toast({ title: 'Success', description: 'Product added/updated in store' });
-        setAddDialogOpen(false);
-        setNewProduct({ productName: '', category: '', model: '', costPrice: 0, quantity: 1 });
-      }
-    } finally {
-      setActionLoading(false);
+    if (result) {
+      setProducts(prev => {
+        const existing = prev.find(p => p.id === result.id);
+        if (existing) return prev.map(p => p.id === result.id ? result : p);
+        return [...prev, result];
+      });
+      toast.success(isOnline ? 'Product added successfully' : 'Product added locally – will sync when online');
+      setAddDialogOpen(false);
+      setNewProduct({ productName: '', category: '', model: '', costPrice: 0, quantity: 1 });
     }
+    setActionLoading(false);
   };
 
   const handleUpdateProduct = async () => {
     if (!currentProduct) return;
     setActionLoading(true);
-    try {
-      const success = await updateProduct(currentProduct.id, currentProduct);
-      if (success) {
-        setProducts(prev => prev.map(p => p.id === currentProduct.id ? currentProduct : p));
-        toast({ title: 'Success', description: 'Product updated' });
-        setEditDialogOpen(false);
-      }
-    } finally {
-      setActionLoading(false);
+    const success = await updateProduct(currentProduct.id!, currentProduct);
+    if (success) {
+      setProducts(prev => prev.map(p => p.id === currentProduct.id ? currentProduct : p));
+      toast.success(isOnline ? 'Product updated' : 'Product updated locally – will sync when online');
+      setEditDialogOpen(false);
     }
+    setActionLoading(false);
   };
 
   const handleSellProduct = async () => {
     if (!currentProduct || sellForm.quantity > currentProduct.quantity || sellForm.sellingPrice <= 0) {
-      toast({ title: 'Error', description: 'Invalid quantity or price', variant: 'destructive' });
+      toast.error('Invalid quantity or price');
       return;
     }
 
     setActionLoading(true);
-    try {
-      const success = await sellProduct(currentProduct.id, sellForm.quantity, sellForm.sellingPrice, sellForm.deadline, userBranch);
-      if (success) {
-        setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - sellForm.quantity } : p));
-        toast({ title: 'Success', description: `Sold ${sellForm.quantity} unit(s)` });
-        setSellDialogOpen(false);
-        setSellForm({ quantity: 1, sellingPrice: 0, deadline: '' });
-      }
-    } finally {
-      setActionLoading(false);
+    const success = await sellProduct(currentProduct.id!, sellForm.quantity, sellForm.sellingPrice, sellForm.deadline, userBranch);
+    if (success) {
+      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - sellForm.quantity } : p));
+      toast.success(isOnline ? `Sold ${sellForm.quantity} unit(s)` : `Sale recorded locally – will sync when online`);
+      setSellDialogOpen(false);
+      setSellForm({ quantity: 1, sellingPrice: 0, deadline: '' });
     }
+    setActionLoading(false);
   };
 
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
     setActionLoading(true);
-    try {
-      await deleteProduct(productToDelete);
+    const success = await deleteProduct(productToDelete);
+    if (success) {
       setProducts(prev => prev.filter(p => p.id !== productToDelete));
-      toast({ title: 'Success', description: 'Product marked as deleted' });
+      toast.success(isOnline ? 'Product marked as deleted' : 'Product marked as deleted locally – will sync when online');
       setDeleteConfirmOpen(false);
-    } finally {
-      setActionLoading(false);
     }
+    setActionLoading(false);
   };
 
-  const handleToggleConfirm = async (id: string, currentConfirm: boolean) => {
+  const handleToggleConfirm = async (id: string, current: boolean) => {
     if (!isAdmin) return;
     setActionLoading(true);
-    try {
-      const success = await updateProduct(id, { confirm: !currentConfirm });
-      if (success) {
-        setProducts(prev => prev.map(p => p.id === id ? { ...p, confirm: !currentConfirm } : p));
-        toast({ title: 'Success', description: `Product ${!currentConfirm ? 'confirmed' : 'unconfirmed'}` });
-      }
-    } finally {
-      setActionLoading(false);
+    const success = await updateProduct(id, { confirm: !current });
+    if (success) {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, confirm: !current } : p));
+      toast.success(`Product ${!current ? 'confirmed' : 'unconfirmed'}`);
     }
+    setActionLoading(false);
   };
 
   if (loading) {
@@ -337,16 +344,10 @@ const ProductsStorePage: React.FC = () => {
       <div className="space-y-6 p-6">
         <Skeleton className="h-12 w-96" />
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
         </div>
         <div className="space-y-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
         </div>
       </div>
     );
@@ -355,13 +356,18 @@ const ProductsStorePage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Store Products" description="Manage store inventory" />
+
       <div className="space-y-6 p-4 md:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Store Products</h1>
             <p className="text-muted-foreground">
-              {isAdmin ? 'All products across branches' : userBranch ? `Products in ${getBranchName(userBranch)}` : 'You are not assigned to any branch'}
+              {isAdmin
+                ? 'All products across branches'
+                : userBranch
+                ? `Products in ${getBranchName(userBranch)}`
+                : 'You are not assigned to any branch'}
             </p>
           </div>
           <div className="flex gap-3">
@@ -390,9 +396,8 @@ const ProductsStorePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Professional Filter Bar at Top */}
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
-          {/* Search */}
           <div className="relative col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
@@ -403,72 +408,37 @@ const ProductsStorePage: React.FC = () => {
             />
           </div>
 
-          {/* Category */}
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Categories</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
+              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
 
-          {/* Branch - Admin Only */}
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Branches" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Branches</SelectItem>
-                {branches.map(b => (
-                  <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
-                ))}
+                {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
 
-          {/* Price Range */}
           <div className="grid grid-cols-2 gap-2">
-            <Input
-              type="number"
-              placeholder="Min Price"
-              value={minPrice}
-              onChange={e => setMinPrice(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Max Price"
-              value={maxPrice}
-              onChange={e => setMaxPrice(e.target.value)}
-            />
+            <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+            <Input type="number" placeholder="Max Price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
           </div>
 
-          {/* Quantity Range */}
           <div className="grid grid-cols-2 gap-2">
-            <Input
-              type="number"
-              placeholder="Min Qty"
-              value={minQty}
-              onChange={e => setMinQty(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Max Qty"
-              value={maxQty}
-              onChange={e => setMaxQty(e.target.value)}
-            />
+            <Input type="number" placeholder="Min Qty" value={minQty} onChange={e => setMinQty(e.target.value)} />
+            <Input type="number" placeholder="Max Qty" value={maxQty} onChange={e => setMaxQty(e.target.value)} />
           </div>
 
-          {/* Confirmation Filter - Admin Only */}
           {isAdmin && (
             <Select value={confirmFilter} onValueChange={setConfirmFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Confirmation" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Confirmation" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All</SelectItem>
                 <SelectItem value="Confirmed">Confirmed Only</SelectItem>
@@ -480,47 +450,26 @@ const ProductsStorePage: React.FC = () => {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <Table className="w-full">
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">
-                    Product Name
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">
-                    Category
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Model</TableHead>
-                <TableHead className="cursor-pointer text-center" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">
-                    Quantity
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
+                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 {isAdmin && (
-                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">
-                      Branch
-                      <ArrowUpDown className="h-4 w-4" />
-                    </div>
+                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
+                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                   </TableHead>
                 )}
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">
-                    Cost Price
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
-                  <div className="flex items-center gap-1">
-                    Added At
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Confirmed</TableHead>
@@ -530,7 +479,7 @@ const ProductsStorePage: React.FC = () => {
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 10 : 9} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-muted-foreground">
                     No products found matching your filters.
                   </TableCell>
                 </TableRow>
@@ -540,30 +489,19 @@ const ProductsStorePage: React.FC = () => {
                     <TableCell className="font-medium">{p.productName}</TableCell>
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="default">
-                        {p.quantity}
-                      </Badge>
-                    </TableCell>
+                    <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
                     {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
-                    <TableCell className={getPriceColor(p.costPrice)}>
-                      {p.costPrice.toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell>{new Date(p.addedDate).toLocaleDateString()}</TableCell>
+                    <TableCell className={getPriceColor(p.costPrice)}>{p.costPrice.toLocaleString()} RWF</TableCell>
                     <TableCell>{getStatusBadge(p.quantity)}</TableCell>
                     <TableCell>
                       <div className="flex justify-center">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleToggleConfirm(p.id, p.confirm)}
+                          onClick={() => handleToggleConfirm(p.id!, p.confirm)}
                           disabled={!isAdmin || actionLoading}
                         >
-                          {p.confirm ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <XCircle className="h-5 w-5 text-red-600" />
-                          )}
+                          {p.confirm ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
                         </Button>
                       </div>
                     </TableCell>
@@ -583,7 +521,7 @@ const ProductsStorePage: React.FC = () => {
                           </Button>
                         )}
                         {isAdmin && (
-                          <Button size="sm" variant="ghost" onClick={() => { setProductToDelete(p.id); setDeleteConfirmOpen(true); }}>
+                          <Button size="sm" variant="ghost" onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         )}
@@ -608,52 +546,61 @@ const ProductsStorePage: React.FC = () => {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label>Product Name *</Label>
-                <Input
-                  value={newProduct.productName}
-                  onChange={e => setNewProduct(prev => ({ ...prev, productName: e.target.value }))}
-                  placeholder="Enter product name"
+                <Input 
+                  value={newProduct.productName} 
+                  onChange={e => setNewProduct(prev => ({ ...prev, productName: e.target.value }))} 
+                  placeholder="Enter product name" 
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Category *</Label>
-                <Input
-                  value={newProduct.category}
-                  onChange={e => setNewProduct(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="Enter category"
+                <Input 
+                  value={newProduct.category} 
+                  onChange={e => setNewProduct(prev => ({ ...prev, category: e.target.value }))} 
+                  placeholder="Enter category" 
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Model (optional)</Label>
-                <Input
-                  value={newProduct.model}
-                  onChange={e => setNewProduct(prev => ({ ...prev, model: e.target.value }))}
-                  placeholder="Enter model"
+                <Input 
+                  value={newProduct.model} 
+                  onChange={e => setNewProduct(prev => ({ ...prev, model: e.target.value }))} 
+                  placeholder="Enter model" 
                 />
               </div>
+              
               <div className="grid gap-2">
                 <Label>Cost Price (RWF) *</Label>
-                <Input
-                  type="number"
-                  value={newProduct.costPrice}
-                  onChange={e => setNewProduct(prev => ({ ...prev, costPrice: Number(e.target.value) || 0 }))}
-                  placeholder="Enter cost price"
+                <Input 
+                  type="number" 
+                  value={newProduct.costPrice || ''} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewProduct(prev => ({ ...prev, costPrice: val === '' ? '' : Number(val) }))
+                  }} 
+                  placeholder="Enter cost price" 
                 />
               </div>
+
               <div className="grid gap-2">
                 <Label>Quantity *</Label>
-                <Input
-                  type="number"
-                  value={newProduct.quantity}
-                  onChange={e => setNewProduct(prev => ({ ...prev, quantity: Number(e.target.value) || 1 }))}
-                  placeholder="Enter product quantity"
+                <Input 
+                  type="number" 
+                  value={newProduct.quantity || ''} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewProduct(prev => ({ ...prev, quantity: val === '' ? '' : Number(val) }))
+                  }} 
+                  placeholder="Enter quantity" 
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddProduct} disabled={actionLoading}>
+              <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={handleAddProduct} 
+                disabled={actionLoading || !newProduct.productName || !newProduct.costPrice || !newProduct.quantity}
+              >
                 {actionLoading ? 'Adding...' : 'Add Product'}
               </Button>
             </DialogFooter>
@@ -662,65 +609,30 @@ const ProductsStorePage: React.FC = () => {
 
         {/* Edit Product Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Product</DialogTitle>
-            </DialogHeader>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit Product</DialogTitle></DialogHeader>
             {currentProduct && (
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label>Product Name</Label>
-                  <Input
-                    value={currentProduct.productName}
-                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, productName: e.target.value } : null)}
-                  />
+                  <Input value={currentProduct.productName} onChange={e => setCurrentProduct(prev => prev ? { ...prev, productName: e.target.value } : null)} />
                 </div>
                 <div className="grid gap-2">
                   <Label>Category</Label>
-                  <Input
-                    value={currentProduct.category}
-                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, category: e.target.value } : null)}
-                  />
+                  <Input value={currentProduct.category} onChange={e => setCurrentProduct(prev => prev ? { ...prev, category: e.target.value } : null)} />
                 </div>
                 <div className="grid gap-2">
                   <Label>Model</Label>
-                  <Input
-                    value={currentProduct.model || ''}
-                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, model: e.target.value } : null)}
-                  />
+                  <Input value={currentProduct.model || ''} onChange={e => setCurrentProduct(prev => prev ? { ...prev, model: e.target.value } : null)} />
                 </div>
                 <div className="grid gap-2">
                   <Label>Cost Price</Label>
-                  <Input
-                    type="number"
-                    value={currentProduct.costPrice}
-                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Branch</Label>
-                  <Select
-                    value={currentProduct.branch}
-                    onValueChange={v => setCurrentProduct(prev => prev ? { ...prev, branch: v } : null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {branches.map(b => (
-                        <SelectItem key={b.id} value={b.id!}>
-                          {b.branchName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input type="number" value={currentProduct.costPrice} onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)} />
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleUpdateProduct} disabled={actionLoading}>
                 {actionLoading ? 'Saving...' : 'Save Changes'}
               </Button>
@@ -731,51 +643,54 @@ const ProductsStorePage: React.FC = () => {
         {/* Sell Product Dialog */}
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Sell Product</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Sell Product</DialogTitle></DialogHeader>
             {currentProduct && (
               <div className="space-y-4 py-4">
                 <p className="font-medium">{currentProduct.productName}</p>
                 <p className="text-sm text-muted-foreground">Available: {currentProduct.quantity}</p>
+                
                 <div className="grid gap-2">
                   <Label>Quantity to Sell</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={currentProduct.quantity}
-                    value={sellForm.quantity}
-                    onChange={e => setSellForm(s => ({ ...s, quantity: Number(e.target.value) || 1 }))}
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max={currentProduct.quantity} 
+                    placeholder="Enter quantity"
+                    value={sellForm.quantity || ''} 
+                    onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} 
                   />
                 </div>
+
                 <div className="grid gap-2">
                   <Label>Selling Price (RWF)</Label>
-                  <Input
-                    type="number"
-                    value={sellForm.sellingPrice}
-                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: Number(e.target.value) || 0 }))}
+                  <Input 
+                    type="number" 
+                    placeholder="Enter selling price"
+                    value={sellForm.sellingPrice || ''} 
+                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: e.target.value === '' ? '' : Number(e.target.value) }))} 
                   />
                 </div>
+
                 <div className="grid gap-2">
                   <Label>Return Deadline (optional)</Label>
-                  <Input
-                    type="date"
-                    value={sellForm.deadline}
-                    onChange={e => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+                  <Input 
+                    type="date" 
+                    value={sellForm.deadline} 
+                    onChange={e => setSellForm(s => ({ ...s, deadline: e.target.value }))} 
                   />
                 </div>
+
                 {sellForm.sellingPrice > 0 && sellForm.quantity > 0 && (
-                  <p className="font-bold">
-                    Total: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF
-                  </p>
+                  <p className="font-bold">Total: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF</p>
                 )}
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSellDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSellProduct} disabled={actionLoading}>
+              <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={handleSellProduct} 
+                disabled={actionLoading || !sellForm.quantity || !sellForm.sellingPrice}
+              >
                 {actionLoading ? 'Selling...' : 'Sell'}
               </Button>
             </DialogFooter>
@@ -785,9 +700,7 @@ const ProductsStorePage: React.FC = () => {
         {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Product Details</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Product Details</DialogTitle></DialogHeader>
             {currentProduct && (
               <div className="space-y-2 py-4">
                 <p><strong>Name:</strong> {currentProduct.productName}</p>
@@ -802,9 +715,7 @@ const ProductsStorePage: React.FC = () => {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
-                Close
-              </Button>
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -819,9 +730,7 @@ const ProductsStorePage: React.FC = () => {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>
                 {actionLoading ? 'Deleting...' : 'Delete'}
               </Button>
