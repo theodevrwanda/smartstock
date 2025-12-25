@@ -66,7 +66,6 @@ export const syncOfflineOperations = async (): Promise<void> => {
   try {
     for (const op of queue) {
       if (op.type === 'addOrUpdate') {
-        // Reconstruct logic similar to addOrUpdateProduct
         const productsRef = collection(db, 'products');
         const normalizedName = op.data.productName.trim().toLowerCase();
         const normalizedCategory = op.data.category.trim().toLowerCase();
@@ -148,7 +147,7 @@ export const syncOfflineOperations = async (): Promise<void> => {
   }
 };
 
-// Get products – works offline thanks to persistence
+// Get products – only confirmed or all depending on role
 export const getProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -174,7 +173,7 @@ export const getProducts = async (
   }
 };
 
-// Add or update product – queues if offline
+// Add or update product – unchanged
 export const addOrUpdateProduct = async (
   data: {
     productName: string;
@@ -195,7 +194,6 @@ export const addOrUpdateProduct = async (
   const isOnline = navigator.onLine;
 
   if (!isOnline) {
-    // Queue operation
     const queue = getOfflineQueue();
     queue.push({
       type: 'addOrUpdate',
@@ -217,7 +215,6 @@ export const addOrUpdateProduct = async (
     };
   }
 
-  // Online: normal flow
   try {
     const productsRef = collection(db, 'products');
     const normalizedName = data.productName.trim().toLowerCase();
@@ -286,7 +283,7 @@ export const addOrUpdateProduct = async (
   }
 };
 
-// Sell product – queues if offline
+// UPDATED: sellProduct – now blocks sale if product is not confirmed
 export const sellProduct = async (
   id: string,
   quantity: number,
@@ -297,7 +294,6 @@ export const sellProduct = async (
   const isOnline = navigator.onLine;
 
   if (!isOnline) {
-    // Get current product from cache
     const productDoc = await getDoc(doc(db, 'products', id));
     if (!productDoc.exists()) {
       toast.error('Product not found');
@@ -305,12 +301,17 @@ export const sellProduct = async (
     }
     const product = productDoc.data() as Product;
 
+    // Even offline: block sale if not confirmed
+    if (!product.confirm) {
+      toast.error('This product is not confirmed. Please wait for admin confirmation.');
+      return false;
+    }
+
     if (quantity > product.quantity) {
       toast.error('Not enough stock');
       return false;
     }
 
-    // Queue sell
     const queue = getOfflineQueue();
     queue.push({
       type: 'sell',
@@ -327,7 +328,7 @@ export const sellProduct = async (
     return true;
   }
 
-  // Online: normal sell logic
+  // Online: full validation
   try {
     const originalDoc = doc(db, 'products', id);
     const originalSnap = await getDoc(originalDoc);
@@ -339,13 +340,24 @@ export const sellProduct = async (
 
     const original = originalSnap.data() as Product;
 
+    // NEW: Block sale if not confirmed
+    if (!original.confirm) {
+      toast.error('This product is not confirmed. Please wait for admin confirmation.');
+      return false;
+    }
+
     if (userBranch && original.branch !== userBranch) {
-      toast.error('Branch mismatch');
+      toast.error('You can only sell products from your assigned branch');
       return false;
     }
 
     if (quantity > original.quantity) {
       toast.error('Not enough stock');
+      return false;
+    }
+
+    if (sellingPrice <= 0) {
+      toast.error('Selling price must be greater than 0');
       return false;
     }
 
@@ -372,12 +384,12 @@ export const sellProduct = async (
     return true;
   } catch (error) {
     console.error('Sale failed:', error);
-    toast.error('Sale failed');
+    toast.error('Sale failed. Please try again.');
     return false;
   }
 };
 
-// Other functions (update, delete) can also be enhanced, but for brevity, they remain online-only or can be queued similarly
+// Other functions unchanged
 export const updateProduct = async (id: string, updates: Partial<Product>): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'products', id), {
@@ -406,4 +418,5 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
     return false;
   }
 };
+
 export { toast } from 'sonner';
