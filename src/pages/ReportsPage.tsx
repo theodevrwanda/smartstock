@@ -215,7 +215,7 @@ const ReportsPage: React.FC = () => {
             />
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as typeof statusFilter)}>
             <SelectTrigger>
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
