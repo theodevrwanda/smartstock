@@ -576,7 +576,7 @@ const ProductsStorePage: React.FC = () => {
                   value={newProduct.costPrice || ''} 
                   onChange={e => {
                     const val = e.target.value;
-                    setNewProduct(prev => ({ ...prev, costPrice: val === '' ? '' : Number(val) }))
+                    setNewProduct(prev => ({ ...prev, costPrice: val === '' ? 0 : Number(val) }))
                   }} 
                   placeholder="Enter cost price" 
                 />
@@ -589,7 +589,7 @@ const ProductsStorePage: React.FC = () => {
                   value={newProduct.quantity || ''} 
                   onChange={e => {
                     const val = e.target.value;
-                    setNewProduct(prev => ({ ...prev, quantity: val === '' ? '' : Number(val) }))
+                    setNewProduct(prev => ({ ...prev, quantity: val === '' ? 0 : Number(val) }))
                   }} 
                   placeholder="Enter quantity" 
                 />
@@ -657,7 +657,7 @@ const ProductsStorePage: React.FC = () => {
                     max={currentProduct.quantity} 
                     placeholder="Enter quantity"
                     value={sellForm.quantity || ''} 
-                    onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} 
+                    onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? 0 : Number(e.target.value) }))} 
                   />
                 </div>
 
@@ -667,7 +667,7 @@ const ProductsStorePage: React.FC = () => {
                     type="number" 
                     placeholder="Enter selling price"
                     value={sellForm.sellingPrice || ''} 
-                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: e.target.value === '' ? '' : Number(e.target.value) }))} 
+                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: e.target.value === '' ? 0 : Number(e.target.value) }))} 
                   />
                 </div>
 

@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
 
   // Only add tagger in development
   if (mode === "development") {
-    plugins.push(componentTagger());
+    plugins.push(componentTagger() as any);
   }
 
   return {
