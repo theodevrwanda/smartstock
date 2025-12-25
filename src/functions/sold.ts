@@ -28,7 +28,7 @@ export interface SoldProduct {
   businessId: string;
 }
 
-// Get sold products - admin sees all, staff sees only their branch
+// Get sold products - strict branch access control
 export const getSoldProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -36,9 +36,23 @@ export const getSoldProducts = async (
 ): Promise<SoldProduct[]> => {
   try {
     const productsRef = collection(db, 'products');
-    let q = query(productsRef, where('businessId', '==', businessId), where('status', '==', 'sold'));
 
-    if (userRole === 'staff' && branchId) {
+    // Base query: sold products for this business
+    let q = query(
+      productsRef,
+      where('businessId', '==', businessId),
+      where('status', '==', 'sold')
+    );
+
+    if (userRole === 'admin') {
+      // Admin sees all sold products across all branches → no filter
+    } else if (userRole === 'staff') {
+      // Staff with no branch → no access to any sold data
+      if (!branchId) {
+        return []; // Explicitly return empty
+      }
+
+      // Staff with branch → only their branch
       q = query(q, where('branch', '==', branchId));
     }
 
@@ -54,7 +68,7 @@ export const getSoldProducts = async (
   }
 };
 
-// Delete sold product (admin only)
+// Delete sold product (admin only - no change needed here)
 export const deleteSoldProduct = async (id: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'products', id));
@@ -67,7 +81,7 @@ export const deleteSoldProduct = async (id: string): Promise<boolean> => {
   }
 };
 
-// Update sold product details (admin only)
+// Update sold product details (admin only - no change needed)
 export const updateSoldProduct = async (
   id: string,
   updates: Partial<SoldProduct>
@@ -86,7 +100,7 @@ export const updateSoldProduct = async (
   }
 };
 
-// Restore sold product - reduce qty, if 0 delete sold, create restored in products
+// Restore sold product - with branch check (already good, minor comment update)
 export const restoreSoldProduct = async (
   id: string,
   restoreQty: number,
@@ -105,8 +119,9 @@ export const restoreSoldProduct = async (
 
     const sold = soldSnap.data() as SoldProduct;
 
-    if (userBranch && sold.branch !== userBranch && !isAdmin) {
-      toast.error('Cannot restore - branch mismatch');
+    // Non-admin staff can only restore from their own branch
+    if (!isAdmin && userBranch && sold.branch !== userBranch) {
+      toast.error('Cannot restore - you can only restore products from your branch');
       return false;
     }
 
@@ -121,10 +136,11 @@ export const restoreSoldProduct = async (
       return false;
     }
 
-    // Create restored product
+    // Create restored entry
     const restoredRef = doc(collection(db, 'products'));
     await setDoc(restoredRef, {
       ...sold,
+      id: restoredRef.id,
       status: 'restored',
       restoreComment: comment,
       quantity: restoreQty,
@@ -132,10 +148,9 @@ export const restoreSoldProduct = async (
       updatedAt: new Date().toISOString(),
     });
 
-    // Update sold qty
+    // Update or delete original sold record
     const remainingQty = sold.quantity - restoreQty;
     if (remainingQty === 0) {
-      // Delete if 0
       await deleteDoc(soldDoc);
     } else {
       await updateDoc(soldDoc, {
@@ -152,4 +167,5 @@ export const restoreSoldProduct = async (
     return false;
   }
 };
+
 export { toast } from 'sonner';

@@ -147,7 +147,7 @@ export const syncOfflineOperations = async (): Promise<void> => {
   }
 };
 
-// Get products – only confirmed or all depending on role
+// Get products – strict branch access control
 export const getProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -155,9 +155,23 @@ export const getProducts = async (
 ): Promise<Product[]> => {
   try {
     const productsRef = collection(db, 'products');
-    let q = query(productsRef, where('businessId', '==', businessId), where('status', '==', 'store'));
 
-    if (userRole === 'staff' && branchId) {
+    // Base query: only in-store products for this business
+    let q = query(
+      productsRef,
+      where('businessId', '==', businessId),
+      where('status', '==', 'store')
+    );
+
+    if (userRole === 'admin') {
+      // Admin sees all products across all branches → no additional filter
+    } else if (userRole === 'staff') {
+      // Staff with no branch assigned → no access to any data
+      if (!branchId) {
+        return []; // Explicitly return empty array
+      }
+
+      // Staff with branch → filter only their branch
       q = query(q, where('branch', '==', branchId));
     }
 
