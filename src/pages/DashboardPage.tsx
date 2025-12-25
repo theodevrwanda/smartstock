@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { 
   Package, Layers, Box, Clock, PlusCircle, RefreshCw, 
   Archive, AlertTriangle, XCircle, TrendingUp, TrendingDown, 
-  CheckCircle, Zap, ShieldCheck 
+  CheckCircle, Zap, ShieldCheck, Hourglass, DollarSign
 } from 'lucide-react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +56,7 @@ const DashboardPage: React.FC = () => {
             ))}
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(12)].map((_, i) => (
+            {[...Array(16)].map((_, i) => (
               <Skeleton key={i} className="h-32 rounded-lg" />
             ))}
           </div>
@@ -72,7 +72,7 @@ const DashboardPage: React.FC = () => {
       <SEOHelmet title="Dashboard - Pixelmart EMS" description="Inventory Management" />
 
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] p-4 md:p-8 space-y-8 transition-colors duration-300">
-        {/* Header Section */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
@@ -91,28 +91,35 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Primary Row: Essential Stats */}
+        {/* Primary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <BigProCard title="Total Products" value={stats.totalProducts} subtitle="All products" icon={<Package />} color="indigo" />
+          <BigProCard title="Categories" value={stats.totalCategories} subtitle="Unique categories" icon={<Layers />} color="blue" />
+          <BigProCard title="Models" value={stats.totalModels} subtitle="Unique models" icon={<Box />} color="violet" />
+        </div>
+
+        {/* Financial Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <BigProCard 
-            title="Total Products" 
-            value={stats.totalProducts} 
-            subtitle="All products" 
-            icon={<Package />} 
-            color="indigo" 
+            title="Net Profit" 
+            value={stats.totalNetProfit.toLocaleString()} 
+            subtitle="Total RWF" 
+            icon={<DollarSign />} 
+            color={stats.totalNetProfit >= 0 ? "green" : "red"} 
           />
           <BigProCard 
-            title="Categories" 
-            value={stats.totalCategories} 
-            subtitle="Unique categories" 
-            icon={<Layers />} 
+            title="Stock Value" 
+            value={stats.totalStockValue.toLocaleString()} 
+            subtitle="Confirmed RWF" 
+            icon={<Package />} 
             color="blue" 
           />
           <BigProCard 
-            title="Models" 
-            value={stats.totalModels} 
-            subtitle="Unique models" 
-            icon={<Box />} 
-            color="violet" 
+            title="Total Loss" 
+            value={stats.totalLoss.toLocaleString()} 
+            subtitle="From Sales RWF" 
+            icon={<DollarSign />} 
+            color="red" 
           />
         </div>
 
@@ -124,10 +131,17 @@ const DashboardPage: React.FC = () => {
           <SmallProCard title="Updated Today" value={stats.productsUpdatedToday} subtitle="Updated today" icon={<RefreshCw className="text-orange-500" />} />
 
           <SmallProCard title="Never Updated" value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
-          <SmallProCard title="In Stock" value={stats.activeProducts} subtitle="Available" icon={<CheckCircle className="text-emerald-500" />} />
+          <SmallProCard title="In Stock" value={stats.activeProducts} subtitle="Confirmed stock" icon={<CheckCircle className="text-emerald-500" />} />
+          <SmallProCard 
+            title="Pending Confirmation" 
+            value={stats.pendingConfirmationCount} 
+            subtitle="Awaiting approval" 
+            icon={<Hourglass className="text-amber-500" />} 
+            danger={stats.pendingConfirmationCount > 0}
+          />
           <SmallProCard title="Sold" value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-500" />} />
-          <SmallProCard title="Restored" value={stats.restoredProducts} subtitle="Returned" icon={<Archive className="text-indigo-500" />} />
 
+          <SmallProCard title="Restored" value={stats.restoredProducts} subtitle="Returned" icon={<Archive className="text-indigo-500" />} />
           <SmallProCard title="Deleted" value={stats.deletedProducts} subtitle="In trash" icon={<XCircle className="text-rose-500" />} />
           <SmallProCard title="Low Stock" value={stats.lowStockProducts} subtitle="≤5 units" icon={<AlertTriangle className="text-amber-500" />} danger={stats.lowStockProducts > 0} />
           <SmallProCard title="Out of Stock" value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
@@ -156,20 +170,21 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-/* --- Reusable Pro Components --- */
-
+/* --- Reusable Components --- */
 const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
   const colors: any = {
     indigo: "bg-indigo-600 dark:bg-indigo-700",
     blue: "bg-blue-600 dark:bg-blue-700",
     violet: "bg-violet-600 dark:bg-violet-700",
+    green: "bg-green-600 dark:bg-green-700",
+    red: "bg-red-600 dark:bg-red-700",
   };
   return (
-    <Card className={`border-none shadow-lg ${colors[color]} text-white transition-transform hover:scale-[1.02]`}>
+    <Card className={`border-none shadow-lg ${colors[color] || colors.blue} text-white transition-transform hover:scale-[1.02]`}>
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div className="p-2 bg-white rounded-lg">
-            {React.cloneElement(icon, { className: `h-5 w-5 ${color === 'indigo' ? 'text-indigo-600' : color === 'blue' ? 'text-blue-600' : 'text-violet-600'}` })}
+            {React.cloneElement(icon, { className: `h-5 w-5 ${color === 'indigo' ? 'text-indigo-600' : color === 'blue' ? 'text-blue-600' : color === 'violet' ? 'text-violet-600' : color === 'green' ? 'text-green-600' : 'text-red-600'}` })}
           </div>
           <div className="text-right">
             <p className="text-[10px] font-black uppercase tracking-widest opacity-80">{title}</p>
@@ -186,13 +201,13 @@ const SmallProCard = ({ title, value, subtitle, icon, highlight, danger }: any) 
   <Card className={`border-none shadow-sm group hover:shadow-md transition-all duration-200 bg-white dark:bg-[#1e293b]`}>
     <CardContent className="p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className={`p-1.5 rounded-md ${highlight ? 'bg-indigo-600' : 'bg-slate-100 dark:bg-slate-800'}`}>
-          {React.cloneElement(icon, { className: highlight ? "h-3.5 w-3.5 text-white" : "h-3.5 w-3.5" })}
+        <div className={`p-1.5 rounded-md ${highlight ? 'bg-indigo-600' : danger ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-slate-100 dark:bg-slate-800'}`}>
+          {React.cloneElement(icon, { className: highlight ? "h-3.5 w-3.5 text-white" : danger ? "h-3.5 w-3.5 text-amber-600 dark:text-amber-400" : "h-3.5 w-3.5" })}
         </div>
         {highlight && <span className="text-[8px] font-black bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">NEW</span>}
       </div>
       <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">{title}</p>
-      <p className={`text-xl font-black mt-0.5 ${danger ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>{value}</p>
+      <p className={`text-xl font-black mt-0.5 ${danger ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>{value}</p>
       <p className="text-[9px] font-medium text-slate-400 mt-1 uppercase">{subtitle}</p>
     </CardContent>
   </Card>
@@ -212,7 +227,7 @@ const HighlightCard = ({ type, name, quantity, icon, color }: any) => {
           </div>
           <div className="flex justify-between items-end mt-auto">
             <div>
-              <p className="text-2xl font-black uppercase text-slate-900 dark:text-white leading-tight">{name}</p>
+              <p className="text-2xl font-black uppercase text-slate-900 dark:text-white leading-tight">{name || 'N/A'}</p>
               <p className={`${text} text-[10px] font-black uppercase tracking-tighter mt-1`}>In-System Inventory</p>
             </div>
             <div className="text-right">
