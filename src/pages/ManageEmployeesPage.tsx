@@ -133,14 +133,6 @@ const ManageEmployeesPage: React.FC = () => {
   const businessId = user?.businessId;
   const businessName = user?.businessName || 'RwandaScratch';
 
-  // Fetch data
-  useEffect(() => {
-    if (!businessId) {
-      setLoading(false);
-      return;
-    }
-
-  // Fetch data
   useEffect(() => {
     if (!businessId) {
       setLoading(false);
@@ -171,7 +163,7 @@ const ManageEmployeesPage: React.FC = () => {
     };
 
     fetchData();
-  }, [businessId]);
+  }, [businessId, toast]);
 
   const getBranchName = (id: string | null) => branchMap.get(id || 'unassigned') || 'Unassigned';
 
@@ -225,7 +217,6 @@ const ManageEmployeesPage: React.FC = () => {
       if (success) {
         setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? { ...e, branch: assignBranchId } : e));
         
-        // If assigning branch to current user, update auth state immediately
         if (currentEmployee.id === user?.id) {
           updateUser({ branch: assignBranchId });
           toast({ 
@@ -263,7 +254,6 @@ const ManageEmployeesPage: React.FC = () => {
       if (success) {
         setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? currentEmployee : e));
         
-        // If updating current user, update auth state immediately
         if (currentEmployee.id === user?.id) {
           updateUser({
             firstName: currentEmployee.firstName,
