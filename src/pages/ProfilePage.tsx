@@ -20,9 +20,11 @@ import {
   ArrowRight,
   Check,
   Building2,
+  WifiOff,
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,7 @@ import {
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
+import { addPendingOperation } from '@/lib/offlineDB';
 
 interface BusinessInfo {
   id: string;
@@ -58,7 +61,8 @@ interface BusinessInfo {
 
 const ProfilePage: React.FC = () => {
   const { toast } = useToast();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user, logout, loading: authLoading, updateUser, updateUserAndSync } = useAuth();
+  const { isOnline, addPendingChange, pendingCount } = useOffline();
   const auth = getAuth();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +72,7 @@ const ProfilePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string>('');
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [localImageData, setLocalImageData] = useState<string | null>(null);
 
   // Business info state
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
@@ -173,13 +177,15 @@ const ProfilePage: React.FC = () => {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
+        const base64Data = reader.result as string;
+        setPreviewImage(base64Data);
+        setLocalImageData(base64Data); // Store for offline use
       };
       reader.readAsDataURL(file);
 
       toast({
         title: 'Image Selected',
-        description: 'Preview updated. Will upload when you save.',
+        description: isOnline ? 'Preview updated. Will upload when you save.' : 'Image saved locally. Will upload when online.',
       });
     }
   };
@@ -191,23 +197,40 @@ const ProfilePage: React.FC = () => {
     try {
       let newImageUrl = user.profileImage || null;
 
+      // Handle image upload
       if (selectedFile) {
-        if (!navigator.onLine) {
-          toast({
-            title: 'Offline',
-            description: 'Cannot upload image offline. Other changes saved.',
-            variant: 'destructive',
-          });
-        } else {
+        if (isOnline) {
           try {
             toast({ title: 'Uploading...', description: 'Uploading profile image...' });
             newImageUrl = await uploadToCloudinary(selectedFile);
             toast({ title: 'Success', description: 'Image uploaded!' });
+            setLocalImageData(null);
           } catch (error) {
             toast({
               title: 'Upload Failed',
-              description: 'Image not uploaded. Other changes saved.',
+              description: 'Image saved locally. Will upload when connection improves.',
               variant: 'destructive',
+            });
+            // Queue image for later upload
+            if (localImageData) {
+              await addPendingChange('updateProduct', {
+                type: 'imageUpload',
+                userId: user.id,
+                imageData: localImageData,
+              });
+            }
+          }
+        } else {
+          // Offline: store image locally and queue for upload
+          toast({
+            title: 'Offline Mode',
+            description: 'Image saved locally. Will upload when online.',
+          });
+          if (localImageData) {
+            await addPendingChange('updateProduct', {
+              type: 'imageUpload',
+              userId: user.id,
+              imageData: localImageData,
             });
           }
         }
@@ -224,25 +247,63 @@ const ProfilePage: React.FC = () => {
         village: formData.village,
         gender: formData.gender,
         profileImage: newImageUrl,
+        imagephoto: newImageUrl,
       };
 
-      const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, updateData);
+      // Immediately update local auth state for instant UI feedback
+      updateUser({
+        ...updateData,
+        // Use local preview if we have it
+        profileImage: localImageData || newImageUrl,
+        imagephoto: localImageData || newImageUrl,
+      });
+
+      if (isOnline) {
+        // Online: save to Firestore directly
+        const userRef = doc(db, 'users', user.id);
+        await updateDoc(userRef, { ...updateData, updatedAt: new Date().toISOString() });
+      } else {
+        // Offline: queue for sync
+        await addPendingChange('updateProduct', {
+          collection: 'users',
+          id: user.id,
+          updates: updateData,
+        });
+      }
 
       // Only admin can update business name
       if (isAdmin && businessInfo && businessFormData.businessName !== businessInfo.businessName) {
-        const businessRef = doc(db, 'businesses', businessInfo.id);
-        await updateDoc(businessRef, { businessName: businessFormData.businessName });
+        if (isOnline) {
+          const businessRef = doc(db, 'businesses', businessInfo.id);
+          await updateDoc(businessRef, { 
+            businessName: businessFormData.businessName,
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          await addPendingChange('updateProduct', {
+            collection: 'businesses',
+            id: businessInfo.id,
+            updates: { businessName: businessFormData.businessName },
+          });
+        }
         setBusinessInfo(prev => prev ? { ...prev, businessName: businessFormData.businessName } : null);
+        // Update auth state with new business name
+        updateUser({ businessName: businessFormData.businessName });
       }
 
-      toast({ title: 'Success', description: 'Profile updated successfully!' });
+      toast({ 
+        title: 'Success', 
+        description: isOnline 
+          ? 'Profile updated successfully!' 
+          : 'Profile updated locally. Will sync when online.' 
+      });
       setIsEditing(false);
       setSelectedFile(null);
     } catch (error) {
+      console.error('Save error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save profile.',
+        description: 'Failed to save profile. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -279,15 +340,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const toggleOfflineMode = () => {
-    setIsOfflineMode(prev => !prev);
-    toast({
-      title: isOfflineMode ? 'Online Mode' : 'Offline Mode',
-      description: isOfflineMode 
-        ? 'Connected to live data.' 
-        : 'Offline mode active (preview only).',
-    });
-  };
+  // Removed manual offline toggle - now using OfflineContext
 
   // Step 1: Verify current password
   const handleVerifyCurrentPassword = async () => {
@@ -632,20 +685,33 @@ const ProfilePage: React.FC = () => {
 
           {/* Settings Sidebar */}
           <div className="space-y-6">
+            {/* Connection Status */}
             <Card>
               <CardHeader>
-                <CardTitle>App Mode</CardTitle>
+                <CardTitle>Connection Status</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">Offline Mode</p>
-                    <p className="text-sm text-gray-500">Preview changes without internet</p>
+                    <p className="font-medium">{isOnline ? 'Online' : 'Offline'}</p>
+                    <p className="text-sm text-gray-500">
+                      {isOnline ? 'Connected to cloud' : 'Working offline - changes sync when online'}
+                    </p>
                   </div>
-                  <Button variant="outline" size="icon" onClick={toggleOfflineMode}>
-                    {isOfflineMode ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
-                  </Button>
+                  <Badge variant={isOnline ? 'default' : 'secondary'} className="flex items-center gap-1">
+                    {isOnline ? 'Online' : (
+                      <>
+                        <WifiOff className="h-3 w-3" />
+                        Offline
+                      </>
+                    )}
+                  </Badge>
                 </div>
+                {pendingCount > 0 && (
+                  <p className="text-sm text-amber-600 mt-3">
+                    {pendingCount} change{pendingCount !== 1 ? 's' : ''} pending sync
+                  </p>
+                )}
               </CardContent>
             </Card>
 

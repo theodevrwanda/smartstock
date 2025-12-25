@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -15,9 +16,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, PlusCircle, Eye, Edit, Trash2, UserPlus, CloudOff } from 'lucide-react';
+import { Search, PlusCircle, Eye, Edit, Trash2, UserPlus, CloudOff, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOffline } from '@/contexts/OfflineContext';
 import {
   getEmployees,
   createEmployee,
@@ -92,7 +94,8 @@ const PageSkeleton = () => (
 
 const ManageEmployeesPage: React.FC = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { isOnline, addPendingChange } = useOffline();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchMap, setBranchMap] = useState<Map<string, string>>(new Map());
@@ -100,7 +103,6 @@ const ManageEmployeesPage: React.FC = () => {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -131,17 +133,12 @@ const ManageEmployeesPage: React.FC = () => {
   const businessId = user?.businessId;
   const businessName = user?.businessName || 'RwandaScratch';
 
-  // Online/offline detection
+  // Fetch data
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
 
   // Fetch data
   useEffect(() => {
@@ -220,6 +217,33 @@ const ManageEmployeesPage: React.FC = () => {
     }
   };
 
+  const handleAssignBranch = async () => {
+    if (!currentEmployee?.id) return;
+    setActionLoading(true);
+    try {
+      const success = await assignBranchToEmployee(currentEmployee.id, assignBranchId);
+      if (success) {
+        setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? { ...e, branch: assignBranchId } : e));
+        
+        // If assigning branch to current user, update auth state immediately
+        if (currentEmployee.id === user?.id) {
+          updateUser({ branch: assignBranchId });
+          toast({ 
+            title: 'Success', 
+            description: 'Branch assigned. Your session has been updated.' 
+          });
+        } else {
+          toast({ title: 'Success', description: 'Branch assigned' });
+        }
+        setIsAssignBranchDialogOpen(false);
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to assign branch', variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleUpdateEmployee = async () => {
     if (!currentEmployee?.id) return;
     setActionLoading(true);
@@ -238,28 +262,25 @@ const ManageEmployeesPage: React.FC = () => {
       });
       if (success) {
         setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? currentEmployee : e));
+        
+        // If updating current user, update auth state immediately
+        if (currentEmployee.id === user?.id) {
+          updateUser({
+            firstName: currentEmployee.firstName,
+            lastName: currentEmployee.lastName,
+            fullName: `${currentEmployee.firstName} ${currentEmployee.lastName}`.trim(),
+            phone: currentEmployee.phone,
+            branch: currentEmployee.branch,
+            role: currentEmployee.role,
+            isActive: currentEmployee.isActive,
+          });
+        }
+        
         toast({ title: 'Success', description: 'Employee updated' });
         setIsUpdateDialogOpen(false);
       }
     } catch {
       toast({ title: 'Error', description: 'Update failed', variant: 'destructive' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleAssignBranch = async () => {
-    if (!currentEmployee?.id) return;
-    setActionLoading(true);
-    try {
-      const success = await assignBranchToEmployee(currentEmployee.id, assignBranchId);
-      if (success) {
-        setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? { ...e, branch: assignBranchId } : e));
-        toast({ title: 'Success', description: 'Branch assigned' });
-        setIsAssignBranchDialogOpen(false);
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to assign branch', variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
@@ -419,6 +440,7 @@ const ManageEmployeesPage: React.FC = () => {
                     onCheckedChange={selectAll}
                   />
                 </TableHead>
+                <TableHead className="w-16">Photo</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
@@ -433,7 +455,7 @@ const ManageEmployeesPage: React.FC = () => {
             <TableBody>
               {filteredEmployees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
                     No employees found. Click "Add Employee" to create one.
                   </TableCell>
                 </TableRow>
@@ -445,6 +467,14 @@ const ManageEmployeesPage: React.FC = () => {
                         checked={selectedEmployees.includes(emp.id!)}
                         onCheckedChange={() => handleSelect(emp.id!)}
                       />
+                    </TableCell>
+                    <TableCell>
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={emp.profileImage || emp.imagephoto || ''} alt={`${emp.firstName} ${emp.lastName}`} />
+                        <AvatarFallback>
+                          <User className="h-5 w-5 text-muted-foreground" />
+                        </AvatarFallback>
+                      </Avatar>
                     </TableCell>
                     <TableCell className="font-medium">{emp.firstName} {emp.lastName}</TableCell>
                     <TableCell>{emp.email}</TableCell>

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup, 
@@ -9,13 +9,14 @@ import {
   createUserWithEmailAndPassword,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, addDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebase';
 import { AuthState, User } from '@/types';
+import { saveUserLocally, getLocalUser, addPendingOperation } from '@/lib/offlineDB';
 import axios from 'axios';
 
 // Extended User interface for auth context
-interface AuthUser extends User {
+export interface AuthUser extends User {
   businessId?: string;
   businessName?: string;
   businessActive?: boolean;
@@ -42,6 +43,8 @@ interface AuthContextType extends AuthState {
   loginWithGoogle: () => Promise<boolean>;
   logout: () => void;
   updateUser: (userData: Partial<AuthUser>) => void;
+  updateUserAndSync: (userData: Partial<AuthUser>) => Promise<boolean>;
+  refreshUser: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   register: (data: RegisterData) => Promise<boolean>;
   errorMessage: string | null;
@@ -49,6 +52,9 @@ interface AuthContextType extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Local storage key for cached user
+const CACHED_USER_KEY = 'pixelmart_cached_user';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -72,17 +78,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Load cached user from localStorage on mount
+  useEffect(() => {
+    const cached = localStorage.getItem(CACHED_USER_KEY);
+    if (cached) {
+      try {
+        const cachedUser = JSON.parse(cached);
+        setAuthState(prev => ({
+          ...prev,
+          user: cachedUser,
+          isAuthenticated: true,
+        }));
+      } catch (e) {
+        localStorage.removeItem(CACHED_USER_KEY);
+      }
+    }
+  }, []);
+
+  // Cache user to localStorage whenever it changes
+  useEffect(() => {
+    if (authState.user) {
+      localStorage.setItem(CACHED_USER_KEY, JSON.stringify(authState.user));
+    } else {
+      localStorage.removeItem(CACHED_USER_KEY);
+    }
+  }, [authState.user]);
+
   // Function to get business status
-  const getBusinessStatus = async (businessId: string): Promise<boolean> => {
+  const getBusinessStatus = async (businessId: string): Promise<{ isActive: boolean; businessName: string }> => {
     try {
       const businessDoc = await getDoc(doc(db, 'businesses', businessId));
       if (businessDoc.exists()) {
-        return businessDoc.data().isActive !== false;
+        const data = businessDoc.data();
+        return {
+          isActive: data.isActive !== false,
+          businessName: data.businessName || '',
+        };
       }
-      return true;
+      return { isActive: true, businessName: '' };
     } catch (error) {
       console.error('Error fetching business status:', error);
-      return true;
+      return { isActive: true, businessName: '' };
     }
   };
 
@@ -95,8 +131,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Get business status if user has businessId
         let businessActive = true;
+        let businessName = userData.businessName || '';
         if (userData.businessId) {
-          businessActive = await getBusinessStatus(userData.businessId);
+          const businessInfo = await getBusinessStatus(userData.businessId);
+          businessActive = businessInfo.isActive;
+          businessName = businessInfo.businessName || businessName;
         }
 
         const fullUser: AuthUser = {
@@ -116,11 +155,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isActive: userData.isActive !== false,
           imagephoto: userData.imagephoto || userData.profileImage || null,
           profileImage: userData.profileImage || userData.imagephoto || null,
-          businessName: userData.businessName || '',
+          businessName,
           gender: userData.gender || '',
           businessId: userData.businessId || null,
           businessActive,
         };
+
+        // Cache user locally in IndexedDB for offline access
+        try {
+          await saveUserLocally({
+            id: fullUser.id,
+            email: fullUser.email,
+            name: fullUser.fullName,
+            firstName: fullUser.firstName,
+            lastName: fullUser.lastName,
+            role: fullUser.role as 'admin' | 'staff',
+            branch: fullUser.branch,
+            businessId: fullUser.businessId || '',
+            profileImage: fullUser.profileImage,
+            imagephoto: fullUser.imagephoto,
+            isActive: fullUser.isActive !== false,
+          });
+        } catch (e) {
+          console.error('Failed to cache user locally:', e);
+        }
 
         return fullUser;
       } else {
@@ -128,13 +186,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
+      // Try to get from local cache if offline
+      if (!navigator.onLine) {
+        const cached = localStorage.getItem(CACHED_USER_KEY);
+        if (cached) {
+          return JSON.parse(cached);
+        }
+      }
       setErrorMessage('Failed to load user data. Please try again.');
       return null;
     }
   };
 
+  // Set up real-time listener for user document
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeUser: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
         const userData = await getUserFromFirestore(firebaseUser);
@@ -148,6 +216,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             loading: false,
             token,
           });
+
+          // Set up real-time listener for user document changes
+          unsubscribeUser = onSnapshot(
+            doc(db, 'users', firebaseUser.uid),
+            async (docSnap) => {
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                
+                // Get fresh business info
+                let businessActive = true;
+                let businessName = data.businessName || '';
+                if (data.businessId) {
+                  const businessInfo = await getBusinessStatus(data.businessId);
+                  businessActive = businessInfo.isActive;
+                  businessName = businessInfo.businessName || businessName;
+                }
+
+                const updatedUser: AuthUser = {
+                  id: firebaseUser.uid,
+                  email: firebaseUser.email || data.email || '',
+                  firstName: data.firstName || '',
+                  lastName: data.lastName || '',
+                  fullName: `${data.firstName || ''} ${data.lastName || ''}`.trim(),
+                  username: data.username || data.email || firebaseUser.email || '',
+                  phone: data.phone || data.phoneNumber || '',
+                  district: data.district || '',
+                  sector: data.sector || '',
+                  cell: data.cell || '',
+                  village: data.village || '',
+                  role: data.role || 'staff',
+                  branch: data.branch || null,
+                  isActive: data.isActive !== false,
+                  imagephoto: data.imagephoto || data.profileImage || null,
+                  profileImage: data.profileImage || data.imagephoto || null,
+                  businessName,
+                  gender: data.gender || '',
+                  businessId: data.businessId || null,
+                  businessActive,
+                };
+
+                setAuthState(prev => ({
+                  ...prev,
+                  user: updatedUser,
+                }));
+              }
+            },
+            (error) => {
+              console.error('User listener error:', error);
+            }
+          );
         } else {
           setAuthState({
             user: null,
@@ -164,10 +282,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           loading: false,
           token: undefined,
         });
+        
+        // Clean up user listener
+        if (unsubscribeUser) {
+          unsubscribeUser();
+          unsubscribeUser = null;
+        }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeUser) {
+        unsubscribeUser();
+      }
+    };
   }, []);
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
@@ -223,6 +352,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await signOut(auth);
       delete axios.defaults.headers.common['Authorization'];
+      localStorage.removeItem(CACHED_USER_KEY);
     } catch (error) {
       console.error('Error during logout:', error);
     }
@@ -241,12 +371,83 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = (userData: Partial<AuthUser>) => {
-    if (authState.user) {
-      const updatedUser = { ...authState.user, ...userData };
-      setAuthState((prev) => ({ ...prev, user: updatedUser }));
+  // Update user state immediately (for local UI update)
+  const updateUser = useCallback((userData: Partial<AuthUser>) => {
+    setAuthState(prev => {
+      if (!prev.user) return prev;
+      const updatedUser = { ...prev.user, ...userData };
+      return { ...prev, user: updatedUser };
+    });
+  }, []);
+
+  // Update user and sync to Firestore (with offline support)
+  const updateUserAndSync = useCallback(async (userData: Partial<AuthUser>): Promise<boolean> => {
+    if (!authState.user?.id) return false;
+
+    // Immediately update local state
+    updateUser(userData);
+
+    const isOnline = navigator.onLine;
+
+    if (!isOnline) {
+      // Queue for sync when back online
+      try {
+        await addPendingOperation({
+          type: 'updateProduct', // Reusing type, will handle in sync
+          data: {
+            collection: 'users',
+            id: authState.user.id,
+            updates: userData,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to queue user update:', e);
+      }
+      return true;
     }
-  };
+
+    // Online: update Firestore directly
+    try {
+      const userRef = doc(db, 'users', authState.user.id);
+      const updateData: any = { ...userData, updatedAt: new Date().toISOString() };
+      
+      // Handle fullName
+      if (userData.firstName || userData.lastName) {
+        updateData.fullName = `${userData.firstName || authState.user.firstName} ${userData.lastName || authState.user.lastName}`.trim();
+      }
+
+      await updateDoc(userRef, updateData);
+      return true;
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      // Queue for retry
+      try {
+        await addPendingOperation({
+          type: 'updateProduct',
+          data: {
+            collection: 'users',
+            id: authState.user.id,
+            updates: userData,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to queue user update:', e);
+      }
+      return false;
+    }
+  }, [authState.user, updateUser]);
+
+  // Refresh user data from Firestore
+  const refreshUser = useCallback(async () => {
+    if (!auth.currentUser) return;
+    const userData = await getUserFromFirestore(auth.currentUser);
+    if (userData) {
+      setAuthState(prev => ({
+        ...prev,
+        user: userData,
+      }));
+    }
+  }, []);
 
   const register = async (data: RegisterData): Promise<boolean> => {
     setAuthState((prev) => ({ ...prev, loading: true }));
@@ -265,8 +466,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         village: data.village,
         ownerId: userCredential.user.uid,
         isActive: false, // Business is inactive by default, needs central admin approval
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       const businessRef = await addDoc(collection(db, 'businesses'), businessData);
@@ -288,11 +489,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isActive: false, // User is inactive by default
         profileImage: data.profileImage || null,
         imagephoto: data.profileImage || null,
-        businessName: data.businessName,
         businessId: businessRef.id,
         gender: data.gender,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userDataToSave);
@@ -328,6 +528,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loginWithGoogle,
         logout,
         updateUser,
+        updateUserAndSync,
+        refreshUser,
         resetPassword,
         register,
         errorMessage,
