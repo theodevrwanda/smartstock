@@ -24,11 +24,11 @@ export interface RestoredProduct {
   costPrice: number;
   sellingPrice?: number | null;
   restoredDate: string;
-  restoreComment?: string;
+  restoreComment?: string | null;
   businessId: string;
 }
 
-// Get restored products
+// Get restored products - robust mapping
 export const getRestoredProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -36,38 +36,76 @@ export const getRestoredProducts = async (
 ): Promise<RestoredProduct[]> => {
   try {
     const productsRef = collection(db, 'products');
-    let q = query(productsRef, where('businessId', '==', businessId), where('status', '==', 'restored'));
+    let q = query(
+      productsRef,
+      where('businessId', '==', businessId),
+      where('status', '==', 'restored')
+    );
 
     if (userRole === 'staff' && branchId) {
       q = query(q, where('branch', '==', branchId));
     }
 
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({
-      id: d.id,
-      ...d.data(),
-    } as RestoredProduct));
-  } catch (error) {
+
+    if (snapshot.empty) {
+      console.log('No restored products found for query');
+      return [];
+    }
+
+    const products: RestoredProduct[] = snapshot.docs.map((d) => {
+      const data = d.data();
+
+      return {
+        id: d.id,
+        productName: data.productName || 'Unknown Product',
+        category: data.category || 'uncategorized',
+        model: data.model || undefined,
+        quantity: data.quantity || 0,
+        branch: data.branch || '',
+        costPrice: data.costPrice || 0,
+        sellingPrice: data.sellingPrice ?? null,
+        restoredDate: data.restoredDate
+          ? typeof data.restoredDate === 'string'
+            ? data.restoredDate
+            : data.restoredDate.toDate().toISOString()
+          : new Date().toISOString(),
+        restoreComment: data.restoreComment || undefined,
+        businessId: data.businessId || businessId,
+      };
+    });
+
+    console.log(`Loaded ${products.length} restored products`);
+    return products;
+  } catch (error: any) {
     console.error('Error loading restored products:', error);
-    toast.error('Failed to load restored products');
+    if (error.code === 'permission-denied') {
+      toast.error('Permission denied: Cannot read restored products.');
+    } else {
+      toast.error('Failed to load restored products');
+    }
     return [];
   }
 };
 
-// Delete restored product (admin only)
+// Delete restored product
 export const deleteRestoredProduct = async (id: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'products', id));
-    toast.success('Restored product deleted');
+    toast.success('Restored product deleted permanently');
     return true;
-  } catch (error) {
-    console.error('Error deleting restored product:', error);
-    toast.error('Failed to delete restored product');
+  } catch (error: any) {
+    console.error('Error deleting:', error);
+    if (error.code === 'permission-denied') {
+      toast.error('Permission denied');
+    } else {
+      toast.error('Failed to delete restored product');
+    }
     return false;
   }
 };
 
-// Sell restored product - STRICT branch check for everyone (including admin)
+// Sell restored product - copies restoreComment directly to new sold record
 export const sellRestoredProduct = async (
   id: string,
   sellQty: number,
@@ -76,61 +114,71 @@ export const sellRestoredProduct = async (
   userBranch?: string | null
 ): Promise<boolean> => {
   try {
-    const restoredDoc = doc(db, 'products', id);
-    const restoredSnap = await getDoc(restoredDoc);
+    const restoredDocRef = doc(db, 'products', id);
+    const restoredSnap = await getDoc(restoredDocRef);
 
     if (!restoredSnap.exists()) {
-      toast.error('Restored product not found');
+      toast.error('Restored product not found in database');
       return false;
     }
 
-    const restored = restoredSnap.data() as RestoredProduct;
+    const restoredData = restoredSnap.data() as any;
 
-    // Strict check: user can only sell from their assigned branch
-    if (userBranch && restored.branch !== userBranch) {
-      toast.error('Cannot sell - product not from your assigned branch');
+    // Branch permission check
+    if (userBranch && restoredData.branch !== userBranch) {
+      toast.error('Cannot sell: Product not in your branch');
       return false;
     }
 
-    if (sellQty > restored.quantity || sellQty <= 0) {
+    if (sellQty <= 0 || sellQty > restoredData.quantity) {
       toast.error('Invalid quantity');
       return false;
     }
 
     if (sellingPrice <= 0) {
-      toast.error('Selling price must be greater than 0');
+      toast.error('Selling price must be > 0');
       return false;
     }
 
-    // Reduce quantity in restored product
-    const remainingQty = restored.quantity - sellQty;
-    if (remainingQty === 0) {
-      await deleteDoc(restoredDoc);
-    } else {
-      await updateDoc(restoredDoc, {
-        quantity: remainingQty,
-        updatedAt: new Date().toISOString(),
-      });
-    }
+    const now = new Date().toISOString();
+    const remainingQty = restoredData.quantity - sellQty;
 
-    // Create new sold record
+    // Create new sold record - keep the original restoreComment
     const soldRef = doc(collection(db, 'products'));
     await setDoc(soldRef, {
-      ...restored,
+      ...restoredData,
       id: soldRef.id,
       status: 'sold',
-      sellingPrice,
-      soldDate: new Date().toISOString(),
       quantity: sellQty,
+      sellingPrice,
+      soldDate: now,
       deadline: deadline || null,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
+      // restoreComment is copied as-is from restored product
+      // restoredDate kept if you want history, or set to null if preferred
+      restoredDate: restoredData.restoredDate || null,
     });
 
-    toast.success(`Sold ${sellQty} unit(s) from restored stock`);
+    // Update or delete original restored product
+    if (remainingQty === 0) {
+      await deleteDoc(restoredDocRef);
+      toast.success(`Fully re-sold (${sellQty} unit(s)). Removed from restored stock.`);
+    } else {
+      await updateDoc(restoredDocRef, {
+        quantity: remainingQty,
+        updatedAt: now,
+      });
+      toast.success(`Re-sold ${sellQty} unit(s). Remaining in restored: ${remainingQty}`);
+    }
+
     return true;
-  } catch (error) {
-    console.error('Error selling restored product:', error);
-    toast.error('Sale failed');
+  } catch (error: any) {
+    console.error('Error in sellRestoredProduct:', error);
+    if (error.code === 'permission-denied') {
+      toast.error('Permission denied: Cannot modify this product');
+    } else {
+      toast.error('Sale failed. Please try again.');
+    }
     return false;
   }
 };

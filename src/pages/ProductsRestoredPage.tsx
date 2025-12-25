@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -73,36 +73,36 @@ const ProductsRestoredPage: React.FC = () => {
     deadline: '',
   });
 
-  // Load data
-  useEffect(() => {
+  // Load data function - extracted for reuse
+  const loadData = useCallback(async () => {
     if (!businessId) {
       setLoading(false);
       return;
     }
 
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [restoredProds, branchList] = await Promise.all([
-          getRestoredProducts(businessId, user?.role || 'staff', userBranch),
-          getBranches(businessId),
-        ]);
+    setLoading(true);
+    try {
+      const [restoredProds, branchList] = await Promise.all([
+        getRestoredProducts(businessId, user?.role || 'staff', userBranch),
+        getBranches(businessId),
+      ]);
 
-        setRestoredProducts(restoredProds);
-        setBranches(branchList);
+      setRestoredProducts(restoredProds);
+      setBranches(branchList);
 
-        const map = new Map<string, string>();
-        branchList.forEach(b => map.set(b.id!, b.branchName));
-        setBranchMap(map);
-      } catch {
-        toast({ title: 'Error', description: 'Failed to load restored products', variant: 'destructive' });
-      } finally {
-        setLoading(false);
-      }
-    };
+      const map = new Map<string, string>();
+      branchList.forEach(b => b.id && map.set(b.id, b.branchName));
+      setBranchMap(map);
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to load restored products', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  }, [businessId, user?.role, userBranch, toast]);
 
-    load();
-  }, [businessId, user?.role, userBranch]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 
@@ -154,7 +154,7 @@ const ProductsRestoredPage: React.FC = () => {
     }
   };
 
-  // Export functionality
+  // Export columns
   const restoredExportColumns: ExportColumn[] = [
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
@@ -218,6 +218,7 @@ const ProductsRestoredPage: React.FC = () => {
     return filteredProducts.reduce((sum, p) => sum + calculateProfitLoss(p), 0);
   };
 
+  // Handle sell with refetch
   const handleSell = async () => {
     if (!currentProduct) return;
     setActionLoading(true);
@@ -229,33 +230,32 @@ const ProductsRestoredPage: React.FC = () => {
         sellForm.deadline || undefined,
         userBranch
       );
+
       if (success) {
-        setRestoredProducts(prev => {
-          const remaining = currentProduct.quantity - sellForm.quantity;
-          if (remaining <= 0) {
-            return prev.filter(p => p.id !== currentProduct.id);
-          }
-          return prev.map(p => p.id === currentProduct.id ? { ...p, quantity: remaining } : p);
-        });
-        toast({ title: 'Success', description: `Sold ${sellForm.quantity} unit(s)` });
+        toast({ title: 'Success', description: `Successfully re-sold ${sellForm.quantity} unit(s)` });
         setSellDialogOpen(false);
         setCurrentProduct(null);
         setSellForm({ quantity: 1, sellingPrice: 0, deadline: '' });
+        await loadData(); // Refetch to get fresh data
       }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Sale failed', variant: 'destructive' });
     } finally {
       setActionLoading(false);
     }
   };
 
+  // Handle delete with refetch
   const handleDelete = async () => {
     if (!currentProduct) return;
     setActionLoading(true);
     try {
       const success = await deleteRestoredProduct(currentProduct.id);
       if (success) {
-        setRestoredProducts(prev => prev.filter(p => p.id !== currentProduct.id));
+        toast({ title: 'Success', description: 'Restored product deleted permanently' });
         setDeleteConfirmOpen(false);
         setCurrentProduct(null);
+        await loadData(); // Refetch
       }
     } finally {
       setActionLoading(false);
@@ -269,7 +269,11 @@ const ProductsRestoredPage: React.FC = () => {
 
   const openSell = (product: RestoredProduct) => {
     setCurrentProduct(product);
-    setSellForm({ quantity: 1, sellingPrice: product.costPrice * 1.2, deadline: '' });
+    setSellForm({
+      quantity: 1,
+      sellingPrice: Math.round(product.costPrice * 1.2),
+      deadline: '',
+    });
     setSellDialogOpen(true);
   };
 
@@ -337,7 +341,7 @@ const ProductsRestoredPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Professional Filters */}
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
@@ -462,7 +466,7 @@ const ProductsRestoredPage: React.FC = () => {
                         <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {p.quantity > 0 && p.branch === userBranch && (
+                        {p.quantity > 0 && (!userBranch || p.branch === userBranch) && (
                           <Button size="sm" variant="ghost" onClick={() => openSell(p)}>
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
@@ -497,7 +501,9 @@ const ProductsRestoredPage: React.FC = () => {
                 <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
                 <p><strong>Selling Price:</strong> {(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
                 <p><strong>Total Amount:</strong> {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF</p>
-                <p><strong>Profit/Loss:</strong> {calculateProfitLoss(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>Profit/Loss:</strong> <span className={getProfitLossColor(calculateProfitLoss(currentProduct))}>
+                  {calculateProfitLoss(currentProduct).toLocaleString()} RWF
+                </span></p>
                 <p><strong>Restored Date:</strong> {new Date(currentProduct.restoredDate).toLocaleDateString()}</p>
                 {currentProduct.restoreComment && (
                   <div>
@@ -521,8 +527,8 @@ const ProductsRestoredPage: React.FC = () => {
             </DialogHeader>
             {currentProduct && (
               <div className="space-y-4 py-4">
-                <p className="font-medium">{currentProduct.productName}</p>
-                <p className="text-sm text-muted-foreground">Available: {currentProduct.quantity}</p>
+                <p className="font-medium">{currentProduct.productName} {currentProduct.model && `(${currentProduct.model})`}</p>
+                <p className="text-sm text-muted-foreground">Available quantity: {currentProduct.quantity}</p>
                 <div className="grid gap-2">
                   <Label>Quantity to Sell</Label>
                   <Input
@@ -530,13 +536,14 @@ const ProductsRestoredPage: React.FC = () => {
                     min="1"
                     max={currentProduct.quantity}
                     value={sellForm.quantity}
-                    onChange={e => setSellForm(s => ({ ...s, quantity: Number(e.target.value) || 1 }))}
+                    onChange={e => setSellForm(s => ({ ...s, quantity: Math.max(1, Math.min(currentProduct.quantity, Number(e.target.value) || 1)) }))}
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label>Selling Price (RWF)</Label>
                   <Input
                     type="number"
+                    min="1"
                     value={sellForm.sellingPrice}
                     onChange={e => setSellForm(s => ({ ...s, sellingPrice: Number(e.target.value) || 0 }))}
                   />
@@ -550,16 +557,16 @@ const ProductsRestoredPage: React.FC = () => {
                   />
                 </div>
                 {sellForm.sellingPrice > 0 && sellForm.quantity > 0 && (
-                  <p className="font-bold">
-                    Total: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF
+                  <p className="font-bold text-lg">
+                    Total Sale Amount: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF
                   </p>
                 )}
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSell} disabled={actionLoading}>
-                {actionLoading ? 'Selling...' : 'Sell'}
+              <Button onClick={handleSell} disabled={actionLoading || sellForm.quantity < 1 || sellForm.sellingPrice <= 0}>
+                {actionLoading ? <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Selling...</> : 'Sell'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -571,13 +578,13 @@ const ProductsRestoredPage: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Delete Restored Product?</DialogTitle>
               <DialogDescription>
-                This action cannot be undone.
+                This action cannot be undone. The product will be permanently removed.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete'}
+                {actionLoading ? <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : 'Delete Permanently'}
               </Button>
             </DialogFooter>
           </DialogContent>

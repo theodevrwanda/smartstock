@@ -38,7 +38,7 @@ interface ProductData {
   costPrice: number;
   sellingPrice?: number | null;
   status: string;
-  addedDate?: string;
+  addedDate?: string;        // ISO string, e.g., "2025-12-25T07:04:37.939Z"
   deletedDate?: string;
   soldDate?: string;
   quantity: number;
@@ -46,25 +46,26 @@ interface ProductData {
   updatedAt?: string;
 }
 
-// Helper to get start of day/week/month
-const getStartOfDay = () => {
+// Helper functions for date boundaries (all in UTC to match Firestore timestamps)
+const getStartOfDay = (): string => {
   const d = new Date();
-  d.setHours(0, 0, 0, 0);
+  d.setUTCHours(0, 0, 0, 0);
   return d.toISOString();
 };
 
-const getStartOfWeek = () => {
+const getStartOfWeek = (): string => {
   const d = new Date();
-  const day = d.getDay();
-  d.setDate(d.getDate() - day);
-  d.setHours(0, 0, 0, 0);
+  const day = d.getUTCDay(); // 0 = Sunday, 1 = Monday, ...
+  const diff = (day === 0 ? 6 : day - 1); // Start week on Monday
+  d.setUTCDate(d.getUTCDate() - diff);
+  d.setUTCHours(0, 0, 0, 0);
   return d.toISOString();
 };
 
-const getStartOfMonth = () => {
+const getStartOfMonth = (): string => {
   const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
   return d.toISOString();
 };
 
@@ -81,78 +82,104 @@ export const getDashboardStats = async (
       baseQuery = query(baseQuery, where('branch', '==', branchId));
     }
 
-    // Fetch all products
     const snapshot = await getDocs(baseQuery);
-    const products: ProductData[] = snapshot.docs.map(doc => ({
-      id: doc.id,
-      productName: doc.data().productName || '',
-      category: doc.data().category || '',
-      model: doc.data().model || '',
-      costPrice: doc.data().costPrice || 0,
-      sellingPrice: doc.data().sellingPrice || null,
-      status: doc.data().status || 'store',
-      addedDate: doc.data().addedDate || '',
-      deletedDate: doc.data().deletedDate || '',
-      soldDate: doc.data().soldDate || '',
-      quantity: doc.data().quantity || 0,
-      branch: doc.data().branch || '',
-      updatedAt: doc.data().updatedAt || '',
-    }));
+    const products: ProductData[] = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        productName: data.productName || '',
+        category: data.category || '',
+        model: data.model || undefined,
+        costPrice: data.costPrice || 0,
+        sellingPrice: data.sellingPrice ?? null,
+        status: data.status || 'store',
+        addedDate: data.addedDate || undefined,
+        deletedDate: data.deletedDate || undefined,
+        soldDate: data.soldDate || undefined,
+        quantity: data.quantity || 0,
+        branch: data.branch || '',
+        updatedAt: data.updatedAt || undefined,
+      };
+    });
 
+    // Date boundaries (UTC)
     const todayStart = getStartOfDay();
     const weekStart = getStartOfWeek();
     const monthStart = getStartOfMonth();
 
-    // Counts by status
-    const activeProducts = products.filter(p => p.status === 'store').length;
+    // Filter active (in store) products
+    const storeProducts = products.filter(p => p.status === 'store');
+
+    // Status counts
+    const activeProducts = storeProducts.length;
     const soldProducts = products.filter(p => p.status === 'sold').length;
     const restoredProducts = products.filter(p => p.status === 'restored').length;
     const deletedProducts = products.filter(p => p.status === 'deleted').length;
 
-    // Added/Updated counts
-    const productsAddedToday = products.filter(p => p.addedDate && p.addedDate >= todayStart).length;
-    const productsAddedThisWeek = products.filter(p => p.addedDate && p.addedDate >= weekStart).length;
-    const productsAddedThisMonth = products.filter(p => p.addedDate && p.addedDate >= monthStart).length;
+    // Added counts — ONLY for products currently in 'store'
+    const productsAddedToday = storeProducts.filter(p => 
+      p.addedDate && p.addedDate >= todayStart
+    ).length;
 
-    const productsUpdatedToday = products.filter(p => p.updatedAt && p.updatedAt >= todayStart).length;
-    const productsUpdatedThisMonth = products.filter(p => p.updatedAt && p.updatedAt >= monthStart).length;
+    const productsAddedThisWeek = storeProducts.filter(p => 
+      p.addedDate && p.addedDate >= weekStart
+    ).length;
+
+    const productsAddedThisMonth = storeProducts.filter(p => 
+      p.addedDate && p.addedDate >= monthStart
+    ).length;
+
+    // Updated counts (all products, not just store)
+    const productsUpdatedToday = products.filter(p => 
+      p.updatedAt && p.updatedAt >= todayStart
+    ).length;
+
+    const productsUpdatedThisMonth = products.filter(p => 
+      p.updatedAt && p.updatedAt >= monthStart
+    ).length;
+
     const productsNeverUpdated = products.filter(p => !p.updatedAt).length;
 
-    // Stock levels
-    const lowStock = products.filter(p => p.status === 'store' && p.quantity > 0 && p.quantity <= 5).length;
-    const outOfStock = products.filter(p => p.status === 'store' && p.quantity === 0).length;
+    // Stock-related stats (only store products)
+    const lowStockProducts = storeProducts.filter(p => p.quantity > 0 && p.quantity <= 5).length;
+    const outOfStockProducts = storeProducts.filter(p => p.quantity === 0).length;
 
-    // Total stock quantity
-    const totalStockQuantity = products
-      .filter(p => p.status === 'store')
-      .reduce((sum, p) => sum + (p.quantity || 0), 0);
+    const totalStockQuantity = storeProducts.reduce((sum, p) => sum + p.quantity, 0);
 
-    // Categories & Models
+    // Categories & unique models
     const categories = new Set(products.map(p => p.category)).size;
-    const models = new Set(products.filter(p => p.model).map(p => `${p.productName}-${p.model}`)).size;
+    const models = new Set(
+      products
+        .filter(p => p.model)
+        .map(p => `${p.category}-${p.productName}-${p.model}`)
+    ).size;
 
-    // Most & least stocked (store only)
-    const storeProducts = products.filter(p => p.status === 'store');
+    // Most & least stocked (among store products)
     let mostStocked = { name: 'N/A', quantity: 0 };
     let leastStocked = { name: 'N/A', quantity: 0 };
 
     if (storeProducts.length > 0) {
-      storeProducts.sort((a, b) => (b.quantity || 0) - (a.quantity || 0));
+      // Most stocked
+      const sortedByQuantityDesc = [...storeProducts].sort((a, b) => b.quantity - a.quantity);
       mostStocked = {
-        name: storeProducts[0].productName + (storeProducts[0].model ? ` (${storeProducts[0].model})` : ''),
-        quantity: storeProducts[0].quantity || 0,
+        name: `${sortedByQuantityDesc[0].productName}${sortedByQuantityDesc[0].model ? ` (${sortedByQuantityDesc[0].model})` : ''}`,
+        quantity: sortedByQuantityDesc[0].quantity,
       };
-      const withStock = storeProducts.filter(p => (p.quantity || 0) > 0);
+
+      // Least stocked — only consider products with quantity > 0
+      const withStock = storeProducts.filter(p => p.quantity > 0);
       if (withStock.length > 0) {
-        withStock.sort((a, b) => (a.quantity || 0) - (b.quantity || 0));
+        const sortedAsc = withStock.sort((a, b) => a.quantity - b.quantity);
         leastStocked = {
-          name: withStock[0].productName + (withStock[0].model ? ` (${withStock[0].model})` : ''),
-          quantity: withStock[0].quantity || 0,
+          name: `${sortedAsc[0].productName}${sortedAsc[0].model ? ` (${sortedAsc[0].model})` : ''}`,
+          quantity: sortedAsc[0].quantity,
         };
       }
     }
 
-    const averageStockPerProduct = activeProducts > 0 ? Math.round(totalStockQuantity / activeProducts) : 0;
+    const averageStockPerProduct = activeProducts > 0 
+      ? Math.round(totalStockQuantity / activeProducts) 
+      : 0;
 
     return {
       totalProducts: products.length,
@@ -168,8 +195,8 @@ export const getDashboardStats = async (
       soldProducts,
       restoredProducts,
       deletedProducts,
-      lowStockProducts: lowStock,
-      outOfStockProducts: outOfStock,
+      lowStockProducts,
+      outOfStockProducts,
       mostStockedProduct: mostStocked,
       leastStockedProduct: leastStocked,
       averageStockPerProduct,

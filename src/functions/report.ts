@@ -33,9 +33,9 @@ export interface ReportSummary {
   restoredCount: number;
   deletedCount: number;
 
-  grossProfit: number;   // ✅ NEW
+  grossProfit: number;
   totalLoss: number;
-  netProfit: number;     // ✅ NEW
+  netProfit: number;
 
   totalStoreValue: number;
   lowStockCount: number;
@@ -51,6 +51,7 @@ export const getReportData = async (
     const productsRef = collection(db, 'products');
     let q = query(productsRef, where('businessId', '==', businessId));
 
+    // Staff → only their branch
     if (userRole === 'staff' && branchId) {
       q = query(q, where('branch', '==', branchId));
     }
@@ -69,7 +70,7 @@ export const getReportData = async (
 
       let profitLoss: number | null = null;
 
-      // ✅ Profit/Loss ONLY for sold products
+      // ✅ Profit/Loss ONLY applies to SOLD products
       if (data.status === 'sold' && sellingPrice !== null) {
         profitLoss = (sellingPrice - costPrice) * quantity;
       }
@@ -94,31 +95,40 @@ export const getReportData = async (
     });
 
     // ---------- SUMMARY CALCULATIONS ----------
+
     const storeProducts = products.filter(p => p.status === 'store');
-    const soldProducts = products.filter(p => p.status === 'sold');
     const restoredProducts = products.filter(p => p.status === 'restored');
+    const soldProducts = products.filter(p => p.status === 'sold');
     const deletedProducts = products.filter(p => p.status === 'deleted');
 
+    // ✅ Gross profit = only positive sold profit
     const grossProfit = soldProducts.reduce((sum, p) => {
       return p.profitLoss && p.profitLoss > 0 ? sum + p.profitLoss : sum;
     }, 0);
 
+    // ✅ Total loss = absolute value of negative sold profit
     const totalLoss = soldProducts.reduce((sum, p) => {
-      return p.profitLoss && p.profitLoss < 0 ? sum + Math.abs(p.profitLoss) : sum;
+      return p.profitLoss && p.profitLoss < 0
+        ? sum + Math.abs(p.profitLoss)
+        : sum;
     }, 0);
 
     const netProfit = grossProfit - totalLoss;
 
-    const totalStoreValue = storeProducts.reduce(
+    // ✅ STORE VALUE = STORE + RESTORED (returned items have value)
+    const totalStoreValue = [...storeProducts, ...restoredProducts].reduce(
       (sum, p) => sum + p.costPrice * p.quantity,
       0
     );
 
-    const lowStockCount = storeProducts.filter(
+    // ✅ Stock warnings (include restored)
+    const stockProducts = [...storeProducts, ...restoredProducts];
+
+    const lowStockCount = stockProducts.filter(
       p => p.quantity > 0 && p.quantity <= 5
     ).length;
 
-    const outOfStockCount = storeProducts.filter(
+    const outOfStockCount = stockProducts.filter(
       p => p.quantity === 0
     ).length;
 
