@@ -15,7 +15,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner'; // Using Sonner directly
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getBranches,
@@ -90,7 +90,6 @@ const PageSkeleton = () => (
 );
 
 const ManageBranchPage: React.FC = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -148,18 +147,14 @@ const ManageBranchPage: React.FC = () => {
         const data = await getBranches(businessId);
         setBranches(data);
       } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to load branches',
-          variant: 'destructive',
-        });
+        toast.error('Failed to load branches');
       } finally {
         setLoading(false);
       }
     };
 
     fetchBranches();
-  }, [businessId, toast]);
+  }, [businessId]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -180,11 +175,11 @@ const ManageBranchPage: React.FC = () => {
       .includes(searchTerm.toLowerCase())
   );
 
-  // Create branch – Firebase handles offline automatically
+  // Create branch
   const handleCreateBranch = async () => {
     const { branchName, district, sector, cell, village } = newBranch;
     if (!branchName || !district || !sector || !cell || !village) {
-      toast({ title: 'Error', description: 'Please fill all fields', variant: 'destructive' });
+      toast.error('Please fill all fields');
       return;
     }
 
@@ -196,12 +191,12 @@ const ManageBranchPage: React.FC = () => {
       if (createdBranch) {
         setBranches((prev) => [...prev, createdBranch]);
 
-        toast({
-          title: 'Branch Created',
-          description: isOnline
+        toast.success(
+          isOnline
             ? 'Branch added successfully'
             : 'Saved offline – will sync when back online',
-        });
+          { description: 'Branch Created' }
+        );
       }
 
       setNewBranch({
@@ -214,11 +209,7 @@ const ManageBranchPage: React.FC = () => {
       });
       setIsCreateDialogOpen(false);
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create branch',
-        variant: 'destructive',
-      });
+      toast.error(error.message || 'Failed to create branch');
     } finally {
       setActionLoading(false);
     }
@@ -242,12 +233,12 @@ const ManageBranchPage: React.FC = () => {
         setBranches((prev) =>
           prev.map((b) => (b.id === currentBranch.id ? currentBranch : b))
         );
-        toast({ title: 'Success', description: 'Branch updated successfully' });
+        toast.success('Branch updated successfully');
         setIsUpdateDialogOpen(false);
         setCurrentBranch(null);
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to update branch', variant: 'destructive' });
+      toast.error('Failed to update branch');
     } finally {
       setActionLoading(false);
     }
@@ -262,11 +253,11 @@ const ManageBranchPage: React.FC = () => {
       await deleteBranch(branchToDelete);
       setBranches((prev) => prev.filter((b) => b.id !== branchToDelete));
       setSelectedBranches((prev) => prev.filter((id) => id !== branchToDelete));
-      toast({ title: 'Deleted', description: 'Branch removed successfully' });
+      toast.success('Branch removed successfully');
       setBranchToDelete(null);
       setIsDeleteConfirmOpen(false);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete branch', variant: 'destructive' });
+      toast.error('Failed to delete branch');
     } finally {
       setActionLoading(false);
     }
@@ -281,17 +272,10 @@ const ManageBranchPage: React.FC = () => {
       await deleteMultipleBranches(selectedBranches);
       setBranches((prev) => prev.filter((b) => !selectedBranches.includes(b.id!)));
       setSelectedBranches([]);
-      toast({
-        title: 'Deleted',
-        description: `${selectedBranches.length} branch(es) removed successfully`,
-      });
+      toast.success(`${selectedBranches.length} branch(es) removed successfully`);
       setIsDeleteSelectedConfirmOpen(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete selected branches',
-        variant: 'destructive',
-      });
+      toast.error('Failed to delete selected branches');
     } finally {
       setActionLoading(false);
     }
@@ -513,7 +497,7 @@ const ManageBranchPage: React.FC = () => {
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, branchName: e.target.value }))
                   }
-                  placeholder="e.g., Main Branch"
+                  placeholder="Enter branch name"
                 />
               </div>
               <div className="grid gap-2">
@@ -524,7 +508,7 @@ const ManageBranchPage: React.FC = () => {
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, district: e.target.value }))
                   }
-                  placeholder="e.g., Gasabo"
+                  placeholder="Enter branch district"
                 />
               </div>
               <div className="grid gap-2">
@@ -535,7 +519,7 @@ const ManageBranchPage: React.FC = () => {
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, sector: e.target.value }))
                   }
-                  placeholder="e.g., Kacyiru"
+                  placeholder="Enter branch sector"
                 />
               </div>
               <div className="grid gap-2">
@@ -546,7 +530,7 @@ const ManageBranchPage: React.FC = () => {
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, cell: e.target.value }))
                   }
-                  placeholder="e.g., Kamatamu"
+                  placeholder="Enter branch cell"
                 />
               </div>
               <div className="grid gap-2">
@@ -557,7 +541,7 @@ const ManageBranchPage: React.FC = () => {
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, village: e.target.value }))
                   }
-                  placeholder="e.g., Kibaza"
+                  placeholder="Enter branch village"
                 />
               </div>
             </div>
@@ -566,7 +550,7 @@ const ManageBranchPage: React.FC = () => {
                 Cancel
               </Button>
               <Button onClick={handleCreateBranch} disabled={actionLoading}>
-                {actionLoading ? 'Creating...' : 'Create Branch'}
+                {actionLoading ? 'Creating...' : 'Create'}
               </Button>
             </DialogFooter>
           </DialogContent>

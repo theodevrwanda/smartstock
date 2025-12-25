@@ -498,124 +498,154 @@ const ManageEmployeesPage: React.FC = () => {
         </div>
 
         {/* Create Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Employee</DialogTitle>
-              <DialogDescription>
-                Default password will be <strong>1234567</strong>
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="create-email">Email *</Label>
-                <Input
-                  id="create-email"
-                  type="email"
-                  value={newEmployee.email}
-                  onChange={e => setNewEmployee(p => ({ ...p, email: e.target.value }))}
-                  placeholder="employee@example.com"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-firstName">First Name *</Label>
-                <Input
-                  id="create-firstName"
-                  value={newEmployee.firstName}
-                  onChange={e => setNewEmployee(p => ({ ...p, firstName: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-lastName">Last Name *</Label>
-                <Input
-                  id="create-lastName"
-                  value={newEmployee.lastName}
-                  onChange={e => setNewEmployee(p => ({ ...p, lastName: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-phone">Phone</Label>
-                <Input
-                  id="create-phone"
-                  value={newEmployee.phone}
-                  onChange={e => setNewEmployee(p => ({ ...p, phone: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-district">District</Label>
-                <Input
-                  id="create-district"
-                  value={newEmployee.district}
-                  onChange={e => setNewEmployee(p => ({ ...p, district: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-sector">Sector</Label>
-                <Input
-                  id="create-sector"
-                  value={newEmployee.sector}
-                  onChange={e => setNewEmployee(p => ({ ...p, sector: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-cell">Cell</Label>
-                <Input
-                  id="create-cell"
-                  value={newEmployee.cell}
-                  onChange={e => setNewEmployee(p => ({ ...p, cell: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-village">Village</Label>
-                <Input
-                  id="create-village"
-                  value={newEmployee.village}
-                  onChange={e => setNewEmployee(p => ({ ...p, village: e.target.value }))}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-gender">Gender</Label>
-                <Select value={newEmployee.gender} onValueChange={v => setNewEmployee(p => ({ ...p, gender: v as 'male' | 'female' }))}>
-                  <SelectTrigger id="create-gender">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="create-branch">Branch (Optional)</Label>
-                <Select
-                  value={newEmployee.branch || 'unassigned'}
-                  onValueChange={v => setNewEmployee(p => ({ ...p, branch: v === 'unassigned' ? null : v }))}
-                >
-                  <SelectTrigger id="create-branch">
-                    <SelectValue placeholder="Select branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {branches.map(b => (
-                      <SelectItem key={b.id} value={b.id!}>
-                        {b.branchName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateEmployee} disabled={actionLoading}>
-                {actionLoading ? 'Creating...' : 'Create Employee'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+  <DialogContent className="max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Create New Employee</DialogTitle>
+      <DialogDescription>
+        Default password will be <strong>1234567</strong>
+      </DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+      {/* Email */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-email">Email *</Label>
+        <Input
+          id="create-email"
+          type="email"
+          value={newEmployee.email}
+          onChange={e => setNewEmployee(p => ({ ...p, email: e.target.value }))}
+          placeholder="Enter email here"
+        />
+      </div>
 
+      {/* First Name */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-firstName">First Name *</Label>
+        <Input
+          id="create-firstName"
+          value={newEmployee.firstName}
+          onChange={e => setNewEmployee(p => ({ ...p, firstName: e.target.value }))}
+          placeholder="Enter first name here"
+        />
+      </div>
+
+      {/* Last Name */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-lastName">Last Name *</Label>
+        <Input
+          id="create-lastName"
+          value={newEmployee.lastName}
+          onChange={e => setNewEmployee(p => ({ ...p, lastName: e.target.value }))}
+          placeholder="Enter last name here"
+        />
+      </div>
+
+      {/* Phone */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-phone">Phone</Label>
+        <Input
+          id="create-phone"
+          type="tel"
+          value={newEmployee.phone}
+          onChange={e => setNewEmployee(p => ({ ...p, phone: e.target.value }))}
+          placeholder="Enter phone number here"
+        />
+      </div>
+
+      {/* District */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-district">District</Label>
+        <Input
+          id="create-district"
+          value={newEmployee.district}
+          onChange={e => setNewEmployee(p => ({ ...p, district: e.target.value }))}
+          placeholder="Enter district here"
+        />
+      </div>
+
+      {/* Sector */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-sector">Sector</Label>
+        <Input
+          id="create-sector"
+          value={newEmployee.sector}
+          onChange={e => setNewEmployee(p => ({ ...p, sector: e.target.value }))}
+          placeholder="Enter sector here"
+        />
+      </div>
+
+      {/* Cell */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-cell">Cell</Label>
+        <Input
+          id="create-cell"
+          value={newEmployee.cell}
+          onChange={e => setNewEmployee(p => ({ ...p, cell: e.target.value }))}
+          placeholder="Enter cell here"
+        />
+      </div>
+
+      {/* Village */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-village">Village</Label>
+        <Input
+          id="create-village"
+          value={newEmployee.village}
+          onChange={e => setNewEmployee(p => ({ ...p, village: e.target.value }))}
+          placeholder="Enter village here"
+        />
+      </div>
+
+      {/* Gender */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-gender">Gender</Label>
+        <Select
+          value={newEmployee.gender || ''}
+          onValueChange={v => setNewEmployee(p => ({ ...p, gender: v as 'male' | 'female' }))}
+        >
+          <SelectTrigger id="create-gender">
+            <SelectValue placeholder="Select gender" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="male">Male</SelectItem>
+            <SelectItem value="female">Female</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Branch */}
+      <div className="grid gap-2">
+        <Label htmlFor="create-branch">Branch (Optional)</Label>
+        <Select
+          value={newEmployee.branch || 'unassigned'}
+          onValueChange={v => setNewEmployee(p => ({ ...p, branch: v === 'unassigned' ? null : v }))}
+        >
+          <SelectTrigger id="create-branch">
+            <SelectValue placeholder="Select a branch" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {branches.map(b => (
+              <SelectItem key={b.id} value={b.id!}>
+                {b.branchName}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={handleCreateEmployee} disabled={actionLoading}>
+        {actionLoading ? 'Creating...' : 'Create Employee'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
         {/* Update Dialog */}
         <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
