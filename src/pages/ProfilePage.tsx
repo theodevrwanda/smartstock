@@ -3,36 +3,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  User as UserIcon,
-  Edit,
-  Save,
-  X,
-  Phone,
-  Mail,
-  MapPin,
+import { 
+  User as UserIcon, 
+  Edit, 
+  Save, 
+  X, 
+  Phone, 
+  Mail, 
+  MapPin, 
   LogOut,
+  ToggleLeft,
+  ToggleRight,
   Loader2,
   Key,
   Trash2,
   ArrowRight,
   Check,
   Building2,
-  Wifi,
   WifiOff,
-  Shield,
-  Globe,
-  Calendar,
-  UserCircle,
-  Briefcase,
-  ChevronRight,
-  Camera,
-  Verified,
-  Sparkles,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import {
@@ -43,36 +33,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
 import SEOHelmet from '@/components/SEOHelmet';
-import {
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
   getAuth,
   reauthenticateWithCredential,
   EmailAuthProvider,
@@ -83,7 +46,7 @@ import {
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
-import { addPendingChange } from '@/lib/offlineDB';
+import { addPendingOperation } from '@/lib/offlineDB';
 
 interface BusinessInfo {
   id: string;
@@ -93,15 +56,15 @@ interface BusinessInfo {
   cell: string;
   village: string;
   isActive: boolean;
-  businessType: string;
-  employeesCount: number;
-  lastActive?: string;
+  createdAt?: any;
 }
 
 const ProfilePage: React.FC = () => {
-  const { user, logout, loading: authLoading, updateUser } = useAuth();
-  const { isOnline, addPendingChange, pendingCount, syncPendingChanges } = useOffline();
+  const { toast } = useToast();
+  const { user, logout, loading: authLoading, updateUser, updateUserAndSync } = useAuth();
+  const { isOnline, addPendingChange, pendingCount } = useOffline();
   const auth = getAuth();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -111,17 +74,18 @@ const ProfilePage: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [localImageData, setLocalImageData] = useState<string | null>(null);
 
+  // Business info state
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [businessFormData, setBusinessFormData] = useState({
     businessName: '',
-    businessType: '',
-    employeesCount: 0,
   });
 
+  // Dialogs
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
+  // Multi-step Change Password
   const [passwordStep, setPasswordStep] = useState<1 | 2>(1);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -129,27 +93,26 @@ const ProfilePage: React.FC = () => {
   const [isVerifyingCurrent, setIsVerifyingCurrent] = useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [currentPasswordError, setCurrentPasswordError] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Reset email
   const [resetEmail, setResetEmail] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    fullName: '',
     phone: '',
     district: '',
     sector: '',
     cell: '',
     village: '',
     gender: '',
-    bio: '',
-    website: '',
+    businessName: '',
   });
 
   const isAdmin = user?.role === 'admin';
 
+  // Fetch business info
   useEffect(() => {
     const fetchBusinessInfo = async () => {
       if (user?.businessId) {
@@ -157,23 +120,18 @@ const ProfilePage: React.FC = () => {
           const businessDoc = await getDoc(doc(db, 'businesses', user.businessId));
           if (businessDoc.exists()) {
             const data = businessDoc.data();
-            const businessData: BusinessInfo = {
+            setBusinessInfo({
               id: businessDoc.id,
               businessName: data.businessName || '',
               district: data.district || '',
               sector: data.sector || '',
               cell: data.cell || '',
               village: data.village || '',
-              businessType: data.businessType || 'Retail',
-              employeesCount: data.employeesCount || 0,
               isActive: data.isActive !== false,
-              lastActive: data.lastActive || new Date().toISOString(),
-            };
-            setBusinessInfo(businessData);
+              createdAt: data.createdAt,
+            });
             setBusinessFormData({
               businessName: data.businessName || '',
-              businessType: data.businessType || 'Retail',
-              employeesCount: data.employeesCount || 0,
             });
           }
         } catch (error) {
@@ -183,23 +141,22 @@ const ProfilePage: React.FC = () => {
     };
 
     if (!authLoading && user) {
-      Promise.all([fetchBusinessInfo()]).then(() => {
-        setFormData({
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          phone: user.phone || '',
-          district: user.district || '',
-          sector: user.sector || '',
-          cell: user.cell || '',
-          village: user.village || '',
-          gender: user.gender || '',
-          bio: user.bio || '',
-          website: user.website || '',
-        });
-        setPreviewImage(user.profileImage || '');
-        setResetEmail(user.email || '');
-        setIsLoading(false);
+      fetchBusinessInfo();
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        district: user.district || '',
+        sector: user.sector || '',
+        cell: user.cell || '',
+        village: user.village || '',
+        gender: user.gender || '',
+        businessName: user.businessName || '',
       });
+      setPreviewImage(user.profileImage || '');
+      setResetEmail(user.email || '');
+      setIsLoading(false);
     }
   }, [user, authLoading]);
 
@@ -217,43 +174,61 @@ const ProfilePage: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64Data = reader.result as string;
         setPreviewImage(base64Data);
-        setLocalImageData(base64Data);
+        setLocalImageData(base64Data); // Store for offline use
       };
       reader.readAsDataURL(file);
-      toast.info(isOnline ? 'Image selected. Will upload when saved.' : 'Image saved locally.');
+
+      toast({
+        title: 'Image Selected',
+        description: isOnline ? 'Preview updated. Will upload when you save.' : 'Image saved locally. Will upload when online.',
+      });
     }
   };
 
   const handleSave = async () => {
     if (!user) return;
     setIsSaving(true);
+
     try {
       let newImageUrl = user.profileImage || null;
 
+      // Handle image upload
       if (selectedFile) {
         if (isOnline) {
-          toast.loading('Uploading image...');
           try {
+            toast({ title: 'Uploading...', description: 'Uploading profile image...' });
             newImageUrl = await uploadToCloudinary(selectedFile);
-            toast.success('Image uploaded successfully');
+            toast({ title: 'Success', description: 'Image uploaded!' });
             setLocalImageData(null);
-          } catch {
-            toast.error('Image upload failed. Saved locally.');
+          } catch (error) {
+            toast({
+              title: 'Upload Failed',
+              description: 'Image saved locally. Will upload when connection improves.',
+              variant: 'destructive',
+            });
+            // Queue image for later upload
             if (localImageData) {
-              await addPendingChange('imageUpload', {
+              await addPendingChange('updateProduct', {
+                type: 'imageUpload',
                 userId: user.id,
                 imageData: localImageData,
               });
             }
           }
         } else {
-          toast.info('Offline: Image saved locally. Will upload when online.');
+          // Offline: store image locally and queue for upload
+          toast({
+            title: 'Offline Mode',
+            description: 'Image saved locally. Will upload when online.',
+          });
           if (localImageData) {
-            await addPendingChange('imageUpload', {
+            await addPendingChange('updateProduct', {
+              type: 'imageUpload',
               userId: user.id,
               imageData: localImageData,
             });
@@ -271,50 +246,66 @@ const ProfilePage: React.FC = () => {
         cell: formData.cell,
         village: formData.village,
         gender: formData.gender,
-        bio: formData.bio,
-        website: formData.website,
-        profileImage: newImageUrl || localImageData,
-        updatedAt: new Date().toISOString(),
+        profileImage: newImageUrl,
+        imagephoto: newImageUrl,
       };
 
+      // Immediately update local auth state for instant UI feedback
       updateUser({
         ...updateData,
+        // Use local preview if we have it
         profileImage: localImageData || newImageUrl,
+        imagephoto: localImageData || newImageUrl,
       });
 
       if (isOnline) {
-        await updateDoc(doc(db, 'users', user.id), updateData);
+        // Online: save to Firestore directly
+        const userRef = doc(db, 'users', user.id);
+        await updateDoc(userRef, { ...updateData, updatedAt: new Date().toISOString() });
       } else {
-        await addPendingChange('updateUser', {
+        // Offline: queue for sync
+        await addPendingChange('updateProduct', {
+          collection: 'users',
           id: user.id,
           updates: updateData,
         });
       }
 
-      if (isAdmin && businessInfo) {
-        const businessUpdateData = {
-          businessName: businessFormData.businessName,
-          businessType: businessFormData.businessType,
-          employeesCount: businessFormData.employeesCount,
-        };
+      // Only admin can update business name
+      if (isAdmin && businessInfo && businessFormData.businessName !== businessInfo.businessName) {
         if (isOnline) {
-          await updateDoc(doc(db, 'businesses', businessInfo.id), businessUpdateData);
+          const businessRef = doc(db, 'businesses', businessInfo.id);
+          await updateDoc(businessRef, { 
+            businessName: businessFormData.businessName,
+            updatedAt: new Date().toISOString(),
+          });
         } else {
-          await addPendingChange('updateBusiness', {
+          await addPendingChange('updateProduct', {
+            collection: 'businesses',
             id: businessInfo.id,
-            updates: businessUpdateData,
+            updates: { businessName: businessFormData.businessName },
           });
         }
-        setBusinessInfo(prev => prev ? { ...prev, ...businessUpdateData } : null);
+        setBusinessInfo(prev => prev ? { ...prev, businessName: businessFormData.businessName } : null);
+        // Update auth state with new business name
         updateUser({ businessName: businessFormData.businessName });
       }
 
-      toast.success(isOnline ? 'Profile updated successfully!' : 'Changes saved locally. Will sync when online.');
+      toast({ 
+        title: 'Success', 
+        description: isOnline 
+          ? 'Profile updated successfully!' 
+          : 'Profile updated locally. Will sync when online.' 
+      });
       setIsEditing(false);
       setSelectedFile(null);
     } catch (error) {
       console.error('Save error:', error);
-      toast.error('Failed to save profile.');
+      toast({
+        title: 'Error',
+        description: 'Failed to save profile. Please try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -325,23 +316,16 @@ const ProfilePage: React.FC = () => {
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
+        fullName: user.fullName || '',
         phone: user.phone || '',
         district: user.district || '',
         sector: user.sector || '',
         cell: user.cell || '',
         village: user.village || '',
         gender: user.gender || '',
-        bio: user.bio || '',
-        website: user.website || '',
+        businessName: user.businessName || '',
       });
       setPreviewImage(user.profileImage || '');
-      if (businessInfo) {
-        setBusinessFormData({
-          businessName: businessInfo.businessName,
-          businessType: businessInfo.businessType,
-          employeesCount: businessInfo.employeesCount,
-        });
-      }
     }
     setSelectedFile(null);
     setIsEditing(false);
@@ -350,730 +334,554 @@ const ProfilePage: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      toast.success('Signed out successfully');
-    } catch {
-      toast.error('Failed to sign out');
+      toast({ title: 'Logged Out', description: 'Signed out successfully.' });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to log out.', variant: 'destructive' });
     }
   };
 
-  const handleManualSync = async () => {
-    try {
-      await syncPendingChanges();
-      toast.success('Sync started');
-    } catch {
-      toast.error('Sync failed');
-    }
-  };
+  // Removed manual offline toggle - now using OfflineContext
 
+  // Step 1: Verify current password
   const handleVerifyCurrentPassword = async () => {
     if (!currentPassword.trim()) {
-      setCurrentPasswordError('Please enter your current password');
+      setCurrentPasswordError('Please enter your current password.');
       return;
     }
+
+    setCurrentPasswordError('');
     setIsVerifyingCurrent(true);
+
+    if (!auth.currentUser?.email) {
+      toast({ title: 'Error', description: 'User email not found.', variant: 'destructive' });
+      setIsVerifyingCurrent(false);
+      return;
+    }
+
     try {
-      const credential = EmailAuthProvider.credential(auth.currentUser!.email!, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser!, credential);
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      
       setPasswordStep(2);
-      toast.success('Verified. Now set your new password.');
+      toast({ title: 'Verified ✓', description: 'Current password correct. Set new one.' });
     } catch (error: any) {
-      const message = error.code === 'auth/wrong-password' ? 'Incorrect password' : 'Verification failed';
+      let message = 'Failed to verify password.';
+      if (error.code === 'auth/wrong-password') {
+        message = 'Incorrect current password.';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Too many attempts. Try again later.';
+      }
       setCurrentPasswordError(message);
-      toast.error(message);
+      toast({ title: 'Failed', description: message, variant: 'destructive' });
     } finally {
       setIsVerifyingCurrent(false);
     }
   };
 
+  // Step 2: Update password
   const handleUpdateNewPassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
       return;
     }
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters');
+    if (newPassword.length < 6) {
+      toast({ title: 'Error', description: 'Password must be at least 6 characters.', variant: 'destructive' });
       return;
     }
+
     setIsUpdatingPassword(true);
     try {
       await updatePassword(auth.currentUser!, newPassword);
-      toast.success('Password updated successfully!');
+      toast({ title: 'Success', description: 'Password changed successfully!' });
       setChangePasswordOpen(false);
       setPasswordStep(1);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch {
-      toast.error('Failed to update password');
+      setCurrentPasswordError('');
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to update password.', variant: 'destructive' });
     } finally {
       setIsUpdatingPassword(false);
     }
   };
 
+  // Reset password email
   const handleResetPassword = async () => {
-    if (!resetEmail.includes('@')) {
-      toast.error('Enter a valid email');
+    if (!resetEmail || !resetEmail.includes('@')) {
+      toast({ title: 'Error', description: 'Valid email required.', variant: 'destructive' });
       return;
     }
+
     try {
       await sendPasswordResetEmail(auth, resetEmail);
-      toast.success('Password reset email sent');
+      toast({ title: 'Sent', description: 'Check your email for reset link.' });
       setResetPasswordOpen(false);
-    } catch {
-      toast.error('Failed to send reset email');
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to send reset email.', variant: 'destructive' });
     }
   };
 
+  // Delete account
   const handleDeleteAccount = async () => {
+    if (!auth.currentUser) return;
+
     try {
-      await deleteUser(auth.currentUser!);
-      toast.success('Account deleted');
+      await deleteUser(auth.currentUser);
+      toast({ title: 'Deleted', description: 'Account permanently deleted.' });
     } catch (error: any) {
-      toast.error(error.code === 'auth/requires-recent-login' ? 'Please sign in again' : 'Failed to delete account');
+      if (error.code === 'auth/requires-recent-login') {
+        toast({ 
+          title: 'Re-login Needed', 
+          description: 'Please sign in again before deleting account.', 
+          variant: 'destructive' 
+        });
+      } else {
+        toast({ title: 'Error', description: 'Failed to delete account.', variant: 'destructive' });
+      }
     }
     setDeleteAccountOpen(false);
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const getRoleBadge = (role: string) => {
-    const config = {
-      admin: { className: 'bg-gradient-to-r from-purple-500 to-pink-600 text-white', icon: <Shield className="h-3 w-3 mr-1" /> },
-      manager: { className: 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white', icon: <UserCircle className="h-3 w-3 mr-1" /> },
-      staff: { className: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white', icon: <Briefcase className="h-3 w-3 mr-1" /> },
-    }[role] || config.staff;
-
-    return (
-      <Badge className={`${config.className} border-0`}>
-        <div className="flex items-center">
-          {config.icon}
-          {role.charAt(0).toUpperCase() + role.slice(1)}
-        </div>
-      </Badge>
-    );
-  };
-
-  const profileCompletion = () => {
-    const fields = [user.firstName, user.lastName, user.phone, user.district, user.profileImage, formData.bio];
-    const filled = fields.filter(f => f && f.trim() !== '').length;
-    return Math.round((filled / fields.length) * 100);
-  };
+  const getRoleBadge = (role: 'admin' | 'staff') => (
+    <Badge className={role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}>
+      {role.charAt(0).toUpperCase() + role.slice(1)}
+    </Badge>
+  );
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
-        <div className="relative">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-400" />
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-xl"></div>
-        </div>
-        <p className="mt-4 text-gray-600 dark:text-gray-400">Loading your profile...</p>
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
-        <Card className="w-full max-w-md border-0 shadow-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-          <CardContent className="pt-6 text-center">
-            <div className="mb-4 inline-block rounded-full bg-gradient-to-r from-amber-500 to-orange-500 p-3">
-              <UserCircle className="h-12 w-12 text-white" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Authentication Required</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">Please sign in to view your profile</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] text-gray-500">
+        <p>Please log in to view your profile.</p>
       </div>
     );
   }
 
   return (
     <>
-      <SEOHelmet title={`${user.fullName || 'Profile'}`} description="Manage your profile" />
-
-      <div className="min-h-[calc(100vh-80px)] bg-gradient-to-br from-gray-50 via-gray-50/50 to-white dark:from-gray-900 dark:via-gray-900/50 dark:to-gray-950">
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-r from-green-500/10 to-cyan-500/10 rounded-full blur-3xl"></div>
+      <SEOHelmet title="My Profile" description="View and edit your profile" />
+      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Profile</h1>
+            <p className="text-gray-600 dark:text-gray-400">Manage your personal information and account settings</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {!isEditing ? (
+              <Button onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
+                <Edit className="mr-2 h-4 w-4" /> Edit Profile
+              </Button>
+            ) : (
+              <>
+                <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
+                  <X className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8 relative z-10">
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                    Profile
-                  </h1>
-                  <Sparkles className="h-6 w-6 text-amber-500" />
-                </div>
-                <p className="text-gray-600 dark:text-gray-400 text-lg">
-                  Manage your personal information and account settings
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <Button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="w-full md:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Information */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-6">
+                <div
+                  className="relative w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer hover:opacity-90 transition"
+                  onClick={handleImageClick}
                 >
-                  {isEditing ? (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
+                  {previewImage ? (
+                    <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Profile
-                    </>
+                    <div className="w-full h-full flex items-center justify-center">
+                      <UserIcon className="h-16 w-16 text-gray-400" />
+                    </div>
                   )}
-                </Button>
-
-                {isEditing && (
-                  <Button
-                    variant="outline"
-                    onClick={handleCancel}
-                    className="w-full md:w-auto border-2 hover:border-gray-300 dark:hover:border-gray-700"
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Profile Complete</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">99.9%</p>
+                  {isEditing && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <Edit className="h-8 w-8 text-white" />
                     </div>
-                    <Progress value={99} className="h-2 w-24" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Account Status</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {user.isActive ? 'Active' : 'Pending'}
-                      </p>
-                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {user.fullName || `${user.firstName} ${user.lastName}`}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">{user.email}</p>
+                  <div className="flex gap-2 mt-3">
+                    {getRoleBadge(user.role)}
                     <Badge variant={user.isActive ? "default" : "secondary"}>
-                      {user.isActive ? '✓ Active' : '⏳ Pending'}
+                      {user.isActive ? 'Active' : 'Pending Approval'}
                     </Badge>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Connection</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {isOnline ? 'Online' : 'Offline'}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label>First Name</Label>
+                  {isEditing ? (
+                    <Input value={formData.firstName} onChange={e => handleInputChange('firstName', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.firstName || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Last Name</Label>
+                  {isEditing ? (
+                    <Input value={formData.lastName} onChange={e => handleInputChange('lastName', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.lastName || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Full Name</Label>
+                  <p className="mt-2 text-gray-900 dark:text-white">{user.fullName || 'Not set'}</p>
+                </div>
+                <div>
+                  <Label>Gender</Label>
+                  {isEditing ? (
+                    <Input value={formData.gender} onChange={e => handleInputChange('gender', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.gender || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                    <Mail className="h-4 w-4 text-gray-500" />
+                    {user.email}
+                  </p>
+                </div>
+                <div>
+                  <Label>Phone Number</Label>
+                  {isEditing ? (
+                    <Input value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      {user.phone || 'Not set'}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label>District</Label>
+                  {isEditing ? (
+                    <Input value={formData.district} onChange={e => handleInputChange('district', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      {user.district || 'Not set'}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label>Sector</Label>
+                  {isEditing ? (
+                    <Input value={formData.sector} onChange={e => handleInputChange('sector', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.sector || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Cell</Label>
+                  {isEditing ? (
+                    <Input value={formData.cell} onChange={e => handleInputChange('cell', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.cell || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Village</Label>
+                  {isEditing ? (
+                    <Input value={formData.village} onChange={e => handleInputChange('village', e.target.value)} />
+                  ) : (
+                    <p className="mt-2 text-gray-900 dark:text-white">{user.village || 'Not set'}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Business Information Card */}
+          {businessInfo && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Business Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <Label>Business Name {!isAdmin && '(Admin only can edit)'}</Label>
+                    {isEditing && isAdmin ? (
+                      <Input 
+                        value={businessFormData.businessName} 
+                        onChange={e => setBusinessFormData(prev => ({ ...prev, businessName: e.target.value }))} 
+                        placeholder="Enter business name"
+                      />
+                    ) : (
+                      <p className="mt-2 text-gray-900 dark:text-white font-medium">
+                        {businessInfo.businessName || 'Not set'}
                       </p>
-                    </div>
-                    {isOnline ? <Wifi className="h-6 w-6 text-blue-600" /> : <WifiOff className="h-6 w-6 text-orange-600" />}
+                    )}
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <Label>District</Label>
+                    <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      {businessInfo.district || 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Sector</Label>
+                    <p className="mt-2 text-gray-900 dark:text-white">{businessInfo.sector || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label>Cell</Label>
+                    <p className="mt-2 text-gray-900 dark:text-white">{businessInfo.cell || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <Label>Village</Label>
+                    <p className="mt-2 text-gray-900 dark:text-white">{businessInfo.village || 'Not set'}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Business Status</Label>
+                    <div className="mt-2">
+                      <Badge variant={businessInfo.isActive ? "default" : "secondary"}>
+                        {businessInfo.isActive ? 'Active' : 'Pending Approval'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Phone Number</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">{user.phone || 'Not set'}</p>
-                    </div>
-                    <Phone className="h-5 w-5 text-gray-400" />
+          {/* Settings Sidebar */}
+          <div className="space-y-6">
+            {/* Connection Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Connection Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{isOnline ? 'Online' : 'Offline'}</p>
+                    <p className="text-sm text-gray-500">
+                      {isOnline ? 'Connected to cloud' : 'Working offline - changes sync when online'}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <Badge variant={isOnline ? 'default' : 'secondary'} className="flex items-center gap-1">
+                    {isOnline ? 'Online' : (
+                      <>
+                        <WifiOff className="h-3 w-3" />
+                        Offline
+                      </>
+                    )}
+                  </Badge>
+                </div>
+                {pendingCount > 0 && (
+                  <p className="text-sm text-amber-600 mt-3">
+                    {pendingCount} change{pendingCount !== 1 ? 's' : ''} pending sync
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start" onClick={() => setChangePasswordOpen(true)}>
+                  <Key className="mr-2 h-4 w-4" /> Change Password
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setResetPasswordOpen(true)}>
+                  <Mail className="mr-2 h-4 w-4" /> Reset via Email
+                </Button>
+                <Button variant="destructive" className="w-full justify-start" onClick={() => setDeleteAccountOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Account
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
+                </Button>
+              </CardContent>
+            </Card>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800/50 dark:to-gray-900/50 backdrop-blur-sm">
-                <CardHeader className="border-b border-gray-200 dark:border-gray-700">
-                  <CardTitle className="flex items-center gap-2 text-2xl">
-                    <UserCircle className="h-6 w-6 text-blue-500" />
-                    Personal Information
-                  </CardTitle>
-                  <CardDescription>Update your personal details and profile picture</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="flex flex-col md:flex-row items-start md:items-center gap-8 mb-8">
-                    <div className="relative group">
-                      <div className="relative w-40 h-40">
-                        <Avatar className="w-full h-full border-4 border-white dark:border-gray-800 shadow-2xl">
-                          <AvatarImage src={previewImage} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-3xl font-bold">
-                            {getInitials(user.fullName || `${user.firstName} ${user.lastName}`)}
-                          </AvatarFallback>
-                        </Avatar>
+        {/* Multi-Step Change Password Dialog */}
+        <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {passwordStep === 1 ? 'Verify Your Identity' : 'Create New Password'}
+              </DialogTitle>
+              <DialogDescription>
+                {passwordStep === 1
+                  ? 'Enter your current password to proceed.'
+                  : 'Your new password must be at least 6 characters long.'}
+              </DialogDescription>
+            </DialogHeader>
 
-                        {isEditing && (
-                          <>
-                            <div
-                              className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              onClick={handleImageClick}
-                            >
-                              <Camera className="h-10 w-10 text-white" />
-                            </div>
-                            <input
-                              type="file"
-                              ref={fileInputRef}
-                              onChange={handleImageChange}
-                              className="hidden"
-                              accept="image/*"
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                          {user.fullName || `${user.firstName} ${user.lastName}`}
-                        </h2>
-                        <Verified className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">{user.email}</p>
-
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {getRoleBadge(user.role || 'staff')}
-                        <Badge variant={user.isActive ? "default" : "secondary"}>
-                          {user.isActive ? 'Active' : 'Pending Approval'}
-                        </Badge>
-                        {businessInfo?.businessType && (
-                          <Badge variant="outline">
-                            <Briefcase className="h-3 w-3 mr-1" />
-                            {businessInfo.businessType}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {formData.bio && (
-                        <p className="text-gray-700 dark:text-gray-300 italic border-l-4 border-blue-500 pl-4 py-2">
-                          "{formData.bio}"
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <Tabs defaultValue="personal" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="personal">Personal Details</TabsTrigger>
-                      <TabsTrigger value="additional">Additional Info</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="personal" className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <Label htmlFor="first-name" className="font-semibold">First Name</Label>
-                          {isEditing ? (
-                            <Input
-                              id="first-name"
-                              value={formData.firstName}
-                              onChange={e => handleInputChange('firstName', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.firstName || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label htmlFor="last-name" className="font-semibold">Last Name</Label>
-                          {isEditing ? (
-                            <Input
-                              id="last-name"
-                              value={formData.lastName}
-                              onChange={e => handleInputChange('lastName', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.lastName || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label htmlFor="gender" className="font-semibold">Gender</Label>
-                          {isEditing ? (
-                            <Select value={formData.gender} onValueChange={v => handleInputChange('gender', v)}>
-                              <SelectTrigger className="border-2">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="male">Male</SelectItem>
-                                <SelectItem value="female">Female</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                                <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.gender || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label htmlFor="phone" className="font-semibold flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            Phone Number
-                          </Label>
-                          {isEditing ? (
-                            <Input
-                              id="phone"
-                              type="tel"
-                              value={formData.phone}
-                              onChange={e => handleInputChange('phone', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-gray-500" />
-                              {user.phone || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="additional" className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <Label htmlFor="district" className="font-semibold flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            District
-                          </Label>
-                          {isEditing ? (
-                            <Input
-                              id="district"
-                              value={formData.district}
-                              onChange={e => handleInputChange('district', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.district || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label htmlFor="sector" className="font-semibold">Sector</Label>
-                          {isEditing ? (
-                            <Input
-                              id="sector"
-                              value={formData.sector}
-                              onChange={e => handleInputChange('sector', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.sector || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label htmlFor="cell" className="font-semibold">Cell</Label>
-                          {isEditing ? (
-                            <Input
-                              id="cell"
-                              value={formData.cell}
-                              onChange={e => handleInputChange('cell', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.cell || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="space-y-3">
-                          <Label htmlFor="village" className="font-semibold">Village</Label>
-                          {isEditing ? (
-                            <Input
-                              id="village"
-                              value={formData.village}
-                              onChange={e => handleInputChange('village', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {user.village || 'Not set'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="md:col-span-2 space-y-3">
-                          <Label htmlFor="bio" className="font-semibold">Bio</Label>
-                          {isEditing ? (
-                            <Input
-                              id="bio"
-                              value={formData.bio}
-                              onChange={e => handleInputChange('bio', e.target.value)}
-                              className="border-2 focus:border-blue-500"
-                            />
-                          ) : (
-                            <p className="text-gray-700 dark:text-gray-300">
-                              {formData.bio || 'No bio added yet.'}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-
-              {businessInfo && (
-                <Card className="border-0 shadow-xl bg-gradient-to-br from-white via-white to-amber-50/50 dark:from-gray-800 dark:via-gray-800/50 dark:to-amber-900/20 backdrop-blur-sm">
-                  <CardHeader className="border-b border-amber-200 dark:border-amber-800/50">
-                    <CardTitle className="flex items-center gap-2 text-2xl">
-                      <Building2 className="h-6 w-6 text-amber-600" />
-                      Business Information
-                    </CardTitle>
-                    <CardDescription>{isAdmin ? 'Manage your business details' : 'View business information'}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <Label className="font-semibold">Business Name</Label>
-                        {isEditing && isAdmin ? (
-                          <Input
-                            value={businessFormData.businessName}
-                            onChange={e => setBusinessFormData(prev => ({ ...prev, businessName: e.target.value }))}
-                            className="border-2 focus:border-amber-500"
-                          />
-                        ) : (
-                          <p className="text-lg font-medium text-gray-900 dark:text-white">{businessInfo.businessName}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label className="font-semibold">Business Type</Label>
-                        {isEditing && isAdmin ? (
-                          <Select
-                            value={businessFormData.businessType}
-                            onValueChange={v => setBusinessFormData(prev => ({ ...prev, businessType: v }))}
-                          >
-                            <SelectTrigger className="border-2"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Retail">Retail</SelectItem>
-                              <SelectItem value="Wholesale">Wholesale</SelectItem>
-                              <SelectItem value="Service">Service</SelectItem>
-                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <p className="text-lg font-medium text-gray-900 dark:text-white">{businessInfo.businessType}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label className="font-semibold">Employees</Label>
-                        {isEditing && isAdmin ? (
-                          <Input
-                            type="number"
-                            value={businessFormData.employeesCount}
-                            onChange={e => setBusinessFormData(prev => ({ ...prev, employeesCount: parseInt(e.target.value) || 0 }))}
-                            className="border-2 focus:border-amber-500"
-                          />
-                        ) : (
-                          <p className="text-lg font-medium text-gray-900 dark:text-white">{businessInfo.employeesCount} employees</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="py-4">
+              {passwordStep === 1 ? (
+                <div className="space-y-4">
+                  <Label htmlFor="current-password">Current Password</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => {
+                      setCurrentPassword(e.target.value);
+                      setCurrentPasswordError('');
+                    }}
+                    placeholder="Enter your current password"
+                    autoFocus
+                  />
+                  {currentPasswordError && (
+                    <p className="text-sm text-red-600 dark:text-red-400">{currentPasswordError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    autoFocus
+                  />
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your new password"
+                  />
+                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-sm text-red-600 dark:text-red-400">Passwords do not match.</p>
+                  )}
+                  {newPassword && newPassword.length < 6 && (
+                    <p className="text-sm text-red-600 dark:text-red-400">Password must be at least 6 characters.</p>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="space-y-8">
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800/50 dark:to-gray-900/50 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    Connection Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className={`flex items-center justify-between p-4 rounded-lg ${
-                    isOnline
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800/50'
-                      : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800/50'
-                  }`}>
-                    <div>
-                      <p className="font-bold text-lg">{isOnline ? 'Online' : 'Offline'}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {isOnline ? 'Connected to cloud' : 'Working offline - changes sync when online'}
-                      </p>
-                    </div>
-                    {isOnline ? <Wifi className="h-8 w-8 text-green-600" /> : <WifiOff className="h-8 w-8 text-orange-600" />}
-                  </div>
-
-                  {pendingCount > 0 && (
-                    <>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-amber-600 dark:text-amber-400 font-medium">Pending Changes</span>
-                          <span className="font-bold">{pendingCount}</span>
-                        </div>
-                        <Progress value={pendingCount * 10} className="h-2" />
-                      </div>
-                      <Button
-                        onClick={handleManualSync}
-                        disabled={!isOnline}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Sync Now
-                      </Button>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white via-white to-gray-50/50 dark:from-gray-800 dark:via-gray-800/50 dark:to-gray-900/50 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Security & Account
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button variant="outline" className="w-full justify-between" onClick={() => setChangePasswordOpen(true)}>
-                    <div className="flex items-center gap-2"><Key className="h-4 w-4" /> Change Password</div>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" className="w-full justify-between" onClick={() => setResetPasswordOpen(true)}>
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4" /> Reset via Email</div>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Separator className="my-2" />
-                  <Button variant="outline" className="w-full justify-between" onClick={handleLogout}>
-                    <div className="flex items-center gap-2"><LogOut className="h-4 w-4" /> Sign Out</div>
-                  </Button>
-                  <Button variant="destructive" className="w-full" onClick={() => setDeleteAccountOpen(true)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Account
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-
-        {/* Dialogs remain unchanged except using Sonner toast */}
-        <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
-          <DialogContent className="max-w-[90vw] sm:max-w-md border-0 shadow-2xl bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-            <DialogHeader>
-              <DialogTitle className="text-2xl">
-                {passwordStep === 1 ? 'Verify Your Identity' : 'Create New Password'}
-              </DialogTitle>
-            </DialogHeader>
-            {passwordStep === 1 ? (
-              <div className="space-y-4">
-                <Label>Current Password</Label>
-                <div className="relative">
-                  <Input
-                    type={showCurrentPassword ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={e => { setCurrentPassword(e.target.value); setCurrentPasswordError(''); }}
-                  />
-                  <Button variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                    {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                {currentPasswordError && <p className="text-sm text-red-600">{currentPasswordError}</p>}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <Label>New Password</Label>
-                  <div className="relative">
-                    <Input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-                    <Button variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowNewPassword(!showNewPassword)}>
-                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <div>
-                  <Label>Confirm Password</Label>
-                  <div className="relative">
-                    <Input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-                    <Button variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>
+                Cancel
+              </Button>
               {passwordStep === 1 ? (
-                <Button onClick={handleVerifyCurrentPassword} disabled={isVerifyingCurrent}>
-                  {isVerifyingCurrent && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button
+                  onClick={handleVerifyCurrentPassword}
+                  disabled={isVerifyingCurrent || !currentPassword.trim()}
+                >
+                  {isVerifyingCurrent ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                  )}
                   Continue
                 </Button>
               ) : (
-                <>
-                  <Button variant="outline" onClick={() => setPasswordStep(1)}>Back</Button>
-                  <Button onClick={handleUpdateNewPassword} disabled={isUpdatingPassword || newPassword.length < 8 || newPassword !== confirmPassword}>
-                    {isUpdatingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                    Update
-                  </Button>
-                </>
+                <Button
+                  onClick={handleUpdateNewPassword}
+                  disabled={
+                    isUpdatingPassword ||
+                    newPassword.length < 6 ||
+                    newPassword !== confirmPassword
+                  }
+                >
+                  {isUpdatingPassword ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
+                  Update Password
+                </Button>
               )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
+        {/* Reset Password via Email Dialog */}
         <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Reset Password</DialogTitle></DialogHeader>
-            <Label>Email Address</Label>
-            <Input type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} />
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                We will send a password reset link to your email address.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="reset-email">Email Address</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Enter your email"
+              />
+            </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>Cancel</Button>
-              <Button onClick={handleResetPassword}>Send Reset Link</Button>
+              <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleResetPassword}>
+                Send Reset Link
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
+        {/* Delete Account Confirmation Dialog */}
         <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle className="text-red-600">Delete Account</DialogTitle></DialogHeader>
-            <DialogDescription>This action is permanent and cannot be undone.</DialogDescription>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Account</DialogTitle>
+              <DialogDescription>
+                This action is permanent and cannot be undone. All your data will be deleted.
+              </DialogDescription>
+            </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDeleteAccount}>Delete Account</Button>
+              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteAccount}>
+                Delete My Account
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
