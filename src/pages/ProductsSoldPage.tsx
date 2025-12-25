@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, Undo, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,20 +22,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getSoldProducts,
   deleteSoldProduct,
   restoreSoldProduct,
   SoldProduct,
+  toast, // ← Now imported directly from sold.ts
 } from '@/functions/sold';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsSoldPage: React.FC = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
@@ -67,9 +67,9 @@ const ProductsSoldPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<SoldProduct | null>(null);
 
-  // Restore form
+  // Restore form – quantity starts empty
   const [restoreForm, setRestoreForm] = useState({
-    quantity: 1,
+    quantity: '' as string | number,
     comment: '',
   });
 
@@ -95,7 +95,7 @@ const ProductsSoldPage: React.FC = () => {
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
       } catch {
-        toast({ title: 'Error', description: 'Failed to load sold products', variant: 'destructive' });
+        toast.error('Failed to load sold products');
       } finally {
         setLoading(false);
       }
@@ -155,7 +155,7 @@ const ProductsSoldPage: React.FC = () => {
     }
   };
 
-  // Export functionality
+  // Export
   const soldExportColumns: ExportColumn[] = [
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
@@ -188,12 +188,12 @@ const ProductsSoldPage: React.FC = () => {
 
   const handleExportExcel = () => {
     exportToExcel(getSoldExportData(), soldExportColumns, 'sold-products');
-    toast({ title: 'Success', description: 'Exported to Excel' });
+    toast.success('Exported to Excel');
   };
 
   const handleExportPDF = () => {
     exportToPDF(getSoldExportData(), soldExportColumns, 'sold-products', `Sold Products Report - Total P/L: ${calculateTotalProfitLoss().toLocaleString()} RWF`);
-    toast({ title: 'Success', description: 'Exported to PDF' });
+    toast.success('Exported to PDF');
   };
 
   const getPriceColor = (price: number) => {
@@ -224,22 +224,37 @@ const ProductsSoldPage: React.FC = () => {
   };
 
   const handleRestore = async () => {
-    if (!currentProduct) return;
+    if (!currentProduct || restoreForm.quantity === '' || Number(restoreForm.quantity) <= 0) {
+      toast.error('Please enter a valid quantity');
+      return;
+    }
+
+    const qty = Number(restoreForm.quantity);
+
+    if (qty > currentProduct.quantity) {
+      toast.error('Cannot restore more than sold quantity');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      const success = await restoreSoldProduct(currentProduct.id, restoreForm.quantity, restoreForm.comment, userBranch, isAdmin);
+      const success = await restoreSoldProduct(currentProduct.id, qty, restoreForm.comment, userBranch, isAdmin);
       if (success) {
         setSoldProducts(prev => {
-          const remaining = currentProduct.quantity - restoreForm.quantity;
+          const remaining = currentProduct.quantity - qty;
           if (remaining <= 0) {
             return prev.filter(p => p.id !== currentProduct.id);
           }
           return prev.map(p => p.id === currentProduct.id ? { ...p, quantity: remaining } : p);
         });
-        toast({ title: 'Success', description: `Restored ${restoreForm.quantity} unit(s)` });
+        toast.success(
+          qty === currentProduct.quantity
+            ? 'Fully restored – sale record removed'
+            : `Restored ${qty} unit(s)`
+        );
         setRestoreDialogOpen(false);
         setCurrentProduct(null);
-        setRestoreForm({ quantity: 1, comment: '' });
+        setRestoreForm({ quantity: '', comment: '' });
       }
     } finally {
       setActionLoading(false);
@@ -253,6 +268,7 @@ const ProductsSoldPage: React.FC = () => {
       const success = await deleteSoldProduct(currentProduct.id);
       if (success) {
         setSoldProducts(prev => prev.filter(p => p.id !== currentProduct.id));
+        toast.success('Sale record deleted');
         setDeleteConfirmOpen(false);
         setCurrentProduct(null);
       }
@@ -268,7 +284,7 @@ const ProductsSoldPage: React.FC = () => {
 
   const openRestore = (product: SoldProduct) => {
     setCurrentProduct(product);
-    setRestoreForm({ quantity: 1, comment: '' });
+    setRestoreForm({ quantity: '', comment: '' });
     setRestoreDialogOpen(true);
   };
 
@@ -282,15 +298,10 @@ const ProductsSoldPage: React.FC = () => {
       <div className="space-y-6 p-6">
         <Skeleton className="h-12 w-96" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
         </div>
         <div className="space-y-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
         </div>
       </div>
     );
@@ -349,27 +360,19 @@ const ProductsSoldPage: React.FC = () => {
           </div>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Categories</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
+              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
 
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Branches" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Branches</SelectItem>
-                {branches.map(b => (
-                  <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
-                ))}
+                {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -391,57 +394,33 @@ const ProductsSoldPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">
-                    Product Name
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">
-                    Category
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Model</TableHead>
-                <TableHead className="cursor-pointer text-center" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">
-                    Quantity
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
+                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 {isAdmin && (
-                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">
-                      Branch
-                      <ArrowUpDown className="h-4 w-4" />
-                    </div>
+                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
+                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                   </TableHead>
                 )}
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">
-                    Cost Price
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('sellingPrice')}>
-                  <div className="flex items-center gap-1">
-                    Selling Price
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Selling Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Profit/Loss</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('soldDate')}>
-                  <div className="flex items-center gap-1">
-                    Sold Date
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Sold Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('deadline')}>
-                  <div className="flex items-center gap-1">
-                    Return Deadline
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Return Deadline <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -462,9 +441,7 @@ const ProductsSoldPage: React.FC = () => {
                     <TableCell className="text-center">{p.quantity}</TableCell>
                     {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
                     <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell className={getPriceColor(p.sellingPrice)}>
-                      {p.sellingPrice.toLocaleString()} RWF
-                    </TableCell>
+                    <TableCell className={getPriceColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</TableCell>
                     <TableCell>{(p.quantity * p.sellingPrice).toLocaleString()} RWF</TableCell>
                     <TableCell className={getProfitLossColor(calculateProfitLoss(p))}>
                       {calculateProfitLoss(p).toLocaleString()} RWF
@@ -511,7 +488,7 @@ const ProductsSoldPage: React.FC = () => {
                 <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
                 <p><strong>Selling Price:</strong> {currentProduct.sellingPrice.toLocaleString()} RWF</p>
                 <p><strong>Total Amount:</strong> {(currentProduct.quantity * currentProduct.sellingPrice).toLocaleString()} RWF</p>
-                <p><strong>Profit/Loss:</strong> {calculateProfitLoss(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>Profit/Loss:</strong> <span className={getProfitLossColor(calculateProfitLoss(currentProduct))}>{calculateProfitLoss(currentProduct).toLocaleString()} RWF</span></p>
                 <p><strong>Sold Date:</strong> {new Date(currentProduct.soldDate).toLocaleDateString()}</p>
                 <p><strong>Return Deadline:</strong> {currentProduct.deadline ? new Date(currentProduct.deadline).toLocaleDateString() : '-'}</p>
               </div>
@@ -524,37 +501,85 @@ const ProductsSoldPage: React.FC = () => {
 
         {/* Restore Dialog */}
         <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Restore Sold Product</DialogTitle>
+              <DialogDescription>
+                {currentProduct && `Restoring from: ${currentProduct.productName} (Sold Quantity: ${currentProduct.quantity})`}
+              </DialogDescription>
             </DialogHeader>
+
             {currentProduct && (
-              <div className="grid gap-4 py-4">
-                <p>Restore from <strong>{currentProduct.productName}</strong> (Sold Qty: {currentProduct.quantity})</p>
+              <div className="space-y-5 py-4">
                 <div className="grid gap-2">
-                  <Label>Quantity to Restore</Label>
+                  <Label>Quantity to Restore *</Label>
                   <Input
                     type="number"
                     min="1"
                     max={currentProduct.quantity}
+                    placeholder="Enter quantity to restore"
                     value={restoreForm.quantity}
-                    onChange={e => setRestoreForm(prev => ({ ...prev, quantity: Number(e.target.value) || 1 }))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const num = val === '' ? '' : Number(val);
+                      if (num !== '' && (num < 1 || num > currentProduct.quantity)) return;
+                      setRestoreForm(prev => ({ ...prev, quantity: num }));
+                    }}
                   />
                 </div>
+
+                {restoreForm.quantity !== '' && Number(restoreForm.quantity) > currentProduct.quantity && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      You cannot restore more than the sold quantity ({currentProduct.quantity}).
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {restoreForm.quantity !== '' && Number(restoreForm.quantity) === currentProduct.quantity && (
+                  <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-900 dark:text-blue-200">
+                      <strong>Full Restore:</strong> The product will be fully returned to stock, and{' '}
+                      <strong>this sale record will be permanently removed</strong> from the database because the remaining quantity will be zero.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="grid gap-2">
-                  <Label>Reason for Restore</Label>
+                  <Label>Reason for Restore *</Label>
                   <Textarea
+                    placeholder="Enter reason for restoring this product (required)"
                     value={restoreForm.comment}
-                    onChange={e => setRestoreForm(prev => ({ ...prev, comment: e.target.value }))}
-                    placeholder="Enter reason for restore..."
+                    onChange={(e) => setRestoreForm(prev => ({ ...prev, comment: e.target.value }))}
+                    rows={4}
                   />
                 </div>
               </div>
             )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setRestoreDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleRestore} disabled={actionLoading || restoreForm.comment.trim() === '' || restoreForm.quantity <= 0}>
-                {actionLoading ? 'Restoring...' : 'Restore'}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRestoreDialogOpen(false);
+                  setRestoreForm({ quantity: '', comment: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleRestore}
+                disabled={
+                  actionLoading ||
+                  restoreForm.quantity === '' ||
+                  Number(restoreForm.quantity) <= 0 ||
+                  Number(restoreForm.quantity) > currentProduct?.quantity ||
+                  restoreForm.comment.trim() === ''
+                }
+              >
+                {actionLoading ? 'Restoring...' : 'Confirm Restore'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -566,7 +591,7 @@ const ProductsSoldPage: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Delete Sold Product?</DialogTitle>
               <DialogDescription>
-                This action cannot be undone.
+                This action cannot be undone. The sale record will be permanently deleted.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

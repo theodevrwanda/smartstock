@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, ShoppingCart, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, ShoppingCart, FileSpreadsheet, FileText, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,20 +21,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getRestoredProducts,
   deleteRestoredProduct,
   sellRestoredProduct,
   RestoredProduct,
+  toast, // ← Imported centralized toast from restored.ts
 } from '@/functions/restored';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsRestoredPage: React.FC = () => {
-  const { toast } = useToast();
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
@@ -66,14 +67,14 @@ const ProductsRestoredPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<RestoredProduct | null>(null);
 
-  // Sell form
+  // Sell form – starts empty (placeholders only)
   const [sellForm, setSellForm] = useState({
-    quantity: 1,
-    sellingPrice: 0,
+    quantity: '' as string | number,
+    sellingPrice: '' as string | number,
     deadline: '',
   });
 
-  // Load data function - extracted for reuse
+  // Load data
   const loadData = useCallback(async () => {
     if (!businessId) {
       setLoading(false);
@@ -93,12 +94,12 @@ const ProductsRestoredPage: React.FC = () => {
       const map = new Map<string, string>();
       branchList.forEach(b => b.id && map.set(b.id, b.branchName));
       setBranchMap(map);
-    } catch (err) {
-      toast({ title: 'Error', description: 'Failed to load restored products', variant: 'destructive' });
+    } catch {
+      toast.error('Failed to load restored products');
     } finally {
       setLoading(false);
     }
-  }, [businessId, user?.role, userBranch, toast]);
+  }, [businessId, user?.role, userBranch]);
 
   useEffect(() => {
     loadData();
@@ -154,7 +155,7 @@ const ProductsRestoredPage: React.FC = () => {
     }
   };
 
-  // Export columns
+  // Export
   const restoredExportColumns: ExportColumn[] = [
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
@@ -187,12 +188,12 @@ const ProductsRestoredPage: React.FC = () => {
 
   const handleExportExcel = () => {
     exportToExcel(getRestoredExportData(), restoredExportColumns, 'restored-products');
-    toast({ title: 'Success', description: 'Exported to Excel' });
+    toast.success('Exported to Excel');
   };
 
   const handleExportPDF = () => {
     exportToPDF(getRestoredExportData(), restoredExportColumns, 'restored-products', 'Restored Products Report');
-    toast({ title: 'Success', description: 'Exported to PDF' });
+    toast.success('Exported to PDF');
   };
 
   const getPriceColor = (price: number) => {
@@ -218,44 +219,51 @@ const ProductsRestoredPage: React.FC = () => {
     return filteredProducts.reduce((sum, p) => sum + calculateProfitLoss(p), 0);
   };
 
-  // Handle sell with refetch
   const handleSell = async () => {
-    if (!currentProduct) return;
+    if (!currentProduct || sellForm.quantity === '' || sellForm.sellingPrice === '') return;
+
+    const qty = Number(sellForm.quantity);
+    const price = Number(sellForm.sellingPrice);
+
+    if (qty > currentProduct.quantity || price <= 0 || qty <= 0) {
+      toast.error('Invalid quantity or price');
+      return;
+    }
+
     setActionLoading(true);
     try {
       const success = await sellRestoredProduct(
         currentProduct.id,
-        sellForm.quantity,
-        sellForm.sellingPrice,
+        qty,
+        price,
         sellForm.deadline || undefined,
         userBranch
       );
 
       if (success) {
-        toast({ title: 'Success', description: `Successfully re-sold ${sellForm.quantity} unit(s)` });
+        toast.success(`Successfully re-sold ${qty} unit(s)`);
         setSellDialogOpen(false);
         setCurrentProduct(null);
-        setSellForm({ quantity: 1, sellingPrice: 0, deadline: '' });
-        await loadData(); // Refetch to get fresh data
+        setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+        await loadData();
       }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Sale failed', variant: 'destructive' });
+    } catch {
+      toast.error('Sale failed');
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Handle delete with refetch
   const handleDelete = async () => {
     if (!currentProduct) return;
     setActionLoading(true);
     try {
       const success = await deleteRestoredProduct(currentProduct.id);
       if (success) {
-        toast({ title: 'Success', description: 'Restored product deleted permanently' });
+        toast.success('Restored product deleted permanently');
         setDeleteConfirmOpen(false);
         setCurrentProduct(null);
-        await loadData(); // Refetch
+        await loadData();
       }
     } finally {
       setActionLoading(false);
@@ -269,11 +277,7 @@ const ProductsRestoredPage: React.FC = () => {
 
   const openSell = (product: RestoredProduct) => {
     setCurrentProduct(product);
-    setSellForm({
-      quantity: 1,
-      sellingPrice: Math.round(product.costPrice * 1.2),
-      deadline: '',
-    });
+    setSellForm({ quantity: '', sellingPrice: '', deadline: '' }); // Empty, no defaults
     setSellDialogOpen(true);
   };
 
@@ -287,15 +291,10 @@ const ProductsRestoredPage: React.FC = () => {
       <div className="space-y-6 p-6">
         <Skeleton className="h-12 w-96" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
         </div>
         <div className="space-y-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
         </div>
       </div>
     );
@@ -333,7 +332,7 @@ const ProductsRestoredPage: React.FC = () => {
           </DropdownMenu>
         </div>
 
-        {/* Profit/Loss Summary */}
+        {/* Expected Profit/Loss Summary */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Expected Profit/Loss (if sold at current price)</h2>
           <p className={getProfitLossColor(calculateTotalProfitLoss())}>
@@ -354,27 +353,19 @@ const ProductsRestoredPage: React.FC = () => {
           </div>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Categories</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
+              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
 
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Branches" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Branches</SelectItem>
-                {branches.map(b => (
-                  <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
-                ))}
+                {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -396,30 +387,18 @@ const ProductsRestoredPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">
-                    Product Name
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">
-                    Category
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Model</TableHead>
-                <TableHead className="cursor-pointer text-center" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">
-                    Quantity
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
+                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 {isAdmin && (
-                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">
-                      Branch
-                      <ArrowUpDown className="h-4 w-4" />
-                    </div>
+                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
+                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                   </TableHead>
                 )}
                 <TableHead>Cost Price</TableHead>
@@ -427,10 +406,7 @@ const ProductsRestoredPage: React.FC = () => {
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Profit/Loss</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('restoredDate')}>
-                  <div className="flex items-center gap-1">
-                    Restored Date
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Restored Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Comment</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -519,54 +495,124 @@ const ProductsRestoredPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Sell Dialog */}
+        {/* Sell Dialog – Enhanced with Summary */}
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Sell Restored Product</DialogTitle>
+              <DialogDescription>
+                {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
+                <br />
+                Available: {currentProduct?.quantity} units
+              </DialogDescription>
             </DialogHeader>
+
             {currentProduct && (
-              <div className="space-y-4 py-4">
-                <p className="font-medium">{currentProduct.productName} {currentProduct.model && `(${currentProduct.model})`}</p>
-                <p className="text-sm text-muted-foreground">Available quantity: {currentProduct.quantity}</p>
-                <div className="grid gap-2">
-                  <Label>Quantity to Sell</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={currentProduct.quantity}
-                    value={sellForm.quantity}
-                    onChange={e => setSellForm(s => ({ ...s, quantity: Math.max(1, Math.min(currentProduct.quantity, Number(e.target.value) || 1)) }))}
-                  />
+              <div className="space-y-6 py-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>Quantity to Sell</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Enter quantity"
+                      value={sellForm.quantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSellForm(s => ({ ...s, quantity: val === '' ? '' : Number(val) }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Selling Price per Unit (RWF)</Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter selling price"
+                      value={sellForm.sellingPrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Return Deadline (optional)</Label>
+                    <Input
+                      type="date"
+                      value={sellForm.deadline}
+                      onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Selling Price (RWF)</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={sellForm.sellingPrice}
-                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: Number(e.target.value) || 0 }))}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Return Deadline (optional)</Label>
-                  <Input
-                    type="date"
-                    value={sellForm.deadline}
-                    onChange={e => setSellForm(s => ({ ...s, deadline: e.target.value }))}
-                  />
-                </div>
-                {sellForm.sellingPrice > 0 && sellForm.quantity > 0 && (
-                  <p className="font-bold text-lg">
-                    Total Sale Amount: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF
-                  </p>
+
+                {/* Red warning if qty > available */}
+                {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Quantity exceeds available stock ({currentProduct.quantity}).
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Summary Card */}
+                {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
+                  <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+                    <CardContent className="pt-6 space-y-3">
+                      <div className="flex justify-between text-lg">
+                        <span>Total Money Received:</span>
+                        <span className="font-bold">
+                          {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between text-lg">
+                        <span>Cost of Goods:</span>
+                        <span>
+                          {(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                        <span>Profit / Loss:</span>
+                        <span className={
+                          Number(sellForm.sellingPrice) * Number(sellForm.quantity) >= currentProduct.costPrice * Number(sellForm.quantity)
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }>
+                          {(
+                            Number(sellForm.sellingPrice) * Number(sellForm.quantity) -
+                            currentProduct.costPrice * Number(sellForm.quantity)
+                          ).toLocaleString()} RWF
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSell} disabled={actionLoading || sellForm.quantity < 1 || sellForm.sellingPrice <= 0}>
-                {actionLoading ? <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Selling...</> : 'Sell'}
+              <Button variant="outline" onClick={() => {
+                setSellDialogOpen(false);
+                setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+              }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSell}
+                disabled={
+                  actionLoading ||
+                  sellForm.quantity === '' ||
+                  sellForm.sellingPrice === '' ||
+                  Number(sellForm.quantity) <= 0 ||
+                  Number(sellForm.sellingPrice) <= 0 ||
+                  Number(sellForm.quantity) > currentProduct?.quantity
+                }
+              >
+                {actionLoading ? 'Selling...' : 'Confirm Sale'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -584,7 +630,7 @@ const ProductsRestoredPage: React.FC = () => {
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-                {actionLoading ? <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : 'Delete Permanently'}
+                {actionLoading ? 'Deleting...' : 'Delete Permanently'}
               </Button>
             </DialogFooter>
           </DialogContent>
