@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle } from 'lucide-react';
+import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getProducts,
@@ -30,7 +32,7 @@ import {
   deleteProduct,
   syncOfflineOperations,
   Product,
-  toast, // ← Imported toast from store.ts
+  toast,
 } from '@/functions/store';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,28 +70,33 @@ const ProductsStorePage: React.FC = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
+  const [confirmSaleDialogOpen, setConfirmSaleDialogOpen] = useState(false);
+  const [confirmProductDialogOpen, setConfirmProductDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  // Current product & forms
+  // Current product states
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [productToConfirm, setProductToConfirm] = useState<{ id: string; current: boolean } | null>(null);
 
+  // Add product form – all fields start empty (placeholders only)
   const [newProduct, setNewProduct] = useState({
     productName: '',
     category: '',
     model: '',
-    costPrice: 0,
-    quantity: 1,
+    costPrice: '' as string | number,
+    quantity: '' as string | number,
   });
 
+  // Sell form – empty by default
   const [sellForm, setSellForm] = useState({
-    quantity: 1,
-    sellingPrice: 0,
+    quantity: '' as string | number,
+    sellingPrice: '' as string | number,
     deadline: '',
   });
 
-  // Online/Offline Detection + Toast Notifications
+  // Online/Offline Detection
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -106,10 +113,7 @@ const ProductsStorePage: React.FC = () => {
       toast.warning('⚠️ You are Offline – Working locally. Changes will sync when you reconnect.');
     };
 
-    // Initial check
-    if (!navigator.onLine) {
-      handleOffline();
-    }
+    if (!navigator.onLine) handleOffline();
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -141,12 +145,8 @@ const ProductsStorePage: React.FC = () => {
         const map = new Map<string, string>();
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
-
-        if (!isOnline) {
-          toast.info('Offline Mode – Loaded local data. Changes will sync when online.');
-        }
       } catch (err) {
-        toast.warning(isOnline ? 'Failed to load latest data' : 'Using cached local data (offline)');
+        toast.warning(isOnline ? 'Failed to load latest data' : 'Using cached data (offline)');
       } finally {
         setLoading(false);
       }
@@ -261,14 +261,25 @@ const ProductsStorePage: React.FC = () => {
       toast.error('You are not assigned to any branch');
       return;
     }
-    if (!newProduct.productName || !newProduct.category || newProduct.costPrice <= 0 || newProduct.quantity <= 0) {
+    if (
+      !newProduct.productName ||
+      !newProduct.category ||
+      newProduct.costPrice === '' ||
+      newProduct.quantity === '' ||
+      Number(newProduct.quantity) < 1 ||
+      Number(newProduct.costPrice) <= 0
+    ) {
       toast.error('Please fill all required fields correctly');
       return;
     }
 
     setActionLoading(true);
     const result = await addOrUpdateProduct({
-      ...newProduct,
+      productName: newProduct.productName,
+      category: newProduct.category,
+      model: newProduct.model,
+      costPrice: Number(newProduct.costPrice),
+      quantity: Number(newProduct.quantity),
       branch: userBranch,
       businessId: businessId!,
       confirm: isAdmin,
@@ -282,7 +293,7 @@ const ProductsStorePage: React.FC = () => {
       });
       toast.success(isOnline ? 'Product added successfully' : 'Product added locally – will sync when online');
       setAddDialogOpen(false);
-      setNewProduct({ productName: '', category: '', model: '', costPrice: 0, quantity: 1 });
+      setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '' });
     }
     setActionLoading(false);
   };
@@ -299,19 +310,29 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
-  const handleSellProduct = async () => {
-    if (!currentProduct || sellForm.quantity > currentProduct.quantity || sellForm.sellingPrice <= 0) {
+  const openConfirmSale = () => {
+    setConfirmSaleDialogOpen(true);
+  };
+
+  const handleSellConfirm = async () => {
+    if (!currentProduct || sellForm.quantity === '' || sellForm.sellingPrice === '') return;
+
+    const qty = Number(sellForm.quantity);
+    const price = Number(sellForm.sellingPrice);
+
+    if (qty > currentProduct.quantity || price <= 0 || qty <= 0) {
       toast.error('Invalid quantity or price');
       return;
     }
 
     setActionLoading(true);
-    const success = await sellProduct(currentProduct.id!, sellForm.quantity, sellForm.sellingPrice, sellForm.deadline, userBranch);
+    const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
     if (success) {
-      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - sellForm.quantity } : p));
-      toast.success(isOnline ? `Sold ${sellForm.quantity} unit(s)` : `Sale recorded locally – will sync when online`);
+      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
+      toast.success(isOnline ? `Sold ${qty} unit(s)` : `Sale recorded locally – will sync when online`);
       setSellDialogOpen(false);
-      setSellForm({ quantity: 1, sellingPrice: 0, deadline: '' });
+      setConfirmSaleDialogOpen(false);
+      setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
     }
     setActionLoading(false);
   };
@@ -328,13 +349,22 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
-  const handleToggleConfirm = async (id: string, current: boolean) => {
-    if (!isAdmin) return;
+  // Confirm/Unconfirm Product
+  const openConfirmProductDialog = (id: string, current: boolean) => {
+    setProductToConfirm({ id, current });
+    setConfirmProductDialogOpen(true);
+  };
+
+  const handleConfirmProduct = async () => {
+    if (!productToConfirm || !isAdmin) return;
+
     setActionLoading(true);
-    const success = await updateProduct(id, { confirm: !current });
+    const success = await updateProduct(productToConfirm.id, { confirm: !productToConfirm.current });
     if (success) {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, confirm: !current } : p));
-      toast.success(`Product ${!current ? 'confirmed' : 'unconfirmed'}`);
+      setProducts(prev => prev.map(p => p.id === productToConfirm.id ? { ...p, confirm: !productToConfirm.current } : p));
+      toast.success(`Product ${!productToConfirm.current ? 'confirmed' : 'unconfirmed'} successfully`);
+      setConfirmProductDialogOpen(false);
+      setProductToConfirm(null);
     }
     setActionLoading(false);
   };
@@ -498,7 +528,7 @@ const ProductsStorePage: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleToggleConfirm(p.id!, p.confirm)}
+                          onClick={() => openConfirmProductDialog(p.id!, p.confirm)}
                           disabled={!isAdmin || actionLoading}
                         >
                           {p.confirm ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
@@ -546,60 +576,71 @@ const ProductsStorePage: React.FC = () => {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label>Product Name *</Label>
-                <Input 
-                  value={newProduct.productName} 
-                  onChange={e => setNewProduct(prev => ({ ...prev, productName: e.target.value }))} 
-                  placeholder="Enter product name" 
+                <Input
+                  value={newProduct.productName}
+                  onChange={e => setNewProduct(prev => ({ ...prev, productName: e.target.value }))}
+                  placeholder="Enter product name"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Category *</Label>
-                <Input 
-                  value={newProduct.category} 
-                  onChange={e => setNewProduct(prev => ({ ...prev, category: e.target.value }))} 
-                  placeholder="Enter category" 
+                <Input
+                  value={newProduct.category}
+                  onChange={e => setNewProduct(prev => ({ ...prev, category: e.target.value }))}
+                  placeholder="Enter category"
                 />
               </div>
               <div className="grid gap-2">
                 <Label>Model (optional)</Label>
-                <Input 
-                  value={newProduct.model} 
-                  onChange={e => setNewProduct(prev => ({ ...prev, model: e.target.value }))} 
-                  placeholder="Enter model" 
+                <Input
+                  value={newProduct.model}
+                  onChange={e => setNewProduct(prev => ({ ...prev, model: e.target.value }))}
+                  placeholder="Enter model"
                 />
               </div>
-              
               <div className="grid gap-2">
-                <Label>Cost Price (RWF) *</Label>
-                <Input 
-                  type="number" 
-                  value={newProduct.costPrice || ''} 
+                <Label>Cost Price per Unit (RWF) *</Label>
+                <Input
+                  type="number"
+                  value={newProduct.costPrice}
                   onChange={e => {
                     const val = e.target.value;
-                    setNewProduct(prev => ({ ...prev, costPrice: val === '' ? 0 : Number(val) }))
-                  }} 
-                  placeholder="Enter cost price" 
+                    setNewProduct(prev => ({ ...prev, costPrice: val === '' ? '' : Number(val) }));
+                  }}
+                  placeholder="Enter cost price"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Quantity *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newProduct.quantity}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewProduct(prev => ({ ...prev, quantity: val === '' ? '' : Number(val) }));
+                  }}
+                  placeholder="Enter quantity"
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label>Quantity *</Label>
-                <Input 
-                  type="number" 
-                  value={newProduct.quantity || ''} 
-                  onChange={e => {
-                    const val = e.target.value;
-                    setNewProduct(prev => ({ ...prev, quantity: val === '' ? 0 : Number(val) }))
-                  }} 
-                  placeholder="Enter quantity" 
-                />
-              </div>
+              {/* Total Cost Summary in Add Dialog */}
+              {newProduct.costPrice !== '' && newProduct.quantity !== '' && Number(newProduct.costPrice) > 0 && Number(newProduct.quantity) > 0 && (
+                <Card className="bg-indigo-50 dark:bg-indigo-950 border-indigo-200">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total Cost Value:</span>
+                      <span>{(Number(newProduct.costPrice) * Number(newProduct.quantity)).toLocaleString()} RWF</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-              <Button 
-                onClick={handleAddProduct} 
-                disabled={actionLoading || !newProduct.productName || !newProduct.costPrice || !newProduct.quantity}
+              <Button
+                onClick={handleAddProduct}
+                disabled={actionLoading || !newProduct.productName || !newProduct.category || newProduct.costPrice === '' || newProduct.quantity === ''}
               >
                 {actionLoading ? 'Adding...' : 'Add Product'}
               </Button>
@@ -642,62 +683,168 @@ const ProductsStorePage: React.FC = () => {
 
         {/* Sell Product Dialog */}
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Sell Product</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Sell Product</DialogTitle>
+              <DialogDescription>
+                {currentProduct?.productName} (Available: {currentProduct?.quantity})
+              </DialogDescription>
+            </DialogHeader>
+
             {currentProduct && (
-              <div className="space-y-4 py-4">
-                <p className="font-medium">{currentProduct.productName}</p>
-                <p className="text-sm text-muted-foreground">Available: {currentProduct.quantity}</p>
-                
-                <div className="grid gap-2">
-                  <Label>Quantity to Sell</Label>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    max={currentProduct.quantity} 
-                    placeholder="Enter quantity"
-                    value={sellForm.quantity || ''} 
-                    onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? 0 : Number(e.target.value) }))} 
-                  />
+              <div className="space-y-6 py-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>Quantity to Sell</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Enter quantity"
+                      value={sellForm.quantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSellForm(s => ({ ...s, quantity: val === '' ? '' : Number(val) }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Selling Price per Unit (RWF)</Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter selling price"
+                      value={sellForm.sellingPrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Return Deadline (optional)</Label>
+                    <Input
+                      type="date"
+                      value={sellForm.deadline}
+                      onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+                    />
+                  </div>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label>Selling Price (RWF)</Label>
-                  <Input 
-                    type="number" 
-                    placeholder="Enter selling price"
-                    value={sellForm.sellingPrice || ''} 
-                    onChange={e => setSellForm(s => ({ ...s, sellingPrice: e.target.value === '' ? 0 : Number(e.target.value) }))} 
-                  />
-                </div>
+                {/* Warning if quantity exceeds stock */}
+                {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Quantity entered ({sellForm.quantity}) exceeds available stock ({currentProduct.quantity}).
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-                <div className="grid gap-2">
-                  <Label>Return Deadline (optional)</Label>
-                  <Input 
-                    type="date" 
-                    value={sellForm.deadline} 
-                    onChange={e => setSellForm(s => ({ ...s, deadline: e.target.value }))} 
-                  />
-                </div>
-
-                {sellForm.sellingPrice > 0 && sellForm.quantity > 0 && (
-                  <p className="font-bold">Total: {(sellForm.quantity * sellForm.sellingPrice).toLocaleString()} RWF</p>
+                {/* Summary Card */}
+                {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
+                  <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+                    <CardContent className="pt-6 space-y-3">
+                      <div className="flex justify-between text-lg">
+                        <span>Total Money Received:</span>
+                        <span className="font-bold">
+                          {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-lg">
+                        <span>Cost of Goods:</span>
+                        <span>
+                          {(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                        <span>Profit / Loss:</span>
+                        <span className={
+                          Number(sellForm.sellingPrice) * Number(sellForm.quantity) >= currentProduct.costPrice * Number(sellForm.quantity)
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        }>
+                          {(
+                            Number(sellForm.sellingPrice) * Number(sellForm.quantity) -
+                            currentProduct.costPrice * Number(sellForm.quantity)
+                          ).toLocaleString()} RWF
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSellDialogOpen(false)}>Cancel</Button>
-              <Button 
-                onClick={handleSellProduct} 
-                disabled={actionLoading || !sellForm.quantity || !sellForm.sellingPrice}
+              <Button variant="outline" onClick={() => {
+                setSellDialogOpen(false);
+                setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+              }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={openConfirmSale}
+                disabled={
+                  actionLoading ||
+                  sellForm.quantity === '' ||
+                  sellForm.sellingPrice === '' ||
+                  Number(sellForm.quantity) <= 0 ||
+                  Number(sellForm.sellingPrice) <= 0 ||
+                  Number(sellForm.quantity) > currentProduct.quantity
+                }
               >
-                {actionLoading ? 'Selling...' : 'Sell'}
+                Proceed to Confirm
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Details Dialog */}
+        {/* Final Sale Confirmation Dialog */}
+        <Dialog open={confirmSaleDialogOpen} onOpenChange={setConfirmSaleDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Sale</DialogTitle>
+              <DialogDescription className="space-y-3">
+                <p>Are you sure you want to confirm this sale?</p>
+                <div className="font-medium">
+                  <p>Product: <strong>{currentProduct?.productName}</strong></p>
+                  <p>Quantity: <strong>{sellForm.quantity}</strong></p>
+                  <p>Selling Price per Unit: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
+                  <p className="text-lg pt-2">
+                    Total Amount: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong>
+                  </p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmSaleDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSellConfirm} disabled={actionLoading}>
+                {actionLoading ? 'Selling...' : 'Yes, Confirm Sale'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Product Status Dialog (Admin only) */}
+        <Dialog open={confirmProductDialogOpen} onOpenChange={setConfirmProductDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Confirmation Status</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to <strong>{productToConfirm && !productToConfirm.current ? 'confirm' : 'unconfirm'}</strong> this product?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmProductDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleConfirmProduct} disabled={actionLoading}>
+                {actionLoading ? 'Processing...' : 'Yes, Confirm Change'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Product Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Product Details</DialogTitle></DialogHeader>
@@ -711,7 +858,7 @@ const ProductsStorePage: React.FC = () => {
                 <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
                 <p><strong>Status:</strong> {getStatusBadge(currentProduct.quantity)}</p>
                 <p><strong>Confirmed:</strong> {currentProduct.confirm ? 'Yes' : 'No'}</p>
-                <p><strong>Added At:</strong> {new Date(currentProduct.addedDate).toLocaleDateString()}</p>
+                <p><strong>Added At:</strong> {currentProduct.addedDate ? new Date(currentProduct.addedDate).toLocaleDateString() : '-'}</p>
               </div>
             )}
             <DialogFooter>
@@ -720,7 +867,7 @@ const ProductsStorePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirm Dialog */}
+        {/* Delete Confirmation Dialog */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
