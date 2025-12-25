@@ -17,7 +17,7 @@ const ReportsPage: React.FC = () => {
   const { user } = useAuth();
 
   const isAdmin = user?.role === 'admin';
-  const userBranch = user?.branch || null;
+  const userBranch = user?.branch; // Can be null
   const businessId = user?.businessId;
 
   const [products, setProducts] = useState<ProductReport[]>([]);
@@ -46,17 +46,33 @@ const ReportsPage: React.FC = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const { products: prods, summary: sum } = await getReportData(businessId, user?.role || 'staff', userBranch);
+        // This now correctly respects branch assignment
+        const { products: prods, summary: sum } = await getReportData(
+          businessId,
+          user?.role || 'staff',
+          userBranch  // null → staff sees nothing
+        );
+
         setProducts(prods);
         setSummary(sum);
 
-        const branchList = await getBranches(businessId);
-        setBranches(branchList);
+        // Load branches only for admin
+        if (isAdmin) {
+          const branchList = await getBranches(businessId);
+          setBranches(branchList);
 
-        const map = new Map<string, string>();
-        branchList.forEach(b => map.set(b.id!, b.branchName));
-        setBranchMap(map);
-      } catch {
+          const map = new Map<string, string>();
+          branchList.forEach(b => b.id && map.set(b.id, b.branchName));
+          setBranchMap(map);
+        } else if (userBranch) {
+          // Staff: show only their branch name
+          const staffBranchName = user.branchName || 'Assigned Branch';
+          const map = new Map<string, string>();
+          map.set(userBranch, staffBranchName);
+          setBranchMap(map);
+        }
+        // If staff has no branch → branchMap empty → shows "Unknown"
+      } catch (err) {
         toast({ title: 'Error', description: 'Failed to load report data', variant: 'destructive' });
       } finally {
         setLoading(false);
@@ -64,15 +80,15 @@ const ReportsPage: React.FC = () => {
     };
 
     load();
-  }, [businessId, user?.role, userBranch]);
+  }, [businessId, user?.role, userBranch, isAdmin, toast]);
 
-  const getBranchName = (id: string) => branchMap.get(id) || 'Unknown';
+  const getBranchName = (id: string) => branchMap.get(id) || 'Unknown Branch';
 
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = useMemo(() => ['All', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
   // Filtering
   const filteredProducts = useMemo(() => {
-    return products
+    let filtered = products
       .filter(p =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -80,20 +96,21 @@ const ReportsPage: React.FC = () => {
         (p.restoreComment || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
       .filter(p => statusFilter === 'all' || p.status === statusFilter)
-      .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
-      .filter(p => branchFilter === 'All' || p.branch === branchFilter);
-  }, [products, searchTerm, statusFilter, categoryFilter, branchFilter]);
+      .filter(p => categoryFilter === 'All' || p.category === categoryFilter);
+
+    // Only admin can filter by branch
+    if (isAdmin && branchFilter !== 'All') {
+      filtered = filtered.filter(p => p.branch === branchFilter);
+    }
+
+    return filtered;
+  }, [products, searchTerm, statusFilter, categoryFilter, branchFilter, isAdmin]);
 
   // Sorting
   const sortedProducts = useMemo(() => {
     return [...filteredProducts].sort((a, b) => {
-      let aVal: any = a[sortColumn as keyof ProductReport];
-      let bVal: any = b[sortColumn as keyof ProductReport];
-
-      if (sortColumn === 'branchName') {
-        aVal = getBranchName(a.branch);
-        bVal = getBranchName(b.branch);
-      }
+      let aVal: any = sortColumn === 'branchName' ? getBranchName(a.branch) : a[sortColumn as keyof ProductReport];
+      let bVal: any = sortColumn === 'branchName' ? getBranchName(b.branch) : b[sortColumn as keyof ProductReport];
 
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
@@ -131,17 +148,20 @@ const ReportsPage: React.FC = () => {
       <div className="space-y-6 p-6">
         <Skeleton className="h-12 w-96" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
         </div>
         <Skeleton className="h-96 w-full" />
       </div>
     );
   }
 
-  if (!summary) return null;
+  if (!summary) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        No report data available.
+      </div>
+    );
+  }
 
   return (
     <>
@@ -203,7 +223,7 @@ const ReportsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Professional Filters */}
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
@@ -215,10 +235,8 @@ const ReportsPage: React.FC = () => {
             />
           </div>
 
-          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as typeof statusFilter)}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
+          <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)}>
+            <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Products</SelectItem>
               <SelectItem value="store">In Store</SelectItem>
@@ -229,22 +247,16 @@ const ReportsPage: React.FC = () => {
           </Select>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Categories</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
+              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
 
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Branches" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Branches</SelectItem>
                 {branches.map(b => (
@@ -255,36 +267,24 @@ const ReportsPage: React.FC = () => {
           )}
         </div>
 
-        {/* Unified Table - Real Data from DB */}
+        {/* Table */}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">
-                    Product Name
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">
-                    Category
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Model</TableHead>
-                <TableHead className="cursor-pointer text-center" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">
-                    Quantity
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
+                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 {isAdmin && (
-                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">
-                      Branch
-                      <ArrowUpDown className="h-4 w-4" />
-                    </div>
+                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
+                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                   </TableHead>
                 )}
                 <TableHead>Status</TableHead>
@@ -292,10 +292,7 @@ const ReportsPage: React.FC = () => {
                 <TableHead>Selling Price</TableHead>
                 <TableHead>Profit/Loss</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
-                  <div className="flex items-center gap-1">
-                    Added Date
-                    <ArrowUpDown className="h-4 w-4" />
-                  </div>
+                  <div className="flex items-center gap-1">Added Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Sold/Deleted Date</TableHead>
                 <TableHead>Comment</TableHead>
@@ -305,7 +302,14 @@ const ReportsPage: React.FC = () => {
               {sortedProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-12 text-muted-foreground">
-                    No products found matching filters.
+                    {!isAdmin && !userBranch ? (
+                      <div>
+                        <p className="font-semibold">You are not assigned to any branch.</p>
+                        <p className="text-sm mt-2">Contact your admin to get access.</p>
+                      </div>
+                    ) : (
+                      'No products found matching your filters.'
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -323,19 +327,21 @@ const ReportsPage: React.FC = () => {
                         p.status === 'restored' ? 'outline' :
                         'destructive'
                       }>
-                        {p.status}
+                        {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
                       </Badge>
                     </TableCell>
                     <TableCell className={getPriceColor(p.costPrice)}>
                       {p.costPrice.toLocaleString()} RWF
                     </TableCell>
                     <TableCell>
-                      {p.sellingPrice !== null 
+                      {p.sellingPrice !== null
                         ? <span className={getPriceColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</span>
                         : '-'}
                     </TableCell>
                     <TableCell className={getProfitColor(p.profitLoss)}>
-                      {p.profitLoss !== null ? p.profitLoss.toLocaleString() + ' RWF' : '-'}
+                      {p.profitLoss !== null
+                        ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF`
+                        : '-'}
                     </TableCell>
                     <TableCell>{new Date(p.addedDate).toLocaleDateString()}</TableCell>
                     <TableCell>

@@ -155,8 +155,8 @@ export const getDashboardStats = async (
     ).size;
 
     // Most & least stocked (among store products)
-    let mostStocked = { name: 'N/A', quantity: 0 };
-    let leastStocked = { name: 'N/A', quantity: 0 };
+    let mostStocked = { name: '', quantity: 0 };
+    let leastStocked = { name: '', quantity: 0 };
 
     if (storeProducts.length > 0) {
       // Most stocked
