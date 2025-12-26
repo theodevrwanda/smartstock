@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
+import { TransactionProvider } from "@/contexts/TransactionContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -32,39 +33,41 @@ const App = () => (
       <ThemeProvider>
         <AuthProvider>
           <OfflineProvider>
-            <SearchProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route
-                      path="/"
-                      element={
-                        <ProtectedRoute>
-                          <DashboardLayout />
-                        </ProtectedRoute>
-                      }
-                    >
-                      <Route index element={<Navigate to="/dashboard" replace />} />
-                      <Route path="dashboard" element={<DashboardPage />} />
-                      <Route path="products" element={<ProductsStorePage />} />
-                      <Route path="products-sold" element={<ProductsSoldPage />} />
-                      <Route path="products-restored" element={<ProductsRestoredPage />} />
-                      <Route path="profile" element={<ProfilePage />} />
-                      <Route path="reports" element={<ReportsPage />} />
-                      <Route path="trash" element={<TrashPage />} />
-                      <Route path="manage-branch" element={<ManageBranchPage />} />
-                      <Route path="manage-employees" element={<ManageEmployeesPage />} />
-                    </Route>
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
-            </SearchProvider>
+            <TransactionProvider>
+              <SearchProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <Routes>
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/register" element={<RegisterPage />} />
+                      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                      <Route
+                        path="/"
+                        element={
+                          <ProtectedRoute>
+                            <DashboardLayout />
+                          </ProtectedRoute>
+                        }
+                      >
+                        <Route index element={<Navigate to="/dashboard" replace />} />
+                        <Route path="dashboard" element={<DashboardPage />} />
+                        <Route path="products" element={<ProductsStorePage />} />
+                        <Route path="products-sold" element={<ProductsSoldPage />} />
+                        <Route path="products-restored" element={<ProductsRestoredPage />} />
+                        <Route path="profile" element={<ProfilePage />} />
+                        <Route path="reports" element={<ReportsPage />} />
+                        <Route path="trash" element={<TrashPage />} />
+                        <Route path="manage-branch" element={<ManageBranchPage />} />
+                        <Route path="manage-employees" element={<ManageEmployeesPage />} />
+                      </Route>
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </BrowserRouter>
+                </TooltipProvider>
+              </SearchProvider>
+            </TransactionProvider>
           </OfflineProvider>
         </AuthProvider>
       </ThemeProvider>

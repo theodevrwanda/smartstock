@@ -69,7 +69,7 @@ const ReportsPage: React.FC = () => {
           branchList.forEach(b => b.id && map.set(b.id, b.branchName));
           setBranchMap(map);
         } else if (userBranch) {
-          const staffBranchName = user.branchName || 'Assigned Branch';
+          const staffBranchName = (user as any).branchName || 'Assigned Branch';
           const map = new Map<string, string>();
           map.set(userBranch, staffBranchName);
           setBranchMap(map);
