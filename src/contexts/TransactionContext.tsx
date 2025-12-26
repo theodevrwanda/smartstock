@@ -10,7 +10,7 @@ import {
   getTransactionColor 
 } from '@/lib/transactionLogger';
 import { toast } from 'sonner';
-import { Bell, TrendingUp, TrendingDown, Package, Users, Building2, UserCircle } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 interface TransactionContextType {
   latestTransaction: TransactionLog | null;
@@ -59,21 +59,16 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({ childr
   const showTransactionNotification = useCallback((transaction: TransactionLog) => {
     if (!notificationsEnabled) return;
     
-    // Don't show notifications for own actions
-    if (transaction.userId === user?.id) return;
-
     const typeLabel = transactionTypeLabels[transaction.transactionType];
     const colorClass = getTransactionColor(transaction.transactionType);
     
-    let icon = Package;
     let description = transaction.actionDetails;
     
     // Customize notification based on type
     switch (transaction.transactionType) {
       case 'product_sold':
       case 'resold_restored_product':
-        icon = TrendingUp;
-        description = `${transaction.branchName || 'Unknown Branch'} sold ${transaction.productName}\nQty: ${transaction.quantity}\nPrice: ${formatCurrency(transaction.sellingPrice || 0)}`;
+        description = `${transaction.branchName || 'Branch'} sold ${transaction.productName}\nQty: ${transaction.quantity}\nPrice: ${formatCurrency(transaction.sellingPrice || 0)}`;
         if (transaction.profit && transaction.profit > 0) {
           description += `\nProfit: +${formatCurrency(transaction.profit)}`;
         }
@@ -82,19 +77,26 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({ childr
         }
         break;
       case 'product_restored':
-        icon = Package;
-        description = `${transaction.branchName || 'Unknown Branch'} restored ${transaction.productName}\nQty: ${transaction.quantity}`;
+        description = `${transaction.branchName || 'Branch'} restored ${transaction.productName}\nQty: ${transaction.quantity}`;
+        break;
+      case 'product_added':
+        description = `${transaction.branchName || 'Branch'} added ${transaction.productName}\nQty: ${transaction.quantity}\nCost: ${formatCurrency(transaction.costPrice || 0)}`;
+        break;
+      case 'product_deleted':
+        description = `Deleted product: ${transaction.productName}`;
         break;
       case 'employee_added':
       case 'employee_updated':
-        icon = Users;
+      case 'employee_deleted':
+        description = transaction.actionDetails;
         break;
       case 'branch_created':
       case 'branch_updated':
-        icon = Building2;
+      case 'branch_deleted':
+        description = transaction.actionDetails;
         break;
       case 'profile_updated':
-        icon = UserCircle;
+        description = transaction.actionDetails;
         break;
     }
 
@@ -114,7 +116,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({ childr
         position: 'top-right',
       }
     );
-  }, [notificationsEnabled, user?.id]);
+  }, [notificationsEnabled]);
 
   // Subscribe to new transactions
   useEffect(() => {

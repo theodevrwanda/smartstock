@@ -2,6 +2,7 @@
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
+import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
 
 export interface Branch {
   id?: string;
@@ -13,6 +14,42 @@ export interface Branch {
   businessId: string;
   createdAt?: string;
 }
+
+// Transaction logging context
+let txContext: {
+  userId: string;
+  userName: string;
+  userRole: string;
+  businessId: string;
+  businessName: string;
+} | null = null;
+
+export const setBranchTransactionContext = (ctx: typeof txContext) => {
+  txContext = ctx;
+};
+
+// Helper to log a transaction
+const logTx = async (
+  transactionType: TransactionLog['transactionType'],
+  details: Partial<TransactionLog>
+) => {
+  if (!txContext || !navigator.onLine) return;
+  
+  try {
+    await logTransaction({
+      transactionType,
+      businessId: txContext.businessId,
+      businessName: txContext.businessName,
+      userId: txContext.userId,
+      userName: txContext.userName,
+      userRole: txContext.userRole,
+      actionDetails: details.actionDetails || '',
+      ...details,
+    });
+  } catch (e) {
+    console.error('Failed to log transaction:', e);
+  }
+};
 
 // Get all branches for a specific business
 export const getBranches = async (businessId: string): Promise<Branch[]> => {
@@ -35,7 +72,7 @@ export const getBranches = async (businessId: string): Promise<Branch[]> => {
   }
 };
 
-// Add new branch with businessId
+// Add new branch with businessId and transaction logging
 export const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>): Promise<Branch | null> => {
   try {
     if (!branchData.businessId) {
@@ -47,6 +84,15 @@ export const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>): P
       ...branchData,
       createdAt: new Date().toISOString(),
     });
+
+    // Log branch created transaction
+    await logTx('branch_created', {
+      branchId: docRef.id,
+      branchName: branchData.branchName,
+      actionDetails: `Created new branch: ${branchData.branchName} (${branchData.district}, ${branchData.sector})`,
+      metadata: branchData,
+    });
+
     toast.success('Branch created successfully!');
     return { id: docRef.id, ...branchData, createdAt: new Date().toISOString() };
   } catch (error) {
@@ -56,11 +102,20 @@ export const addBranch = async (branchData: Omit<Branch, 'id' | 'createdAt'>): P
   }
 };
 
-// Update existing branch
+// Update existing branch with transaction logging
 export const updateBranch = async (id: string, branchData: Partial<Branch>): Promise<boolean> => {
   try {
     const branchRef = doc(db, 'branches', id);
     await updateDoc(branchRef, branchData);
+
+    // Log branch updated transaction
+    await logTx('branch_updated', {
+      branchId: id,
+      branchName: branchData.branchName,
+      actionDetails: `Updated branch: ${branchData.branchName || id}`,
+      metadata: branchData,
+    });
+
     toast.success('Branch updated successfully!');
     return true;
   } catch (error) {
@@ -70,11 +125,24 @@ export const updateBranch = async (id: string, branchData: Partial<Branch>): Pro
   }
 };
 
-// Delete single branch
+// Delete single branch with transaction logging
 export const deleteBranch = async (id: string): Promise<boolean> => {
   try {
     const branchRef = doc(db, 'branches', id);
+    const branchSnap = await getDoc(branchRef);
+    const branchData = branchSnap.exists() ? branchSnap.data() : null;
+
     await deleteDoc(branchRef);
+
+    // Log branch deleted transaction
+    if (branchData) {
+      await logTx('branch_deleted', {
+        branchId: id,
+        branchName: branchData.branchName,
+        actionDetails: `Deleted branch: ${branchData.branchName}`,
+      });
+    }
+
     toast.success('Branch deleted successfully!');
     return true;
   } catch (error) {

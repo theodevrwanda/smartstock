@@ -1,4 +1,4 @@
-// src/functions/restore.ts
+// src/functions/restored.ts
 
 import {
   collection,
@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
+import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
 
 export interface RestoredProduct {
   id: string;
@@ -27,6 +28,46 @@ export interface RestoredProduct {
   restoreComment?: string | null;
   businessId: string;
 }
+
+// Transaction logging context
+let txContext: {
+  userId: string;
+  userName: string;
+  userRole: string;
+  businessId: string;
+  businessName: string;
+  branchId?: string;
+  branchName?: string;
+} | null = null;
+
+export const setRestoredTransactionContext = (ctx: typeof txContext) => {
+  txContext = ctx;
+};
+
+// Helper to log a transaction
+const logTx = async (
+  transactionType: TransactionLog['transactionType'],
+  details: Partial<TransactionLog>
+) => {
+  if (!txContext || !navigator.onLine) return;
+  
+  try {
+    await logTransaction({
+      transactionType,
+      businessId: txContext.businessId,
+      businessName: txContext.businessName,
+      branchId: txContext.branchId,
+      branchName: txContext.branchName,
+      userId: txContext.userId,
+      userName: txContext.userName,
+      userRole: txContext.userRole,
+      actionDetails: details.actionDetails || '',
+      ...details,
+    });
+  } catch (e) {
+    console.error('Failed to log transaction:', e);
+  }
+};
 
 // Get restored products - robust mapping
 export const getRestoredProducts = async (
@@ -105,7 +146,7 @@ export const deleteRestoredProduct = async (id: string): Promise<boolean> => {
   }
 };
 
-// Sell restored product - copies restoreComment directly to new sold record
+// Sell restored product with transaction logging
 export const sellRestoredProduct = async (
   id: string,
   sellQty: number,
@@ -143,6 +184,11 @@ export const sellRestoredProduct = async (
     const now = new Date().toISOString();
     const remainingQty = restoredData.quantity - sellQty;
 
+    const totalAmount = sellQty * sellingPrice;
+    const costTotal = sellQty * restoredData.costPrice;
+    const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
+    const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
+
     // Create new sold record - keep the original restoreComment
     const soldRef = doc(collection(db, 'products'));
     await setDoc(soldRef, {
@@ -154,8 +200,6 @@ export const sellRestoredProduct = async (
       soldDate: now,
       deadline: deadline || null,
       updatedAt: now,
-      // restoreComment is copied as-is from restored product
-      // restoredDate kept if you want history, or set to null if preferred
       restoredDate: restoredData.restoredDate || null,
     });
 
@@ -171,6 +215,22 @@ export const sellRestoredProduct = async (
       toast.success(`Re-sold ${sellQty} unit(s). Remaining in restored: ${remainingQty}`);
     }
 
+    // Log resold restored product transaction
+    await logTx('resold_restored_product', {
+      productId: id,
+      productName: restoredData.productName,
+      category: restoredData.category,
+      quantity: sellQty,
+      costPrice: restoredData.costPrice,
+      sellingPrice,
+      pricePerUnit: sellingPrice,
+      totalAmount,
+      profit,
+      loss,
+      actionDetails: `Re-sold ${sellQty} restored unit(s) of ${restoredData.productName} at ${sellingPrice.toLocaleString()} RWF. Total: ${totalAmount.toLocaleString()} RWF${profit > 0 ? `. Profit: +${profit.toLocaleString()} RWF` : ''}${loss > 0 ? `. Loss: -${loss.toLocaleString()} RWF` : ''}`,
+      metadata: { restoreComment: restoredData.restoreComment },
+    });
+
     return true;
   } catch (error: any) {
     console.error('Error in sellRestoredProduct:', error);
@@ -182,4 +242,5 @@ export const sellRestoredProduct = async (
     return false;
   }
 };
-export{toast} from 'sonner';
+
+export { toast } from 'sonner';

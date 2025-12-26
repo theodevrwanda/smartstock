@@ -13,6 +13,7 @@ import {
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { db, secondaryAuth } from '@/firebase/firebase';
 import { toast } from 'sonner';
+import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
 
 export interface Employee {
   id?: string;
@@ -38,6 +39,42 @@ export interface Employee {
   updatedAt?: string;
 }
 
+// Transaction logging context
+let txContext: {
+  userId: string;
+  userName: string;
+  userRole: string;
+  businessId: string;
+  businessName: string;
+} | null = null;
+
+export const setEmployeeTransactionContext = (ctx: typeof txContext) => {
+  txContext = ctx;
+};
+
+// Helper to log a transaction
+const logTx = async (
+  transactionType: TransactionLog['transactionType'],
+  details: Partial<TransactionLog>
+) => {
+  if (!txContext || !navigator.onLine) return;
+  
+  try {
+    await logTransaction({
+      transactionType,
+      businessId: txContext.businessId,
+      businessName: txContext.businessName,
+      userId: txContext.userId,
+      userName: txContext.userName,
+      userRole: txContext.userRole,
+      actionDetails: details.actionDetails || '',
+      ...details,
+    });
+  } catch (e) {
+    console.error('Failed to log transaction:', e);
+  }
+};
+
 // Simple duplicate check for email and phone
 const checkDuplicates = async (email: string, phone: string): Promise<string | null> => {
   const usersRef = collection(db, 'users');
@@ -56,7 +93,7 @@ const checkDuplicates = async (email: string, phone: string): Promise<string | n
   return null;
 };
 
-// Create employee using secondary auth instance (prevents admin logout)
+// Create employee using secondary auth instance (prevents admin logout) with transaction logging
 export const createEmployee = async (
   data: {
     email: string;
@@ -122,6 +159,12 @@ export const createEmployee = async (
     // Save with setDoc - creates new document
     await setDoc(doc(db, 'users', uid), employeeData);
 
+    // Log employee added transaction
+    await logTx('employee_added', {
+      actionDetails: `Added new employee: ${fullName} (${data.email})`,
+      metadata: { employeeId: uid, email: data.email, fullName },
+    });
+
     toast.success('Employee created! Default password: 1234567');
 
     return {
@@ -141,13 +184,21 @@ export const createEmployee = async (
   }
 };
 
-// Other functions unchanged
+// Update employee with transaction logging
 export const updateEmployee = async (id: string, updates: Partial<Omit<Employee, 'id'>>): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'users', id), {
       ...updates,
       updatedAt: new Date().toISOString(),
     });
+
+    // Log employee updated transaction
+    const changes = Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
+    await logTx('employee_updated', {
+      actionDetails: `Updated employee (${id}): ${changes}`,
+      metadata: { employeeId: id, ...updates },
+    });
+
     toast.success('Updated successfully');
     return true;
   } catch {
@@ -156,9 +207,24 @@ export const updateEmployee = async (id: string, updates: Partial<Omit<Employee,
   }
 };
 
-export const assignBranchToEmployee = async (employeeId: string, branchId: string | null): Promise<boolean> => {
+// Assign branch to employee with transaction logging
+export const assignBranchToEmployee = async (employeeId: string, branchId: string | null, branchName?: string): Promise<boolean> => {
   try {
-    await updateDoc(doc(db, 'users', employeeId), { branch: branchId });
+    await updateDoc(doc(db, 'users', employeeId), { 
+      branch: branchId,
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Log employee updated transaction
+    await logTx('employee_updated', {
+      branchId: branchId || undefined,
+      branchName: branchName,
+      actionDetails: branchId 
+        ? `Assigned employee to branch: ${branchName || branchId}`
+        : `Unassigned employee from branch`,
+      metadata: { employeeId, branchId },
+    });
+
     toast.success('Branch assigned');
     return true;
   } catch {
@@ -167,9 +233,17 @@ export const assignBranchToEmployee = async (employeeId: string, branchId: strin
   }
 };
 
-export const deleteEmployee = async (id: string): Promise<boolean> => {
+// Delete employee with transaction logging
+export const deleteEmployee = async (id: string, employeeName?: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'users', id));
+
+    // Log employee deleted transaction
+    await logTx('employee_deleted', {
+      actionDetails: `Deleted employee: ${employeeName || id}`,
+      metadata: { employeeId: id },
+    });
+
     toast.success('Deleted');
     return true;
   } catch {

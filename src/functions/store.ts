@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
+import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
 
 export interface Product {
   id?: string;
@@ -38,6 +39,46 @@ export interface Product {
   categoryLower?: string;
   modelLower?: string;
 }
+
+// Transaction logging context (set by the calling page)
+let txContext: {
+  userId: string;
+  userName: string;
+  userRole: string;
+  businessId: string;
+  businessName: string;
+  branchId?: string;
+  branchName?: string;
+} | null = null;
+
+export const setTransactionContext = (ctx: typeof txContext) => {
+  txContext = ctx;
+};
+
+// Helper to log a transaction
+const logTx = async (
+  transactionType: TransactionLog['transactionType'],
+  details: Partial<TransactionLog>
+) => {
+  if (!txContext || !navigator.onLine) return;
+  
+  try {
+    await logTransaction({
+      transactionType,
+      businessId: txContext.businessId,
+      businessName: txContext.businessName,
+      branchId: txContext.branchId,
+      branchName: txContext.branchName,
+      userId: txContext.userId,
+      userName: txContext.userName,
+      userRole: txContext.userRole,
+      actionDetails: details.actionDetails || '',
+      ...details,
+    });
+  } catch (e) {
+    console.error('Failed to log transaction:', e);
+  }
+};
 
 // Local queue key for pending operations
 const OFFLINE_QUEUE_KEY = 'offline_product_operations';
@@ -187,7 +228,7 @@ export const getProducts = async (
   }
 };
 
-// Add or update product – unchanged
+// Add or update product with transaction logging
 export const addOrUpdateProduct = async (
   data: {
     productName: string;
@@ -258,6 +299,16 @@ export const addOrUpdateProduct = async (
         updatedAt: new Date().toISOString(),
       });
 
+      // Log stock update transaction
+      await logTx('stock_updated', {
+        productId: existingDoc.id,
+        productName: data.productName,
+        category: data.category,
+        quantity: data.quantity,
+        costPrice: data.costPrice,
+        actionDetails: `Added ${data.quantity} units to ${data.productName}`,
+      });
+
       toast.success(`Added ${data.quantity} units`);
       const updatedData = existingDoc.data();
       return {
@@ -287,6 +338,20 @@ export const addOrUpdateProduct = async (
       };
 
       await setDoc(newRef, newProduct);
+
+      // Log product added transaction
+      await logTx('product_added', {
+        productId: newRef.id,
+        productName: data.productName,
+        category: data.category,
+        model: data.model,
+        quantity: data.quantity,
+        costPrice: data.costPrice,
+        pricePerUnit: data.costPrice,
+        totalAmount: data.costPrice * data.quantity,
+        actionDetails: `Added new product: ${data.productName} (Qty: ${data.quantity}, Price: ${data.costPrice.toLocaleString()} RWF)`,
+      });
+
       toast.success('New product added');
       return newProduct;
     }
@@ -297,7 +362,7 @@ export const addOrUpdateProduct = async (
   }
 };
 
-// UPDATED: sellProduct – now blocks sale if product is not confirmed
+// Sell product with transaction logging
 export const sellProduct = async (
   id: string,
   quantity: number,
@@ -354,7 +419,7 @@ export const sellProduct = async (
 
     const original = originalSnap.data() as Product;
 
-    // NEW: Block sale if not confirmed
+    // Block sale if not confirmed
     if (!original.confirm) {
       toast.error('This product is not confirmed. Please wait for admin confirmation.');
       return false;
@@ -375,6 +440,11 @@ export const sellProduct = async (
       return false;
     }
 
+    const totalAmount = quantity * sellingPrice;
+    const costTotal = quantity * original.costPrice;
+    const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
+    const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
+
     await runTransaction(db, async (transaction) => {
       transaction.update(originalDoc, {
         quantity: original.quantity - quantity,
@@ -394,6 +464,22 @@ export const sellProduct = async (
       });
     });
 
+    // Log sale transaction
+    await logTx('product_sold', {
+      productId: id,
+      productName: original.productName,
+      category: original.category,
+      model: original.model,
+      quantity,
+      costPrice: original.costPrice,
+      sellingPrice,
+      pricePerUnit: sellingPrice,
+      totalAmount,
+      profit,
+      loss,
+      actionDetails: `Sold ${quantity} unit(s) of ${original.productName} at ${sellingPrice.toLocaleString()} RWF each. Total: ${totalAmount.toLocaleString()} RWF${profit > 0 ? `. Profit: +${profit.toLocaleString()} RWF` : ''}${loss > 0 ? `. Loss: -${loss.toLocaleString()} RWF` : ''}`,
+    });
+
     toast.success(`Sold ${quantity} unit(s)`);
     return true;
   } catch (error) {
@@ -403,13 +489,25 @@ export const sellProduct = async (
   }
 };
 
-// Other functions unchanged
+// Update product with transaction logging
 export const updateProduct = async (id: string, updates: Partial<Product>): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'products', id), {
       ...updates,
       updatedAt: new Date().toISOString(),
     });
+
+    // Log update transaction
+    if (navigator.onLine) {
+      const changes = Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
+      await logTx('product_updated', {
+        productId: id,
+        productName: updates.productName,
+        actionDetails: `Updated product: ${changes}`,
+        metadata: updates,
+      });
+    }
+
     toast.success('Product updated');
     return true;
   } catch (error) {
@@ -418,13 +516,30 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
   }
 };
 
+// Delete product (mark as deleted) with transaction logging
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
+    const productDoc = await getDoc(doc(db, 'products', id));
+    const productData = productDoc.exists() ? productDoc.data() as Product : null;
+
     await updateDoc(doc(db, 'products', id), {
       status: 'deleted',
       deletedDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+
+    // Log delete transaction
+    if (navigator.onLine && productData) {
+      await logTx('product_deleted', {
+        productId: id,
+        productName: productData.productName,
+        category: productData.category,
+        quantity: productData.quantity,
+        costPrice: productData.costPrice,
+        actionDetails: `Deleted product: ${productData.productName} (Qty: ${productData.quantity})`,
+      });
+    }
+
     toast.success('Product deleted');
     return true;
   } catch (error) {
