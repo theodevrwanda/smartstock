@@ -286,7 +286,7 @@ const ProductsStorePage: React.FC = () => {
       newProduct.costPrice === '' ||
       newProduct.quantity === '' ||
       Number(newProduct.quantity) < 1 ||
-      Number(newProduct.costPrice) <= 0
+      Number(newProduct.costPrice) < 0
     ) {
       toast.error('Please fill all required fields correctly');
       return;

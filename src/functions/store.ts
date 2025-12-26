@@ -22,7 +22,7 @@ export interface Product {
   productName: string;
   category: string;
   model?: string;
-  costPrice: number;
+  costPrice: number; // Now explicitly allows 0
   sellingPrice?: number | null;
   status: 'store' | 'sold' | 'restored' | 'deleted';
   restoreComment?: string;
@@ -92,7 +92,7 @@ export const syncOfflineOperations = async (): Promise<void> => {
           where('branch', '==', op.data.branch),
           where('productNameLower', '==', normalizedName),
           where('categoryLower', '==', normalizedCategory),
-          where('costPrice', '==', op.data.costPrice),
+          where('costPrice', '==', op.data.costPrice), // Allows 0
           where('status', '==', 'store')
         );
 
@@ -193,13 +193,13 @@ export const getProducts = async (
   }
 };
 
-// Add or update product + log transaction
+// Add or update product + log transaction (now fully supports costPrice = 0)
 export const addOrUpdateProduct = async (
   data: {
     productName: string;
     category: string;
     model?: string;
-    costPrice: number;
+    costPrice: number; // Allows 0
     quantity: number;
     branch: string;
     businessId: string;
@@ -243,7 +243,7 @@ export const addOrUpdateProduct = async (
       where('branch', '==', data.branch),
       where('productNameLower', '==', normalizedName),
       where('categoryLower', '==', normalizedCategory),
-      where('costPrice', '==', data.costPrice),
+      where('costPrice', '==', data.costPrice), // Supports 0
       where('status', '==', 'store')
     );
 
@@ -264,7 +264,7 @@ export const addOrUpdateProduct = async (
       if (txContext) {
         await logTransaction({
           transactionType: 'stock_updated',
-          actionDetails: `Added ${data.quantity} units to existing stock: ${data.productName}`,
+          actionDetails: `Added ${data.quantity} units to existing stock: ${data.productName} (Cost: ${data.costPrice})`,
           userId: txContext.userId,
           userName: txContext.userName,
           userRole: txContext.userRole,
@@ -285,7 +285,6 @@ export const addOrUpdateProduct = async (
       return {
         id: existingDoc.id,
         ...updatedData,
-        quantity: (updatedData?.quantity || 0) + data.quantity,
       } as Product;
     } else {
       const newRef = doc(productsRef);
@@ -297,7 +296,7 @@ export const addOrUpdateProduct = async (
         categoryLower: normalizedCategory,
         model: data.model?.trim() || null,
         modelLower: normalizedModel || null,
-        costPrice: data.costPrice,
+        costPrice: data.costPrice, // Can be 0
         sellingPrice: null,
         status: 'store',
         addedDate: new Date().toISOString(),
@@ -314,7 +313,7 @@ export const addOrUpdateProduct = async (
       if (txContext) {
         await logTransaction({
           transactionType: 'stock_added',
-          actionDetails: `Added new product: ${data.productName} (Qty: ${data.quantity})`,
+          actionDetails: `Added new product: ${data.productName} (Qty: ${data.quantity}, Cost: ${data.costPrice})`,
           userId: txContext.userId,
           userName: txContext.userName,
           userRole: txContext.userRole,
@@ -340,7 +339,7 @@ export const addOrUpdateProduct = async (
   }
 };
 
-// Sell product + log transaction
+// Sell product + log transaction (handles costPrice = 0 correctly)
 export const sellProduct = async (
   id: string,
   quantity: number,
@@ -404,13 +403,13 @@ export const sellProduct = async (
       return false;
     }
 
-    if (quantity > original.quantity || sellingPrice <= 0) {
+    if (quantity > original.quantity || sellingPrice < 0) { // Only block negative selling price
       toast.error('Invalid quantity or price');
       return false;
     }
 
     const totalAmount = quantity * sellingPrice;
-    const costTotal = quantity * original.costPrice;
+    const costTotal = quantity * original.costPrice; // Can be 0
     const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
     const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
 
