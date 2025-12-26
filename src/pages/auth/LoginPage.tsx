@@ -33,16 +33,16 @@ export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   
-  const { login, loginWithGoogle, user, isAuthenticated, logout, errorMessage, clearError } = useAuth();
+  const { login, loginWithGoogle, user, isAuthenticated, logout, errorMessage, clearError, loading } = useAuth();
   const navigate = useNavigate();
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  // Handle redirection and messages based on active status
+  // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (!loading && isAuthenticated && user) {
       // Check business active status first
       if (user.businessActive === false) {
         setLoginError('Your business is not active. Please wait for central admin to approve your business.');
@@ -62,10 +62,9 @@ export default function LoginPage() {
       }
 
       // Both are active, proceed to dashboard
-      toast.success('Login successful! Redirecting...');
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate, logout]);
+  }, [isAuthenticated, user, navigate, logout, loading]);
 
   const handleEmailLogin = async (data: LoginFormData) => {
     setIsLoading(true);

@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
+import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
 
 export interface SoldProduct {
   id: string;
@@ -27,6 +28,46 @@ export interface SoldProduct {
   deadline?: string;
   businessId: string;
 }
+
+// Transaction logging context
+let txContext: {
+  userId: string;
+  userName: string;
+  userRole: string;
+  businessId: string;
+  businessName: string;
+  branchId?: string;
+  branchName?: string;
+} | null = null;
+
+export const setSoldTransactionContext = (ctx: typeof txContext) => {
+  txContext = ctx;
+};
+
+// Helper to log a transaction
+const logTx = async (
+  transactionType: TransactionLog['transactionType'],
+  details: Partial<TransactionLog>
+) => {
+  if (!txContext || !navigator.onLine) return;
+  
+  try {
+    await logTransaction({
+      transactionType,
+      businessId: txContext.businessId,
+      businessName: txContext.businessName,
+      branchId: txContext.branchId,
+      branchName: txContext.branchName,
+      userId: txContext.userId,
+      userName: txContext.userName,
+      userRole: txContext.userRole,
+      actionDetails: details.actionDetails || '',
+      ...details,
+    });
+  } catch (e) {
+    console.error('Failed to log transaction:', e);
+  }
+};
 
 // Get sold products - strict branch access control
 export const getSoldProducts = async (
@@ -68,7 +109,7 @@ export const getSoldProducts = async (
   }
 };
 
-// Delete sold product (admin only - no change needed here)
+// Delete sold product (admin only)
 export const deleteSoldProduct = async (id: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'products', id));
@@ -81,7 +122,7 @@ export const deleteSoldProduct = async (id: string): Promise<boolean> => {
   }
 };
 
-// Update sold product details (admin only - no change needed)
+// Update sold product details (admin only)
 export const updateSoldProduct = async (
   id: string,
   updates: Partial<SoldProduct>
@@ -100,7 +141,7 @@ export const updateSoldProduct = async (
   }
 };
 
-// Restore sold product - with branch check (already good, minor comment update)
+// Restore sold product - with branch check and transaction logging
 export const restoreSoldProduct = async (
   id: string,
   restoreQty: number,
@@ -158,6 +199,18 @@ export const restoreSoldProduct = async (
         updatedAt: new Date().toISOString(),
       });
     }
+
+    // Log restore transaction
+    await logTx('product_restored', {
+      productId: id,
+      productName: sold.productName,
+      category: sold.category,
+      quantity: restoreQty,
+      costPrice: sold.costPrice,
+      sellingPrice: sold.sellingPrice,
+      actionDetails: `Restored ${restoreQty} unit(s) of ${sold.productName}. Reason: ${comment || 'N/A'}`,
+      metadata: { restoreComment: comment },
+    });
 
     toast.success(`Restored ${restoreQty} unit(s)`);
     return true;

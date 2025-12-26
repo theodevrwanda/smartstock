@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,8 +60,15 @@ export default function RegisterPage() {
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, isAuthenticated, user, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && isAuthenticated && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, loading]);
 
   // Step 1 form
   const step1Form = useForm<Step1Data>({
