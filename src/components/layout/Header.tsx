@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, User as UserIcon, Moon, Sun, Menu, CloudOff, Wifi } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, Moon, Sun, Menu, CloudOff, Wifi, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -8,12 +8,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
 import GlobalSearch from '@/components/GlobalSearch';
 import MobileMenu from './MobileMenu';
+import BlockchainLedger from '@/components/BlockchainLedger';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { isOnline, pendingCount } = useOffline();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [blockchainOpen, setBlockchainOpen] = useState(false);
 
   // Derive fullName from firstName and lastName if fullName is not directly available
   const fullName =
@@ -56,6 +58,17 @@ const Header: React.FC = () => {
                 <CloudOff className="h-4 w-4 text-red-500" />
               )}
             </div>
+
+            {/* Blockchain Ledger Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBlockchainOpen(true)}
+              className="hidden sm:flex items-center gap-2 text-xs"
+            >
+              <Link2 className="h-4 w-4" />
+              <span className="hidden md:inline">Blockchain</span>
+            </Button>
 
             {/* Theme Toggle */}
             <Button
@@ -105,6 +118,12 @@ const Header: React.FC = () => {
       <MobileMenu
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+      />
+
+      {/* Blockchain Ledger */}
+      <BlockchainLedger
+        isOpen={blockchainOpen}
+        onClose={() => setBlockchainOpen(false)}
       />
     </>
   );
