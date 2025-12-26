@@ -1,3 +1,5 @@
+// src/pages/ManageBranchPage.tsx (or wherever your branch management page is)
+
 import React, { useState, useEffect } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,7 +17,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff } from 'lucide-react';
-import { toast } from 'sonner'; // Using Sonner directly
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getBranches,
@@ -24,6 +26,7 @@ import {
   deleteBranch,
   deleteMultipleBranches,
   Branch,
+  setBranchTransactionContext,
 } from '@/functions/branch';
 
 // Skeleton for a single table row (admin view)
@@ -120,6 +123,19 @@ const ManageBranchPage: React.FC = () => {
   const isAdmin = user?.role === 'admin';
   const businessId = user?.businessId;
 
+  // Set transaction logging context when user is available
+  useEffect(() => {
+    if (user) {
+      setBranchTransactionContext({
+        userId: user.uid || '',
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
+        userRole: user.role || 'staff',
+        businessId: user.businessId || '',
+        businessName: user.businessName || '',
+      });
+    }
+  }, [user]);
+
   // Online/offline detection for UI feedback
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -191,12 +207,7 @@ const ManageBranchPage: React.FC = () => {
       if (createdBranch) {
         setBranches((prev) => [...prev, createdBranch]);
 
-        toast.success(
-          isOnline
-            ? 'Branch added successfully'
-            : 'Saved offline – will sync when back online',
-          { description: 'Branch Created' }
-        );
+        toast.success('Branch created successfully');
       }
 
       setNewBranch({
@@ -380,7 +391,7 @@ const ManageBranchPage: React.FC = () => {
               disabled={selectedBranches.length === 0 || actionLoading}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected
+              Delete Selected ({selectedBranches.length})
             </Button>
           </div>
         </div>
@@ -397,7 +408,7 @@ const ManageBranchPage: React.FC = () => {
         </div>
 
         {/* Full-width Table */}
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="overflow-x-auto border rounded-lg bg-white dark:bg-gray-900">
           <Table>
             <TableHeader>
               <TableRow>
@@ -483,65 +494,65 @@ const ManageBranchPage: React.FC = () => {
 
         {/* Create Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Create New Branch</DialogTitle>
               <DialogDescription>Fill in the details for the new branch.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="create-branchName">Branch Name</Label>
+                <Label htmlFor="create-branchName">Branch Name *</Label>
                 <Input
                   id="create-branchName"
                   value={newBranch.branchName}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, branchName: e.target.value }))
                   }
-                  placeholder="Enter branch name"
+                  placeholder="e.g. Kigali Main"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-district">District</Label>
+                <Label htmlFor="create-district">District *</Label>
                 <Input
                   id="create-district"
                   value={newBranch.district}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, district: e.target.value }))
                   }
-                  placeholder="Enter branch district"
+                  placeholder="e.g. Gasabo"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-sector">Sector</Label>
+                <Label htmlFor="create-sector">Sector *</Label>
                 <Input
                   id="create-sector"
                   value={newBranch.sector}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, sector: e.target.value }))
                   }
-                  placeholder="Enter branch sector"
+                  placeholder="e.g. Kacyiru"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-cell">Cell</Label>
+                <Label htmlFor="create-cell">Cell *</Label>
                 <Input
                   id="create-cell"
                   value={newBranch.cell}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, cell: e.target.value }))
                   }
-                  placeholder="Enter branch cell"
+                  placeholder="e.g. Kagugu"
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-village">Village</Label>
+                <Label htmlFor="create-village">Village *</Label>
                 <Input
                   id="create-village"
                   value={newBranch.village}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, village: e.target.value }))
                   }
-                  placeholder="Enter branch village"
+                  placeholder="e.g. Rukiri"
                 />
               </div>
             </div>
@@ -550,7 +561,7 @@ const ManageBranchPage: React.FC = () => {
                 Cancel
               </Button>
               <Button onClick={handleCreateBranch} disabled={actionLoading}>
-                {actionLoading ? 'Creating...' : 'Create'}
+                {actionLoading ? 'Creating...' : 'Create Branch'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -558,73 +569,75 @@ const ManageBranchPage: React.FC = () => {
 
         {/* Update Dialog */}
         <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Update Branch</DialogTitle>
               <DialogDescription>Edit the branch information.</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="update-branchName">Branch Name</Label>
-                <Input
-                  id="update-branchName"
-                  value={currentBranch?.branchName || ''}
-                  onChange={(e) =>
-                    setCurrentBranch((prev) =>
-                      prev ? { ...prev, branchName: e.target.value } : null
-                    )
-                  }
-                />
+            {currentBranch && (
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="update-branchName">Branch Name</Label>
+                  <Input
+                    id="update-branchName"
+                    value={currentBranch.branchName}
+                    onChange={(e) =>
+                      setCurrentBranch((prev) =>
+                        prev ? { ...prev, branchName: e.target.value } : null
+                      )
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="update-district">District</Label>
+                  <Input
+                    id="update-district"
+                    value={currentBranch.district}
+                    onChange={(e) =>
+                      setCurrentBranch((prev) =>
+                        prev ? { ...prev, district: e.target.value } : null
+                      )
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="update-sector">Sector</Label>
+                  <Input
+                    id="update-sector"
+                    value={currentBranch.sector}
+                    onChange={(e) =>
+                      setCurrentBranch((prev) =>
+                        prev ? { ...prev, sector: e.target.value } : null
+                      )
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="update-cell">Cell</Label>
+                  <Input
+                    id="update-cell"
+                    value={currentBranch.cell}
+                    onChange={(e) =>
+                      setCurrentBranch((prev) =>
+                        prev ? { ...prev, cell: e.target.value } : null
+                      )
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="update-village">Village</Label>
+                  <Input
+                    id="update-village"
+                    value={currentBranch.village}
+                    onChange={(e) =>
+                      setCurrentBranch((prev) =>
+                        prev ? { ...prev, village: e.target.value } : null
+                      )
+                    }
+                  />
+                </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="update-district">District</Label>
-                <Input
-                  id="update-district"
-                  value={currentBranch?.district || ''}
-                  onChange={(e) =>
-                    setCurrentBranch((prev) =>
-                      prev ? { ...prev, district: e.target.value } : null
-                    )
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="update-sector">Sector</Label>
-                <Input
-                  id="update-sector"
-                  value={currentBranch?.sector || ''}
-                  onChange={(e) =>
-                    setCurrentBranch((prev) =>
-                      prev ? { ...prev, sector: e.target.value } : null
-                    )
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="update-cell">Cell</Label>
-                <Input
-                  id="update-cell"
-                  value={currentBranch?.cell || ''}
-                  onChange={(e) =>
-                    setCurrentBranch((prev) =>
-                      prev ? { ...prev, cell: e.target.value } : null
-                    )
-                  }
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="update-village">Village</Label>
-                <Input
-                  id="update-village"
-                  value={currentBranch?.village || ''}
-                  onChange={(e) =>
-                    setCurrentBranch((prev) =>
-                      prev ? { ...prev, village: e.target.value } : null
-                    )
-                  }
-                />
-              </div>
-            </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
                 Cancel
@@ -638,7 +651,7 @@ const ManageBranchPage: React.FC = () => {
 
         {/* Details Dialog */}
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Branch Details</DialogTitle>
             </DialogHeader>

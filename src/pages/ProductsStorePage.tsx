@@ -1,3 +1,5 @@
+// src/pages/ProductsStorePage.tsx (or src/components/ProductsStorePage.tsx)
+
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,6 +35,7 @@ import {
   syncOfflineOperations,
   Product,
   toast,
+  setTransactionContext,
 } from '@/functions/store';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -80,7 +83,7 @@ const ProductsStorePage: React.FC = () => {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productToConfirm, setProductToConfirm] = useState<{ id: string; current: boolean } | null>(null);
 
-  // Add product form – all fields start empty (placeholders only)
+  // Add product form
   const [newProduct, setNewProduct] = useState({
     productName: '',
     category: '',
@@ -89,18 +92,34 @@ const ProductsStorePage: React.FC = () => {
     quantity: '' as string | number,
   });
 
-  // Sell form – empty by default
+  // Sell form
   const [sellForm, setSellForm] = useState({
     quantity: '' as string | number,
     sellingPrice: '' as string | number,
     deadline: '',
   });
 
-  // Online/Offline Detection
+  // Set transaction logging context when user and branches are available
+  useEffect(() => {
+    if (user && branches.length > 0) {
+      const branchInfo = branches.find(b => b.id === user.branch);
+      setTransactionContext({
+        userId: user.uid || '',
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
+        userRole: user.role || 'staff',
+        businessId: user.businessId || '',
+        businessName: user.businessName || '',
+        branchId: user.branch || undefined,
+        branchName: branchInfo?.branchName,
+      });
+    }
+  }, [user, branches]);
+
+  // Online/Offline Detection & Sync
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      toast.success('📶 Back Online – Syncing your offline changes...');
+      toast.success('Back Online – Syncing your offline changes...');
       syncOfflineOperations().then(() => {
         if (businessId) {
           getProducts(businessId, user?.role || 'staff', userBranch).then(setProducts);
@@ -110,7 +129,7 @@ const ProductsStorePage: React.FC = () => {
 
     const handleOffline = () => {
       setIsOnline(false);
-      toast.warning('⚠️ You are Offline – Working locally. Changes will sync when you reconnect.');
+      toast.warning('You are Offline – Working locally. Changes will sync when you reconnect.');
     };
 
     if (!navigator.onLine) handleOffline();
@@ -349,7 +368,6 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
-  // Confirm/Unconfirm Product
   const openConfirmProductDialog = (id: string, current: boolean) => {
     setProductToConfirm({ id, current });
     setConfirmProductDialogOpen(true);
@@ -624,7 +642,6 @@ const ProductsStorePage: React.FC = () => {
                 />
               </div>
 
-              {/* Total Cost Summary in Add Dialog */}
               {newProduct.costPrice !== '' && newProduct.quantity !== '' && Number(newProduct.costPrice) > 0 && Number(newProduct.quantity) > 0 && (
                 <Card className="bg-indigo-50 dark:bg-indigo-950 border-indigo-200">
                   <CardContent className="pt-6">
@@ -731,7 +748,6 @@ const ProductsStorePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Warning if quantity exceeds stock */}
                 {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
@@ -741,7 +757,6 @@ const ProductsStorePage: React.FC = () => {
                   </Alert>
                 )}
 
-                {/* Summary Card */}
                 {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
                   <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
                     <CardContent className="pt-6 space-y-3">
@@ -791,7 +806,7 @@ const ProductsStorePage: React.FC = () => {
                   sellForm.sellingPrice === '' ||
                   Number(sellForm.quantity) <= 0 ||
                   Number(sellForm.sellingPrice) <= 0 ||
-                  Number(sellForm.quantity) > currentProduct.quantity
+                  Number(sellForm.quantity) > currentProduct?.quantity
                 }
               >
                 Proceed to Confirm

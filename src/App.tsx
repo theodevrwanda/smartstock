@@ -8,7 +8,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import { OfflineProvider } from "@/contexts/OfflineContext";
-import { TransactionProvider } from "@/contexts/TransactionContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -33,7 +32,6 @@ const App = () => (
       <ThemeProvider>
         <AuthProvider>
           <OfflineProvider>
-            <TransactionProvider>
               <SearchProvider>
                 <TooltipProvider>
                   <Toaster />
@@ -67,7 +65,6 @@ const App = () => (
                   </BrowserRouter>
                 </TooltipProvider>
               </SearchProvider>
-            </TransactionProvider>
           </OfflineProvider>
         </AuthProvider>
       </ThemeProvider>

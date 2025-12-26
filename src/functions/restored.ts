@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
-import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
+import { logTransaction } from '@/lib/transactionLogger';
 
 export interface RestoredProduct {
   id: string;
@@ -29,11 +29,11 @@ export interface RestoredProduct {
   businessId: string;
 }
 
-// Transaction logging context
+// Transaction context (set before calling sellRestoredProduct)
 let txContext: {
   userId: string;
   userName: string;
-  userRole: string;
+  userRole: 'admin' | 'staff';
   businessId: string;
   businessName: string;
   branchId?: string;
@@ -44,32 +44,7 @@ export const setRestoredTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
 };
 
-// Helper to log a transaction
-const logTx = async (
-  transactionType: TransactionLog['transactionType'],
-  details: Partial<TransactionLog>
-) => {
-  if (!txContext || !navigator.onLine) return;
-  
-  try {
-    await logTransaction({
-      transactionType,
-      businessId: txContext.businessId,
-      businessName: txContext.businessName,
-      branchId: txContext.branchId,
-      branchName: txContext.branchName,
-      userId: txContext.userId,
-      userName: txContext.userName,
-      userRole: txContext.userRole,
-      actionDetails: details.actionDetails || '',
-      ...details,
-    });
-  } catch (e) {
-    console.error('Failed to log transaction:', e);
-  }
-};
-
-// Get restored products - robust mapping
+// Get restored products - robust mapping + branch access control
 export const getRestoredProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -90,7 +65,6 @@ export const getRestoredProducts = async (
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      console.log('No restored products found for query');
       return [];
     }
 
@@ -116,7 +90,6 @@ export const getRestoredProducts = async (
       };
     });
 
-    console.log(`Loaded ${products.length} restored products`);
     return products;
   } catch (error: any) {
     console.error('Error loading restored products:', error);
@@ -129,14 +102,14 @@ export const getRestoredProducts = async (
   }
 };
 
-// Delete restored product
+// Delete restored product (admin only)
 export const deleteRestoredProduct = async (id: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'products', id));
     toast.success('Restored product deleted permanently');
     return true;
   } catch (error: any) {
-    console.error('Error deleting:', error);
+    console.error('Error deleting restored product:', error);
     if (error.code === 'permission-denied') {
       toast.error('Permission denied');
     } else {
@@ -146,7 +119,7 @@ export const deleteRestoredProduct = async (id: string): Promise<boolean> => {
   }
 };
 
-// Sell restored product with transaction logging
+// Sell restored product + log transaction (resold_restored)
 export const sellRestoredProduct = async (
   id: string,
   sellQty: number,
@@ -163,7 +136,7 @@ export const sellRestoredProduct = async (
       return false;
     }
 
-    const restoredData = restoredSnap.data() as any;
+    const restoredData = restoredSnap.data() as RestoredProduct;
 
     // Branch permission check
     if (userBranch && restoredData.branch !== userBranch) {
@@ -177,7 +150,7 @@ export const sellRestoredProduct = async (
     }
 
     if (sellingPrice <= 0) {
-      toast.error('Selling price must be > 0');
+      toast.error('Selling price must be greater than 0');
       return false;
     }
 
@@ -189,7 +162,7 @@ export const sellRestoredProduct = async (
     const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
     const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
 
-    // Create new sold record - keep the original restoreComment
+    // Create new sold record
     const soldRef = doc(collection(db, 'products'));
     await setDoc(soldRef, {
       ...restoredData,
@@ -200,36 +173,51 @@ export const sellRestoredProduct = async (
       soldDate: now,
       deadline: deadline || null,
       updatedAt: now,
-      restoredDate: restoredData.restoredDate || null,
     });
 
-    // Update or delete original restored product
+    // Update or delete original restored record
     if (remainingQty === 0) {
       await deleteDoc(restoredDocRef);
-      toast.success(`Fully re-sold (${sellQty} unit(s)). Removed from restored stock.`);
     } else {
       await updateDoc(restoredDocRef, {
         quantity: remainingQty,
         updatedAt: now,
       });
-      toast.success(`Re-sold ${sellQty} unit(s). Remaining in restored: ${remainingQty}`);
     }
 
-    // Log resold restored product transaction
-    await logTx('resold_restored_product', {
-      productId: id,
-      productName: restoredData.productName,
-      category: restoredData.category,
-      quantity: sellQty,
-      costPrice: restoredData.costPrice,
-      sellingPrice,
-      pricePerUnit: sellingPrice,
-      totalAmount,
-      profit,
-      loss,
-      actionDetails: `Re-sold ${sellQty} restored unit(s) of ${restoredData.productName} at ${sellingPrice.toLocaleString()} RWF. Total: ${totalAmount.toLocaleString()} RWF${profit > 0 ? `. Profit: +${profit.toLocaleString()} RWF` : ''}${loss > 0 ? `. Loss: -${loss.toLocaleString()} RWF` : ''}`,
-      metadata: { restoreComment: restoredData.restoreComment },
-    });
+    // Log re-sold transaction with distinct type
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'resold_restored',
+        actionDetails: `Re-sold ${sellQty} restored unit(s) of ${restoredData.productName} at ${sellingPrice.toLocaleString()} RWF each`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: restoredData.businessId,
+        businessName: txContext.businessName,
+        branchId: restoredData.branch,
+        branchName: txContext.branchName,
+        productId: id,
+        productName: restoredData.productName,
+        category: restoredData.category,
+        model: restoredData.model,
+        quantity: sellQty,
+        costPrice: restoredData.costPrice,
+        sellingPrice,
+        profit,
+        loss,
+        metadata: {
+          restoreComment: restoredData.restoreComment || null,
+          originalRestoredDate: restoredData.restoredDate,
+        },
+      });
+    }
+
+    toast.success(
+      remainingQty === 0
+        ? `Fully re-sold (${sellQty} unit(s)). Removed from restored stock.`
+        : `Re-sold ${sellQty} unit(s). Remaining in restored: ${remainingQty}`
+    );
 
     return true;
   } catch (error: any) {

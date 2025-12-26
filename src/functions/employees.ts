@@ -13,7 +13,7 @@ import {
 import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { db, secondaryAuth } from '@/firebase/firebase';
 import { toast } from 'sonner';
-import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
+import { logTransaction } from '@/lib/transactionLogger';
 
 export interface Employee {
   id?: string;
@@ -39,40 +39,17 @@ export interface Employee {
   updatedAt?: string;
 }
 
-// Transaction logging context
+// Transaction context (set before calling functions that log)
 let txContext: {
   userId: string;
   userName: string;
-  userRole: string;
+  userRole: 'admin' | 'staff';
   businessId: string;
   businessName: string;
 } | null = null;
 
 export const setEmployeeTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
-};
-
-// Helper to log a transaction
-const logTx = async (
-  transactionType: TransactionLog['transactionType'],
-  details: Partial<TransactionLog>
-) => {
-  if (!txContext || !navigator.onLine) return;
-  
-  try {
-    await logTransaction({
-      transactionType,
-      businessId: txContext.businessId,
-      businessName: txContext.businessName,
-      userId: txContext.userId,
-      userName: txContext.userName,
-      userRole: txContext.userRole,
-      actionDetails: details.actionDetails || '',
-      ...details,
-    });
-  } catch (e) {
-    console.error('Failed to log transaction:', e);
-  }
 };
 
 // Simple duplicate check for email and phone
@@ -93,7 +70,7 @@ const checkDuplicates = async (email: string, phone: string): Promise<string | n
   return null;
 };
 
-// Create employee using secondary auth instance (prevents admin logout) with transaction logging
+// Create employee using secondary auth + log transaction
 export const createEmployee = async (
   data: {
     email: string;
@@ -118,7 +95,7 @@ export const createEmployee = async (
       return null;
     }
 
-    // Create Auth user using SECONDARY auth instance (doesn't affect current user session)
+    // Create Auth user using SECONDARY auth instance
     const userCredential = await createUserWithEmailAndPassword(
       secondaryAuth,
       data.email.trim().toLowerCase(),
@@ -127,7 +104,7 @@ export const createEmployee = async (
 
     const uid = userCredential.user.uid;
 
-    // Sign out from secondary auth immediately (just cleanup, doesn't affect main auth)
+    // Sign out from secondary auth immediately
     await signOut(secondaryAuth);
 
     // Prepare data
@@ -156,14 +133,28 @@ export const createEmployee = async (
       updatedAt: new Date().toISOString(),
     };
 
-    // Save with setDoc - creates new document
+    // Save to Firestore
     await setDoc(doc(db, 'users', uid), employeeData);
 
     // Log employee added transaction
-    await logTx('employee_added', {
-      actionDetails: `Added new employee: ${fullName} (${data.email})`,
-      metadata: { employeeId: uid, email: data.email, fullName },
-    });
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'employee_added',
+        actionDetails: `Added new employee: ${fullName} (${data.email})`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: data.businessId,
+        businessName: txContext.businessName,
+        metadata: {
+          employeeId: uid,
+          email: data.email,
+          fullName,
+          phone: data.phone,
+          branch: data.branch || null,
+        },
+      });
+    }
 
     toast.success('Employee created! Default password: 1234567');
 
@@ -184,7 +175,7 @@ export const createEmployee = async (
   }
 };
 
-// Update employee with transaction logging
+// Update employee + log transaction
 export const updateEmployee = async (id: string, updates: Partial<Omit<Employee, 'id'>>): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'users', id), {
@@ -193,13 +184,24 @@ export const updateEmployee = async (id: string, updates: Partial<Omit<Employee,
     });
 
     // Log employee updated transaction
-    const changes = Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
-    await logTx('employee_updated', {
-      actionDetails: `Updated employee (${id}): ${changes}`,
-      metadata: { employeeId: id, ...updates },
-    });
+    if (txContext) {
+      const changedFields = Object.keys(updates)
+        .filter(k => k !== 'updatedAt' && k !== 'fullName')
+        .join(', ') || 'details';
 
-    toast.success('Updated successfully');
+      await logTransaction({
+        transactionType: 'employee_updated',
+        actionDetails: `Updated employee: ${updates.firstName || ''} ${updates.lastName || ''} (${changedFields})`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: txContext.businessId,
+        businessName: txContext.businessName,
+        metadata: { employeeId: id, ...updates },
+      });
+    }
+
+    toast.success('Employee updated successfully');
     return true;
   } catch {
     toast.error('Update failed');
@@ -207,25 +209,35 @@ export const updateEmployee = async (id: string, updates: Partial<Omit<Employee,
   }
 };
 
-// Assign branch to employee with transaction logging
-export const assignBranchToEmployee = async (employeeId: string, branchId: string | null, branchName?: string): Promise<boolean> => {
+// Assign branch to employee + log transaction
+export const assignBranchToEmployee = async (
+  employeeId: string,
+  branchId: string | null,
+  branchName?: string
+): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'users', employeeId), { 
       branch: branchId,
       updatedAt: new Date().toISOString(),
     });
 
-    // Log employee updated transaction
-    await logTx('employee_updated', {
-      branchId: branchId || undefined,
-      branchName: branchName,
-      actionDetails: branchId 
-        ? `Assigned employee to branch: ${branchName || branchId}`
-        : `Unassigned employee from branch`,
-      metadata: { employeeId, branchId },
-    });
+    // Log branch assignment
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'employee_updated',
+        actionDetails: branchId 
+          ? `Assigned employee to branch: ${branchName || branchId}`
+          : `Unassigned employee from branch`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: txContext.businessId,
+        businessName: txContext.businessName,
+        metadata: { employeeId, branchId, branchName },
+      });
+    }
 
-    toast.success('Branch assigned');
+    toast.success('Branch assigned successfully');
     return true;
   } catch {
     toast.error('Assign failed');
@@ -233,18 +245,26 @@ export const assignBranchToEmployee = async (employeeId: string, branchId: strin
   }
 };
 
-// Delete employee with transaction logging
+// Delete employee + log transaction
 export const deleteEmployee = async (id: string, employeeName?: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'users', id));
 
     // Log employee deleted transaction
-    await logTx('employee_deleted', {
-      actionDetails: `Deleted employee: ${employeeName || id}`,
-      metadata: { employeeId: id },
-    });
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'employee_deleted',
+        actionDetails: `Deleted employee: ${employeeName || id}`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: txContext.businessId,
+        businessName: txContext.businessName,
+        metadata: { employeeId: id },
+      });
+    }
 
-    toast.success('Deleted');
+    toast.success('Employee deleted successfully');
     return true;
   } catch {
     toast.error('Delete failed');
@@ -254,8 +274,8 @@ export const deleteEmployee = async (id: string, employeeName?: string): Promise
 
 export const deleteMultipleEmployees = async (ids: string[]): Promise<boolean> => {
   try {
-    await Promise.all(ids.map(id => deleteEmployee(id)));
-    toast.success(`${ids.length} deleted`);
+    await Promise.all(ids.map(id => deleteEmployee(id, 'Multiple')));
+    toast.success(`${ids.length} employees deleted`);
     return true;
   } catch {
     toast.error('Bulk delete failed');
@@ -268,7 +288,9 @@ export const getEmployees = async (): Promise<Employee[]> => {
     const snap = await getDocs(collection(db, 'users'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
   } catch {
-    toast.error('Load failed');
+    toast.error('Failed to load employees');
     return [];
   }
 };
+
+export { toast } from 'sonner';

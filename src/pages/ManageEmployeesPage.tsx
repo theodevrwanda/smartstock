@@ -1,3 +1,5 @@
+// src/pages/ManageEmployeesPage.tsx
+
 import React, { useState, useEffect } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -19,7 +21,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, PlusCircle, Eye, Edit, Trash2, UserPlus, CloudOff, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOffline } from '@/contexts/OfflineContext';
 import {
   getEmployees,
   createEmployee,
@@ -28,6 +29,7 @@ import {
   deleteEmployee,
   deleteMultipleEmployees,
   Employee,
+  setEmployeeTransactionContext,
 } from '@/functions/employees';
 import { getBranches, Branch } from '@/functions/branch';
 
@@ -95,7 +97,6 @@ const PageSkeleton = () => (
 const ManageEmployeesPage: React.FC = () => {
   const { toast } = useToast();
   const { user, updateUser } = useAuth();
-  const { isOnline, addPendingChange } = useOffline();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchMap, setBranchMap] = useState<Map<string, string>>(new Map());
@@ -103,6 +104,7 @@ const ManageEmployeesPage: React.FC = () => {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Dialog states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -133,6 +135,34 @@ const ManageEmployeesPage: React.FC = () => {
   const businessId = user?.businessId;
   const businessName = user?.businessName || 'RwandaScratch';
 
+  // Set transaction logging context when user + branches are ready
+  useEffect(() => {
+    if (user && branches.length > 0) {
+      setEmployeeTransactionContext({
+        userId: user.uid || '',
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
+        userRole: user.role || 'staff',
+        businessId: user.businessId || '',
+        businessName: user.businessName || '',
+      });
+    }
+  }, [user, branches]);
+
+  // Online/offline detection
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Fetch employees and branches
   useEffect(() => {
     if (!businessId) {
       setLoading(false);
@@ -337,6 +367,7 @@ const ManageEmployeesPage: React.FC = () => {
         <SEOHelmet title="Employees" />
         <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
           <h1 className="text-3xl font-bold">Employees</h1>
+
           <div className="overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
@@ -403,7 +434,7 @@ const ManageEmployeesPage: React.FC = () => {
               disabled={selectedEmployees.length === 0 || actionLoading}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected
+              Delete Selected ({selectedEmployees.length})
             </Button>
           </div>
         </div>
@@ -420,7 +451,7 @@ const ManageEmployeesPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="overflow-x-auto border rounded-lg bg-white dark:bg-gray-900">
           <Table>
             <TableHeader>
               <TableRow>
@@ -498,237 +529,121 @@ const ManageEmployeesPage: React.FC = () => {
         </div>
 
         {/* Create Dialog */}
-<Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-  <DialogContent className="max-h-[80vh] overflow-y-auto">
-    <DialogHeader>
-      <DialogTitle>Create New Employee</DialogTitle>
-      <DialogDescription>
-        Default password will be <strong>1234567</strong>
-      </DialogDescription>
-    </DialogHeader>
-    <div className="grid gap-4 py-4">
-      {/* Email */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-email">Email *</Label>
-        <Input
-          id="create-email"
-          type="email"
-          value={newEmployee.email}
-          onChange={e => setNewEmployee(p => ({ ...p, email: e.target.value }))}
-          placeholder="Enter email here"
-        />
-      </div>
-
-      {/* First Name */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-firstName">First Name *</Label>
-        <Input
-          id="create-firstName"
-          value={newEmployee.firstName}
-          onChange={e => setNewEmployee(p => ({ ...p, firstName: e.target.value }))}
-          placeholder="Enter first name here"
-        />
-      </div>
-
-      {/* Last Name */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-lastName">Last Name *</Label>
-        <Input
-          id="create-lastName"
-          value={newEmployee.lastName}
-          onChange={e => setNewEmployee(p => ({ ...p, lastName: e.target.value }))}
-          placeholder="Enter last name here"
-        />
-      </div>
-
-      {/* Phone */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-phone">Phone</Label>
-        <Input
-          id="create-phone"
-          type="tel"
-          value={newEmployee.phone}
-          onChange={e => setNewEmployee(p => ({ ...p, phone: e.target.value }))}
-          placeholder="Enter phone number here"
-        />
-      </div>
-
-      {/* District */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-district">District</Label>
-        <Input
-          id="create-district"
-          value={newEmployee.district}
-          onChange={e => setNewEmployee(p => ({ ...p, district: e.target.value }))}
-          placeholder="Enter district here"
-        />
-      </div>
-
-      {/* Sector */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-sector">Sector</Label>
-        <Input
-          id="create-sector"
-          value={newEmployee.sector}
-          onChange={e => setNewEmployee(p => ({ ...p, sector: e.target.value }))}
-          placeholder="Enter sector here"
-        />
-      </div>
-
-      {/* Cell */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-cell">Cell</Label>
-        <Input
-          id="create-cell"
-          value={newEmployee.cell}
-          onChange={e => setNewEmployee(p => ({ ...p, cell: e.target.value }))}
-          placeholder="Enter cell here"
-        />
-      </div>
-
-      {/* Village */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-village">Village</Label>
-        <Input
-          id="create-village"
-          value={newEmployee.village}
-          onChange={e => setNewEmployee(p => ({ ...p, village: e.target.value }))}
-          placeholder="Enter village here"
-        />
-      </div>
-
-      {/* Gender */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-gender">Gender</Label>
-        <Select
-          value={newEmployee.gender || ''}
-          onValueChange={v => setNewEmployee(p => ({ ...p, gender: v as 'male' | 'female' }))}
-        >
-          <SelectTrigger id="create-gender">
-            <SelectValue placeholder="Select gender" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="male">Male</SelectItem>
-            <SelectItem value="female">Female</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Branch */}
-      <div className="grid gap-2">
-        <Label htmlFor="create-branch">Branch (Optional)</Label>
-        <Select
-          value={newEmployee.branch || 'unassigned'}
-          onValueChange={v => setNewEmployee(p => ({ ...p, branch: v === 'unassigned' ? null : v }))}
-        >
-          <SelectTrigger id="create-branch">
-            <SelectValue placeholder="Select a branch" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {branches.map(b => (
-              <SelectItem key={b.id} value={b.id!}>
-                {b.branchName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button onClick={handleCreateEmployee} disabled={actionLoading}>
-        {actionLoading ? 'Creating...' : 'Create Employee'}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-        {/* Update Dialog */}
-        <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Update Employee</DialogTitle>
+              <DialogTitle>Create New Employee</DialogTitle>
+              <DialogDescription>
+                Default password will be <strong>1234567</strong>
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Email</Label>
-                <Input value={currentEmployee?.email || ''} disabled />
-              </div>
-              <div className="grid gap-2">
-                <Label>First Name</Label>
+                <Label htmlFor="create-email">Email *</Label>
                 <Input
-                  value={currentEmployee?.firstName || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, firstName: e.target.value } : null)}
+                  id="create-email"
+                  type="email"
+                  value={newEmployee.email}
+                  onChange={e => setNewEmployee(p => ({ ...p, email: e.target.value }))}
+                  placeholder="Enter email here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Last Name</Label>
+                <Label htmlFor="create-firstName">First Name *</Label>
                 <Input
-                  value={currentEmployee?.lastName || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, lastName: e.target.value } : null)}
+                  id="create-firstName"
+                  value={newEmployee.firstName}
+                  onChange={e => setNewEmployee(p => ({ ...p, firstName: e.target.value }))}
+                  placeholder="Enter first name here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Phone</Label>
+                <Label htmlFor="create-lastName">Last Name *</Label>
                 <Input
-                  value={currentEmployee?.phone || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                  id="create-lastName"
+                  value={newEmployee.lastName}
+                  onChange={e => setNewEmployee(p => ({ ...p, lastName: e.target.value }))}
+                  placeholder="Enter last name here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>District</Label>
+                <Label htmlFor="create-phone">Phone</Label>
                 <Input
-                  value={currentEmployee?.district || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, district: e.target.value } : null)}
+                  id="create-phone"
+                  type="tel"
+                  value={newEmployee.phone}
+                  onChange={e => setNewEmployee(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="Enter phone number here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Sector</Label>
+                <Label htmlFor="create-district">District</Label>
                 <Input
-                  value={currentEmployee?.sector || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, sector: e.target.value } : null)}
+                  id="create-district"
+                  value={newEmployee.district}
+                  onChange={e => setNewEmployee(p => ({ ...p, district: e.target.value }))}
+                  placeholder="Enter district here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Cell</Label>
+                <Label htmlFor="create-sector">Sector</Label>
                 <Input
-                  value={currentEmployee?.cell || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, cell: e.target.value } : null)}
+                  id="create-sector"
+                  value={newEmployee.sector}
+                  onChange={e => setNewEmployee(p => ({ ...p, sector: e.target.value }))}
+                  placeholder="Enter sector here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Village</Label>
+                <Label htmlFor="create-cell">Cell</Label>
                 <Input
-                  value={currentEmployee?.village || ''}
-                  onChange={e => setCurrentEmployee(prev => prev ? { ...prev, village: e.target.value } : null)}
+                  id="create-cell"
+                  value={newEmployee.cell}
+                  onChange={e => setNewEmployee(p => ({ ...p, cell: e.target.value }))}
+                  placeholder="Enter cell here"
                 />
               </div>
+
               <div className="grid gap-2">
-                <Label>Role</Label>
+                <Label htmlFor="create-village">Village</Label>
+                <Input
+                  id="create-village"
+                  value={newEmployee.village}
+                  onChange={e => setNewEmployee(p => ({ ...p, village: e.target.value }))}
+                  placeholder="Enter village here"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="create-gender">Gender</Label>
                 <Select
-                  value={currentEmployee?.role || 'staff'}
-                  onValueChange={v => setCurrentEmployee(prev => prev ? { ...prev, role: v as 'admin' | 'staff' } : null)}
+                  value={newEmployee.gender || ''}
+                  onValueChange={v => setNewEmployee(p => ({ ...p, gender: v as 'male' | 'female' }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id="create-gender">
+                    <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid gap-2">
-                <Label>Branch</Label>
+                <Label htmlFor="create-branch">Branch (Optional)</Label>
                 <Select
-                  value={currentEmployee?.branch || 'unassigned'}
-                  onValueChange={v => setCurrentEmployee(prev => prev ? { ...prev, branch: v === 'unassigned' ? null : v } : null)}
+                  value={newEmployee.branch || 'unassigned'}
+                  onValueChange={v => setNewEmployee(p => ({ ...p, branch: v === 'unassigned' ? null : v }))}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
+                  <SelectTrigger id="create-branch">
+                    <SelectValue placeholder="Select a branch" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="unassigned">Unassigned</SelectItem>
@@ -740,14 +655,123 @@ const ManageEmployeesPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label>Active Status</Label>
-                <Checkbox
-                  checked={currentEmployee?.isActive || false}
-                  onCheckedChange={c => setCurrentEmployee(prev => prev ? { ...prev, isActive: !!c } : null)}
-                />
-              </div>
             </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateEmployee} disabled={actionLoading}>
+                {actionLoading ? 'Creating...' : 'Create Employee'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Dialog */}
+        <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Update Employee</DialogTitle>
+            </DialogHeader>
+            {currentEmployee && (
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Email</Label>
+                  <Input value={currentEmployee.email} disabled />
+                </div>
+                <div className="grid gap-2">
+                  <Label>First Name</Label>
+                  <Input
+                    value={currentEmployee.firstName}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, firstName: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Last Name</Label>
+                  <Input
+                    value={currentEmployee.lastName}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, lastName: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Phone</Label>
+                  <Input
+                    value={currentEmployee.phone || ''}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>District</Label>
+                  <Input
+                    value={currentEmployee.district || ''}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, district: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Sector</Label>
+                  <Input
+                    value={currentEmployee.sector || ''}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, sector: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Cell</Label>
+                  <Input
+                    value={currentEmployee.cell || ''}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, cell: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Village</Label>
+                  <Input
+                    value={currentEmployee.village || ''}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, village: e.target.value } : null)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Role</Label>
+                  <Select
+                    value={currentEmployee.role}
+                    onValueChange={v => setCurrentEmployee(prev => prev ? { ...prev, role: v as 'admin' | 'staff' } : null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Branch</Label>
+                  <Select
+                    value={currentEmployee.branch || 'unassigned'}
+                    onValueChange={v => setCurrentEmployee(prev => prev ? { ...prev, branch: v === 'unassigned' ? null : v } : null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {branches.map(b => (
+                        <SelectItem key={b.id} value={b.id!}>
+                          {b.branchName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2 items-center">
+                  <Label>Active Status</Label>
+                  <Checkbox
+                    checked={currentEmployee.isActive}
+                    onCheckedChange={c => setCurrentEmployee(prev => prev ? { ...prev, isActive: !!c } : null)}
+                  />
+                </div>
+              </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
                 Cancel
@@ -805,20 +829,29 @@ const ManageEmployeesPage: React.FC = () => {
               <DialogTitle>Employee Details</DialogTitle>
             </DialogHeader>
             {currentEmployee && (
-              <div className="space-y-3 py-4">
-                <div><strong>Full Name:</strong> {currentEmployee.firstName} {currentEmployee.lastName}</div>
-                <div><strong>Username:</strong> {currentEmployee.username || '-'}</div>
-                <div><strong>Email:</strong> {currentEmployee.email}</div>
-                <div><strong>Phone:</strong> {currentEmployee.phone || '-'}</div>
-                <div><strong>District:</strong> {currentEmployee.district || '-'}</div>
-                <div><strong>Sector:</strong> {currentEmployee.sector || '-'}</div>
-                <div><strong>Cell:</strong> {currentEmployee.cell || '-'}</div>
-                <div><strong>Village:</strong> {currentEmployee.village || '-'}</div>
-                <div><strong>Gender:</strong> {currentEmployee.gender || '-'}</div>
-                <div><strong>Role:</strong> {currentEmployee.role}</div>
-                <div><strong>Branch:</strong> {getBranchName(currentEmployee.branch)}</div>
-                <div><strong>Active:</strong> {currentEmployee.isActive ? 'Yes' : 'No'}</div>
-                <div><strong>Created:</strong> {currentEmployee.createdAt ? new Date(currentEmployee.createdAt).toLocaleDateString() : '-'}</div>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={currentEmployee.profileImage || currentEmployee.imagephoto || ''} />
+                    <AvatarFallback><User className="h-8 w-8" /></AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-xl font-bold">{currentEmployee.firstName} {currentEmployee.lastName}</p>
+                    <p className="text-muted-foreground">{currentEmployee.email}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div><strong>Phone:</strong> {currentEmployee.phone || '-'}</div>
+                  <div><strong>Role:</strong> {currentEmployee.role}</div>
+                  <div><strong>District:</strong> {currentEmployee.district || '-'}</div>
+                  <div><strong>Sector:</strong> {currentEmployee.sector || '-'}</div>
+                  <div><strong>Cell:</strong> {currentEmployee.cell || '-'}</div>
+                  <div><strong>Village:</strong> {currentEmployee.village || '-'}</div>
+                  <div><strong>Gender:</strong> {currentEmployee.gender || '-'}</div>
+                  <div><strong>Branch:</strong> {getBranchName(currentEmployee.branch)}</div>
+                  <div><strong>Active:</strong> {currentEmployee.isActive ? 'Yes' : 'No'}</div>
+                  <div><strong>Created:</strong> {currentEmployee.createdAt ? new Date(currentEmployee.createdAt).toLocaleDateString() : '-'}</div>
+                </div>
               </div>
             )}
             <DialogFooter>

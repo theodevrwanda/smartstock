@@ -1,3 +1,5 @@
+// src/pages/ProductsRestoredPage.tsx
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,7 +31,8 @@ import {
   deleteRestoredProduct,
   sellRestoredProduct,
   RestoredProduct,
-  toast, // ← Imported centralized toast from restored.ts
+  toast,
+  setRestoredTransactionContext,
 } from '@/functions/restored';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,12 +70,28 @@ const ProductsRestoredPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<RestoredProduct | null>(null);
 
-  // Sell form – starts empty (placeholders only)
+  // Sell form
   const [sellForm, setSellForm] = useState({
     quantity: '' as string | number,
     sellingPrice: '' as string | number,
     deadline: '',
   });
+
+  // Set transaction context for logging re-sales
+  useEffect(() => {
+    if (user && branches.length > 0) {
+      const branchInfo = branches.find(b => b.id === user.branch);
+      setRestoredTransactionContext({
+        userId: user.uid || '',
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
+        userRole: user.role || 'staff',
+        businessId: user.businessId || '',
+        businessName: user.businessName || '',
+        branchId: user.branch || undefined,
+        branchName: branchInfo?.branchName,
+      });
+    }
+  }, [user, branches]);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -277,7 +296,7 @@ const ProductsRestoredPage: React.FC = () => {
 
   const openSell = (product: RestoredProduct) => {
     setCurrentProduct(product);
-    setSellForm({ quantity: '', sellingPrice: '', deadline: '' }); // Empty, no defaults
+    setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
     setSellDialogOpen(true);
   };
 
@@ -333,9 +352,9 @@ const ProductsRestoredPage: React.FC = () => {
         </div>
 
         {/* Expected Profit/Loss Summary */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2">Expected Profit/Loss (if sold at current price)</h2>
-          <p className={getProfitLossColor(calculateTotalProfitLoss())}>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border">
+          <h2 className="text-xl font-semibold mb-3">Expected Profit / Loss (if sold at current price)</h2>
+          <p className={`text-3xl font-bold ${getProfitLossColor(calculateTotalProfitLoss())}`}>
             {calculateTotalProfitLoss().toLocaleString()} RWF
           </p>
         </div>
@@ -382,7 +401,7 @@ const ProductsRestoredPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border bg-white dark:bg-gray-900 shadow-md">
           <Table>
             <TableHeader>
               <TableRow>
@@ -415,8 +434,8 @@ const ProductsRestoredPage: React.FC = () => {
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-12 text-muted-foreground">
-                    No restored products found.
+                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
+                    No restored products found matching your filters.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -425,18 +444,22 @@ const ProductsRestoredPage: React.FC = () => {
                     <TableCell className="font-medium">{p.productName}</TableCell>
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center">{p.quantity}</TableCell>
+                    <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
                     {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
                     <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
                     <TableCell className={getPriceColor(p.sellingPrice || p.costPrice)}>
                       {(p.sellingPrice || p.costPrice).toLocaleString()} RWF
                     </TableCell>
-                    <TableCell>{(p.quantity * (p.sellingPrice || p.costPrice)).toLocaleString()} RWF</TableCell>
+                    <TableCell className="font-semibold">
+                      {(p.quantity * (p.sellingPrice || p.costPrice)).toLocaleString()} RWF
+                    </TableCell>
                     <TableCell className={getProfitLossColor(calculateProfitLoss(p))}>
                       {calculateProfitLoss(p).toLocaleString()} RWF
                     </TableCell>
                     <TableCell>{new Date(p.restoredDate).toLocaleDateString()}</TableCell>
-                    <TableCell className="max-w-xs truncate">{p.restoreComment || '-'}</TableCell>
+                    <TableCell className="max-w-xs truncate" title={p.restoreComment || undefined}>
+                      {p.restoreComment || '-'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
@@ -444,7 +467,7 @@ const ProductsRestoredPage: React.FC = () => {
                         </Button>
                         {p.quantity > 0 && (!userBranch || p.branch === userBranch) && (
                           <Button size="sm" variant="ghost" onClick={() => openSell(p)}>
-                            <ShoppingCart className="h-4 w-4" />
+                            <ShoppingCart className="h-4 w-4 text-green-600" />
                           </Button>
                         )}
                         {isAdmin && (
@@ -463,28 +486,65 @@ const ProductsRestoredPage: React.FC = () => {
 
         {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Restored Product Details</DialogTitle>
             </DialogHeader>
             {currentProduct && (
-              <div className="space-y-3">
-                <p><strong>Name:</strong> {currentProduct.productName}</p>
-                <p><strong>Category:</strong> {currentProduct.category}</p>
-                <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
-                <p><strong>Quantity:</strong> {currentProduct.quantity}</p>
-                <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
-                <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
-                <p><strong>Selling Price:</strong> {(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
-                <p><strong>Total Amount:</strong> {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF</p>
-                <p><strong>Profit/Loss:</strong> <span className={getProfitLossColor(calculateProfitLoss(currentProduct))}>
-                  {calculateProfitLoss(currentProduct).toLocaleString()} RWF
-                </span></p>
-                <p><strong>Restored Date:</strong> {new Date(currentProduct.restoredDate).toLocaleDateString()}</p>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{currentProduct.productName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Category</p>
+                    <p className="font-medium">{currentProduct.category}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Model</p>
+                    <p className="font-medium">{currentProduct.model || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Quantity</p>
+                    <p className="font-medium">{currentProduct.quantity}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Branch</p>
+                    <p className="font-medium">{getBranchName(currentProduct.branch)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cost Price</p>
+                    <p className="font-medium">{currentProduct.costPrice.toLocaleString()} RWF</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Selling Price</p>
+                    <p className="font-medium">{(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Value</p>
+                    <p className="font-medium text-lg">
+                      {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Expected Profit/Loss</p>
+                    <p className={`font-bold text-lg ${getProfitLossColor(calculateProfitLoss(currentProduct))}`}>
+                      {calculateProfitLoss(currentProduct).toLocaleString()} RWF
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Restored Date</p>
+                    <p className="font-medium">{new Date(currentProduct.restoredDate).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
                 {currentProduct.restoreComment && (
                   <div>
-                    <p><strong>Restore Reason:</strong></p>
-                    <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">{currentProduct.restoreComment}</p>
+                    <p className="text-sm text-muted-foreground mb-2">Restore Reason</p>
+                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                      <p className="whitespace-pre-wrap">{currentProduct.restoreComment}</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -495,7 +555,7 @@ const ProductsRestoredPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Sell Dialog – Enhanced with Summary */}
+        {/* Sell Dialog */}
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
@@ -503,7 +563,7 @@ const ProductsRestoredPage: React.FC = () => {
               <DialogDescription>
                 {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
                 <br />
-                Available: {currentProduct?.quantity} units
+                Available in restored stock: {currentProduct?.quantity} units
               </DialogDescription>
             </DialogHeader>
 
@@ -511,23 +571,27 @@ const ProductsRestoredPage: React.FC = () => {
               <div className="space-y-6 py-4">
                 <div className="grid gap-4">
                   <div className="grid gap-2">
-                    <Label>Quantity to Sell</Label>
+                    <Label>Quantity to Sell *</Label>
                     <Input
                       type="number"
                       min="1"
-                      placeholder="Enter quantity"
+                      max={currentProduct.quantity}
+                      placeholder="How many units?"
                       value={sellForm.quantity}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setSellForm(s => ({ ...s, quantity: val === '' ? '' : Number(val) }));
+                        const num = val === '' ? '' : Number(val);
+                        if (num !== '' && (num < 1 || num > currentProduct.quantity)) return;
+                        setSellForm(s => ({ ...s, quantity: num }));
                       }}
                     />
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Selling Price per Unit (RWF)</Label>
+                    <Label>Selling Price per Unit (RWF) *</Label>
                     <Input
                       type="number"
+                      min="1"
                       placeholder="Enter selling price"
                       value={sellForm.sellingPrice}
                       onChange={(e) => {
@@ -547,44 +611,41 @@ const ProductsRestoredPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Red warning if qty > available */}
+                {/* Warning for invalid quantity */}
                 {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Quantity exceeds available stock ({currentProduct.quantity}).
+                      Quantity exceeds available restored stock ({currentProduct.quantity} units).
                     </AlertDescription>
                   </Alert>
                 )}
 
-                {/* Summary Card */}
-                {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
+                {/* Sale Summary */}
+                {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && Number(sellForm.quantity) <= currentProduct.quantity && (
                   <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
-                    <CardContent className="pt-6 space-y-3">
+                    <CardContent className="pt-6 space-y-4">
                       <div className="flex justify-between text-lg">
-                        <span>Total Money Received:</span>
+                        <span>Total Revenue:</span>
                         <span className="font-bold">
                           {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
                         </span>
                       </div>
-
                       <div className="flex justify-between text-lg">
                         <span>Cost of Goods:</span>
                         <span>
                           {(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF
                         </span>
                       </div>
-
-                      <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                      <div className="flex justify-between text-xl font-bold pt-3 border-t">
                         <span>Profit / Loss:</span>
                         <span className={
-                          Number(sellForm.sellingPrice) * Number(sellForm.quantity) >= currentProduct.costPrice * Number(sellForm.quantity)
+                          Number(sellForm.sellingPrice) >= currentProduct.costPrice
                             ? 'text-green-600'
                             : 'text-red-600'
                         }>
                           {(
-                            Number(sellForm.sellingPrice) * Number(sellForm.quantity) -
-                            currentProduct.costPrice * Number(sellForm.quantity)
+                            (Number(sellForm.sellingPrice) - currentProduct.costPrice) * Number(sellForm.quantity)
                           ).toLocaleString()} RWF
                         </span>
                       </div>
@@ -595,10 +656,13 @@ const ProductsRestoredPage: React.FC = () => {
             )}
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setSellDialogOpen(false);
-                setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
-              }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSellDialogOpen(false);
+                  setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+                }}
+              >
                 Cancel
               </Button>
               <Button
@@ -612,7 +676,7 @@ const ProductsRestoredPage: React.FC = () => {
                   Number(sellForm.quantity) > currentProduct?.quantity
                 }
               >
-                {actionLoading ? 'Selling...' : 'Confirm Sale'}
+                {actionLoading ? 'Processing...' : 'Confirm Sale'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -624,7 +688,7 @@ const ProductsRestoredPage: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Delete Restored Product?</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. The product will be permanently removed.
+                This action is permanent and cannot be undone. The restored product record will be deleted.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

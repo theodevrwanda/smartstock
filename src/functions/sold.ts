@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
-import { logTransaction, TransactionLog } from '@/lib/transactionLogger';
+import { logTransaction } from '@/lib/transactionLogger';
 
 export interface SoldProduct {
   id: string;
@@ -29,11 +29,11 @@ export interface SoldProduct {
   businessId: string;
 }
 
-// Transaction logging context
+// Transaction context (set before calling functions that log)
 let txContext: {
   userId: string;
   userName: string;
-  userRole: string;
+  userRole: 'admin' | 'staff';
   businessId: string;
   businessName: string;
   branchId?: string;
@@ -42,31 +42,6 @@ let txContext: {
 
 export const setSoldTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
-};
-
-// Helper to log a transaction
-const logTx = async (
-  transactionType: TransactionLog['transactionType'],
-  details: Partial<TransactionLog>
-) => {
-  if (!txContext || !navigator.onLine) return;
-  
-  try {
-    await logTransaction({
-      transactionType,
-      businessId: txContext.businessId,
-      businessName: txContext.businessName,
-      branchId: txContext.branchId,
-      branchName: txContext.branchName,
-      userId: txContext.userId,
-      userName: txContext.userName,
-      userRole: txContext.userRole,
-      actionDetails: details.actionDetails || '',
-      ...details,
-    });
-  } catch (e) {
-    console.error('Failed to log transaction:', e);
-  }
 };
 
 // Get sold products - strict branch access control
@@ -78,22 +53,16 @@ export const getSoldProducts = async (
   try {
     const productsRef = collection(db, 'products');
 
-    // Base query: sold products for this business
     let q = query(
       productsRef,
       where('businessId', '==', businessId),
       where('status', '==', 'sold')
     );
 
-    if (userRole === 'admin') {
-      // Admin sees all sold products across all branches → no filter
-    } else if (userRole === 'staff') {
-      // Staff with no branch → no access to any sold data
+    if (userRole === 'staff') {
       if (!branchId) {
-        return []; // Explicitly return empty
+        return [];
       }
-
-      // Staff with branch → only their branch
       q = query(q, where('branch', '==', branchId));
     }
 
@@ -113,7 +82,7 @@ export const getSoldProducts = async (
 export const deleteSoldProduct = async (id: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'products', id));
-    toast.success('Sold product deleted');
+    toast.success('Sold product deleted permanently');
     return true;
   } catch (error) {
     console.error('Error deleting sold product:', error);
@@ -141,7 +110,7 @@ export const updateSoldProduct = async (
   }
 };
 
-// Restore sold product - with branch check and transaction logging
+// Restore sold product + log transaction
 export const restoreSoldProduct = async (
   id: string,
   restoreQty: number,
@@ -160,30 +129,32 @@ export const restoreSoldProduct = async (
 
     const sold = soldSnap.data() as SoldProduct;
 
-    // Non-admin staff can only restore from their own branch
+    // Branch access control
     if (!isAdmin && userBranch && sold.branch !== userBranch) {
       toast.error('Cannot restore - you can only restore products from your branch');
       return false;
     }
 
+    // Deadline check
     const deadlineDate = sold.deadline ? new Date(sold.deadline) : null;
     if (deadlineDate && deadlineDate < new Date()) {
       toast.error('Return deadline has expired');
       return false;
     }
 
+    // Quantity validation
     if (restoreQty > sold.quantity || restoreQty <= 0) {
       toast.error('Invalid restore quantity');
       return false;
     }
 
-    // Create restored entry
+    // Create restored record
     const restoredRef = doc(collection(db, 'products'));
     await setDoc(restoredRef, {
       ...sold,
       id: restoredRef.id,
       status: 'restored',
-      restoreComment: comment,
+      restoreComment: comment || null,
       quantity: restoreQty,
       restoredDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -200,17 +171,28 @@ export const restoreSoldProduct = async (
       });
     }
 
-    // Log restore transaction
-    await logTx('product_restored', {
-      productId: id,
-      productName: sold.productName,
-      category: sold.category,
-      quantity: restoreQty,
-      costPrice: sold.costPrice,
-      sellingPrice: sold.sellingPrice,
-      actionDetails: `Restored ${restoreQty} unit(s) of ${sold.productName}. Reason: ${comment || 'N/A'}`,
-      metadata: { restoreComment: comment },
-    });
+    // Log restoration transaction
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'product_restored',
+        actionDetails: `Restored ${restoreQty} unit(s) of ${sold.productName}${comment ? '. Reason: ' + comment : ''}`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: sold.businessId,
+        businessName: txContext.businessName,
+        branchId: sold.branch,
+        branchName: txContext.branchName,
+        productId: id,
+        productName: sold.productName,
+        category: sold.category,
+        model: sold.model,
+        quantity: restoreQty,
+        costPrice: sold.costPrice,
+        sellingPrice: sold.sellingPrice,
+        metadata: { restoreComment: comment || null },
+      });
+    }
 
     toast.success(`Restored ${restoreQty} unit(s)`);
     return true;

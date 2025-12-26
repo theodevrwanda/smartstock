@@ -1,3 +1,5 @@
+// src/pages/ProductsSoldPage.tsx (or wherever your Sold Products page is)
+
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,7 +31,8 @@ import {
   deleteSoldProduct,
   restoreSoldProduct,
   SoldProduct,
-  toast, // ← Now imported directly from sold.ts
+  toast,
+  setSoldTransactionContext,
 } from '@/functions/sold';
 import { getBranches, Branch } from '@/functions/branch';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,13 +70,29 @@ const ProductsSoldPage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<SoldProduct | null>(null);
 
-  // Restore form – quantity starts empty
+  // Restore form
   const [restoreForm, setRestoreForm] = useState({
     quantity: '' as string | number,
     comment: '',
   });
 
-  // Load data
+  // Set transaction context for logging (when user + branches are ready)
+  useEffect(() => {
+    if (user && branches.length > 0) {
+      const branchInfo = branches.find(b => b.id === user.branch);
+      setSoldTransactionContext({
+        userId: user.uid || '',
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
+        userRole: user.role || 'staff',
+        businessId: user.businessId || '',
+        businessName: user.businessName || '',
+        branchId: user.branch || undefined,
+        branchName: branchInfo?.branchName,
+      });
+    }
+  }, [user, branches]);
+
+  // Load sold products & branches
   useEffect(() => {
     if (!businessId) {
       setLoading(false);
@@ -135,8 +154,6 @@ const ProductsSoldPage: React.FC = () => {
         bVal = getBranchName(b.branch);
       }
 
-      if (aVal instanceof Date) aVal = aVal.getTime();
-      if (bVal instanceof Date) bVal = bVal.getTime();
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
 
@@ -233,6 +250,11 @@ const ProductsSoldPage: React.FC = () => {
 
     if (qty > currentProduct.quantity) {
       toast.error('Cannot restore more than sold quantity');
+      return;
+    }
+
+    if (restoreForm.comment.trim() === '') {
+      toast.error('Please provide a reason for the restore');
       return;
     }
 
@@ -340,9 +362,9 @@ const ProductsSoldPage: React.FC = () => {
         </div>
 
         {/* Profit/Loss Summary */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2">Total Profit/Loss</h2>
-          <p className={getProfitLossColor(calculateTotalProfitLoss())}>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border">
+          <h2 className="text-xl font-semibold mb-3">Total Profit / Loss (Filtered View)</h2>
+          <p className={`text-3xl font-bold ${getProfitLossColor(calculateTotalProfitLoss())}`}>
             {calculateTotalProfitLoss().toLocaleString()} RWF
           </p>
         </div>
@@ -389,7 +411,7 @@ const ProductsSoldPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border bg-white dark:bg-gray-900 shadow-md">
           <Table>
             <TableHeader>
               <TableRow>
@@ -419,17 +441,15 @@ const ProductsSoldPage: React.FC = () => {
                 <TableHead className="cursor-pointer" onClick={() => handleSort('soldDate')}>
                   <div className="flex items-center gap-1">Sold Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('deadline')}>
-                  <div className="flex items-center gap-1">Return Deadline <ArrowUpDown className="h-4 w-4" /></div>
-                </TableHead>
+                <TableHead>Return Deadline</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-12 text-muted-foreground">
-                    No sold products found.
+                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
+                    No sold products found matching your filters.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -438,16 +458,22 @@ const ProductsSoldPage: React.FC = () => {
                     <TableCell className="font-medium">{p.productName}</TableCell>
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center">{p.quantity}</TableCell>
+                    <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
                     {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
                     <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
                     <TableCell className={getPriceColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell>{(p.quantity * p.sellingPrice).toLocaleString()} RWF</TableCell>
+                    <TableCell className="font-semibold">{(p.quantity * p.sellingPrice).toLocaleString()} RWF</TableCell>
                     <TableCell className={getProfitLossColor(calculateProfitLoss(p))}>
                       {calculateProfitLoss(p).toLocaleString()} RWF
                     </TableCell>
                     <TableCell>{new Date(p.soldDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{p.deadline ? new Date(p.deadline).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell>
+                      {p.deadline ? (
+                        <span className={isDeadlineActive(p.deadline) ? 'text-green-600' : 'text-red-600'}>
+                          {new Date(p.deadline).toLocaleDateString()}
+                        </span>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
@@ -455,7 +481,7 @@ const ProductsSoldPage: React.FC = () => {
                         </Button>
                         {(isAdmin || p.branch === userBranch) && isDeadlineActive(p.deadline) && p.quantity > 0 && (
                           <Button size="sm" variant="ghost" onClick={() => openRestore(p)}>
-                            <Undo className="h-4 w-4" />
+                            <Undo className="h-4 w-4 text-blue-600" />
                           </Button>
                         )}
                         {isAdmin && (
@@ -474,23 +500,62 @@ const ProductsSoldPage: React.FC = () => {
 
         {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Sold Product Details</DialogTitle>
             </DialogHeader>
             {currentProduct && (
-              <div className="space-y-3">
-                <p><strong>Name:</strong> {currentProduct.productName}</p>
-                <p><strong>Category:</strong> {currentProduct.category}</p>
-                <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
-                <p><strong>Quantity:</strong> {currentProduct.quantity}</p>
-                <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
-                <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
-                <p><strong>Selling Price:</strong> {currentProduct.sellingPrice.toLocaleString()} RWF</p>
-                <p><strong>Total Amount:</strong> {(currentProduct.quantity * currentProduct.sellingPrice).toLocaleString()} RWF</p>
-                <p><strong>Profit/Loss:</strong> <span className={getProfitLossColor(calculateProfitLoss(currentProduct))}>{calculateProfitLoss(currentProduct).toLocaleString()} RWF</span></p>
-                <p><strong>Sold Date:</strong> {new Date(currentProduct.soldDate).toLocaleDateString()}</p>
-                <p><strong>Return Deadline:</strong> {currentProduct.deadline ? new Date(currentProduct.deadline).toLocaleDateString() : '-'}</p>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{currentProduct.productName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Category</p>
+                    <p className="font-medium">{currentProduct.category}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Model</p>
+                    <p className="font-medium">{currentProduct.model || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Quantity</p>
+                    <p className="font-medium">{currentProduct.quantity}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Branch</p>
+                    <p className="font-medium">{getBranchName(currentProduct.branch)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cost Price</p>
+                    <p className="font-medium">{currentProduct.costPrice.toLocaleString()} RWF</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Selling Price</p>
+                    <p className="font-medium">{currentProduct.sellingPrice.toLocaleString()} RWF</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Amount</p>
+                    <p className="font-medium text-lg">{(currentProduct.quantity * currentProduct.sellingPrice).toLocaleString()} RWF</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Profit/Loss</p>
+                    <p className={`font-bold text-lg ${getProfitLossColor(calculateProfitLoss(currentProduct))}`}>
+                      {calculateProfitLoss(currentProduct).toLocaleString()} RWF
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sold Date</p>
+                    <p className="font-medium">{new Date(currentProduct.soldDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Return Deadline</p>
+                    <p className="font-medium">
+                      {currentProduct.deadline ? new Date(currentProduct.deadline).toLocaleDateString() : '-'}
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
             <DialogFooter>
@@ -505,19 +570,19 @@ const ProductsSoldPage: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Restore Sold Product</DialogTitle>
               <DialogDescription>
-                {currentProduct && `Restoring from: ${currentProduct.productName} (Sold Quantity: ${currentProduct.quantity})`}
+                {currentProduct && `Restoring from sale: ${currentProduct.productName} (Sold: ${currentProduct.quantity} units)`}
               </DialogDescription>
             </DialogHeader>
 
             {currentProduct && (
-              <div className="space-y-5 py-4">
+              <div className="space-y-6 py-4">
                 <div className="grid gap-2">
                   <Label>Quantity to Restore *</Label>
                   <Input
                     type="number"
                     min="1"
                     max={currentProduct.quantity}
-                    placeholder="Enter quantity to restore"
+                    placeholder="How many units to return to stock?"
                     value={restoreForm.quantity}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -538,11 +603,10 @@ const ProductsSoldPage: React.FC = () => {
                 )}
 
                 {restoreForm.quantity !== '' && Number(restoreForm.quantity) === currentProduct.quantity && (
-                  <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950">
-                    <Info className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-900 dark:text-blue-200">
-                      <strong>Full Restore:</strong> The product will be fully returned to stock, and{' '}
-                      <strong>this sale record will be permanently removed</strong> from the database because the remaining quantity will be zero.
+                  <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950">
+                    <Info className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-900 dark:text-amber-200">
+                      <strong>Full Restore:</strong> This will return all units to stock and <strong>permanently delete this sale record</strong>.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -550,10 +614,11 @@ const ProductsSoldPage: React.FC = () => {
                 <div className="grid gap-2">
                   <Label>Reason for Restore *</Label>
                   <Textarea
-                    placeholder="Enter reason for restoring this product (required)"
+                    placeholder="Why is this product being returned? (required)"
                     value={restoreForm.comment}
                     onChange={(e) => setRestoreForm(prev => ({ ...prev, comment: e.target.value }))}
-                    rows={4}
+                    rows={5}
+                    className="resize-none"
                   />
                 </div>
               </div>
@@ -589,15 +654,15 @@ const ProductsSoldPage: React.FC = () => {
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Sold Product?</DialogTitle>
+              <DialogTitle>Delete Sale Record?</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. The sale record will be permanently deleted.
+                This action is permanent and cannot be undone. The sale record will be deleted from the system.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete'}
+                {actionLoading ? 'Deleting...' : 'Delete Permanently'}
               </Button>
             </DialogFooter>
           </DialogContent>
