@@ -139,7 +139,7 @@ const ManageEmployeesPage: React.FC = () => {
   useEffect(() => {
     if (user && branches.length > 0) {
       setEmployeeTransactionContext({
-        userId: user.uid || '',
+        userId: user.id || '',
         userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
         userRole: user.role || 'staff',
         businessId: user.businessId || '',

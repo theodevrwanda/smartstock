@@ -33,7 +33,7 @@ export const useTransactionLogger = () => {
       return null;
     }
 
-    const transaction: Omit<TransactionLog, 'id' | 'createdAt'> = {
+    const transaction = {
       transactionType: data.transactionType,
       businessId: user.businessId,
       businessName: user.businessName || '',
@@ -45,10 +45,7 @@ export const useTransactionLogger = () => {
       productId: data.productId,
       productName: data.productName,
       category: data.category,
-      model: data.model,
       quantity: data.quantity,
-      pricePerUnit: data.pricePerUnit,
-      totalAmount: data.totalAmount,
       costPrice: data.costPrice,
       sellingPrice: data.sellingPrice,
       profit: data.profit,

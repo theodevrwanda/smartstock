@@ -82,7 +82,7 @@ const ProductsRestoredPage: React.FC = () => {
     if (user && branches.length > 0) {
       const branchInfo = branches.find(b => b.id === user.branch);
       setRestoredTransactionContext({
-        userId: user.uid || '',
+        userId: user.id || '',
         userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
         userRole: user.role || 'staff',
         businessId: user.businessId || '',

@@ -23,6 +23,7 @@ import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
 import { toast } from 'sonner';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
+import PWAInstallButton from '@/components/PWAInstallButton';
 
 // Step 1 schema: Business & Location info
 const step1Schema = z.object({
@@ -575,6 +576,11 @@ export default function RegisterPage() {
                   Sign in
                 </Link>
               </p>
+            </div>
+
+            {/* PWA Install Button */}
+            <div className="pt-4 border-t border-slate-200">
+              <PWAInstallButton variant="secondary" className="bg-slate-100 hover:bg-slate-200 text-slate-700" />
             </div>
           </form>
         )}
