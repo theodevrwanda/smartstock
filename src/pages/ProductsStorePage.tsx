@@ -1,4 +1,4 @@
-// src/pages/ProductsStorePage.tsx (or src/components/ProductsStorePage.tsx)
+// src/pages/ProductsStorePage.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
@@ -77,13 +77,11 @@ const ProductsStorePage: React.FC = () => {
   const [confirmProductDialogOpen, setConfirmProductDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [updateQtyDialogOpen, setUpdateQtyDialogOpen] = useState(false);
 
   // Current product states
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productToConfirm, setProductToConfirm] = useState<{ id: string; current: boolean } | null>(null);
-  const [newQuantity, setNewQuantity] = useState<string | number>('');
 
   // Add product form
   const [newProduct, setNewProduct] = useState({
@@ -101,7 +99,7 @@ const ProductsStorePage: React.FC = () => {
     deadline: '',
   });
 
-  // Set transaction logging context when user and branches are available
+  // Set transaction logging context
   useEffect(() => {
     if (user && branches.length > 0) {
       const branchInfo = branches.find(b => b.id === user.branch);
@@ -180,7 +178,7 @@ const ProductsStorePage: React.FC = () => {
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
-  // Filtering
+  // Client-side filtering
   const filteredProducts = useMemo(() => {
     return products
       .filter(p =>
@@ -319,14 +317,39 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
+  // Full edit – safe update with null guards
   const handleUpdateProduct = async () => {
-    if (!currentProduct) return;
+    if (!currentProduct) {
+      toast.error('No product selected');
+      return;
+    }
+
+    if (
+      !currentProduct.productName.trim() ||
+      !currentProduct.category.trim() ||
+      currentProduct.costPrice < 0 ||
+      currentProduct.quantity < 0
+    ) {
+      toast.error('Please fill all fields correctly');
+      return;
+    }
+
     setActionLoading(true);
-    const success = await updateProduct(currentProduct.id!, currentProduct);
+
+    const updates: Partial<Product> = {
+      productName: currentProduct.productName.trim(),
+      category: currentProduct.category.trim(),
+      model: currentProduct.model?.trim() || null,
+      costPrice: currentProduct.costPrice,
+      quantity: currentProduct.quantity,
+    };
+
+    const success = await updateProduct(currentProduct.id!, updates);
     if (success) {
-      setProducts(prev => prev.map(p => p.id === currentProduct.id ? currentProduct : p));
-      toast.success(isOnline ? 'Product updated' : 'Product updated locally – will sync when online');
+      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, ...updates } : p));
+      toast.success(isOnline ? 'Product updated successfully' : 'Product updated locally – will sync when online');
       setEditDialogOpen(false);
+      setCurrentProduct(null);
     }
     setActionLoading(false);
   };
@@ -385,26 +408,6 @@ const ProductsStorePage: React.FC = () => {
       toast.success(`Product ${!productToConfirm.current ? 'confirmed' : 'unconfirmed'} successfully`);
       setConfirmProductDialogOpen(false);
       setProductToConfirm(null);
-    }
-    setActionLoading(false);
-  };
-
-  // Handle update quantity
-  const handleUpdateQuantity = async () => {
-    if (!currentProduct || newQuantity === '') return;
-    const qty = Number(newQuantity);
-    if (qty < 0) {
-      toast.error('Quantity cannot be negative');
-      return;
-    }
-    setActionLoading(true);
-    const success = await updateProduct(currentProduct.id!, { quantity: qty });
-    if (success) {
-      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: qty } : p));
-      toast.success('Quantity updated successfully');
-      setUpdateQtyDialogOpen(false);
-      setNewQuantity('');
-      setCurrentProduct(null);
     }
     setActionLoading(false);
   };
@@ -518,8 +521,7 @@ const ProductsStorePage: React.FC = () => {
           )}
         </div>
 
-        {/* Table */}
-        {/* Desktop Table View */}
+        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
@@ -584,9 +586,6 @@ const ProductsStorePage: React.FC = () => {
                         <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setCurrentProduct(p); setNewQuantity(p.quantity); setUpdateQtyDialogOpen(true); }}>
-                          Qty
-                        </Button>
                         {p.quantity > 0 && (
                           <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
                             <ShoppingCart className="h-4 w-4" />
@@ -606,19 +605,17 @@ const ProductsStorePage: React.FC = () => {
           </Table>
         </div>
 
-        {/* Mobile Card View */}
+        {/* Mobile Cards */}
         <div className="md:hidden space-y-3">
           {sortedProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No products found matching your filters.
-            </div>
+            <div className="text-center py-12 text-muted-foreground">No products found.</div>
           ) : (
             sortedProducts.map(p => (
-              <Card key={p.id} className="overflow-hidden">
+              <Card key={p.id}>
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base truncate">{p.productName}</h3>
+                    <div className="flex-1">
+                      <h3 className="font-semibold truncate">{p.productName}</h3>
                       <div className="flex flex-wrap gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs">{p.category}</Badge>
                         {p.model && <Badge variant="outline" className="text-xs">{p.model}</Badge>}
@@ -629,62 +626,35 @@ const ProductsStorePage: React.FC = () => {
                       {getStatusBadge(p.quantity)}
                     </div>
                   </div>
-                  
                   <div className="flex items-center justify-between mt-3 pt-3 border-t">
                     <span className={`text-sm font-medium ${getPriceColor(p.costPrice)}`}>
                       {p.costPrice.toLocaleString()} RWF
                     </span>
-                    
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" variant="outline" className="h-8 gap-1">
-                          Actions
-                          <ArrowUpDown className="h-3 w-3" />
+                          Actions <ArrowUpDown className="h-3 w-3" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit Product
                         </DropdownMenuItem>
                         {p.quantity > 0 && (
                           <DropdownMenuItem onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            Sell Product
+                            <ShoppingCart className="mr-2 h-4 w-4" /> Sell
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit Product
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setNewQuantity(p.quantity); setUpdateQtyDialogOpen(true); }}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Update Quantity
-                        </DropdownMenuItem>
                         {isAdmin && (
                           <>
-                            <DropdownMenuItem 
-                              onClick={() => openConfirmProductDialog(p.id!, p.confirm)}
-                              disabled={actionLoading}
-                            >
-                              {p.confirm ? (
-                                <>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Unconfirm
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Confirm
-                                </>
-                              )}
+                            <DropdownMenuItem onClick={() => openConfirmProductDialog(p.id!, p.confirm)} disabled={actionLoading}>
+                              {p.confirm ? <><XCircle className="mr-2 h-4 w-4" /> Unconfirm</> : <><CheckCircle className="mr-2 h-4 w-4" /> Confirm</>}
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                            <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                           </>
                         )}
@@ -709,60 +679,33 @@ const ProductsStorePage: React.FC = () => {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label>Product Name *</Label>
-                <Input
-                  value={newProduct.productName}
-                  onChange={e => setNewProduct(prev => ({ ...prev, productName: e.target.value }))}
-                  placeholder="Enter product name"
-                />
+                <Input value={newProduct.productName} onChange={e => setNewProduct(p => ({ ...p, productName: e.target.value }))} />
               </div>
               <div className="grid gap-2">
                 <Label>Category *</Label>
-                <Input
-                  value={newProduct.category}
-                  onChange={e => setNewProduct(prev => ({ ...prev, category: e.target.value }))}
-                  placeholder="Enter category"
-                />
+                <Input value={newProduct.category} onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))} />
               </div>
               <div className="grid gap-2">
                 <Label>Model (optional)</Label>
-                <Input
-                  value={newProduct.model}
-                  onChange={e => setNewProduct(prev => ({ ...prev, model: e.target.value }))}
-                  placeholder="Enter model"
-                />
+                <Input value={newProduct.model} onChange={e => setNewProduct(p => ({ ...p, model: e.target.value }))} />
               </div>
               <div className="grid gap-2">
-                <Label>Cost Price per Unit (RWF) *</Label>
-                <Input
-                  type="number"
-                  value={newProduct.costPrice}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setNewProduct(prev => ({ ...prev, costPrice: val === '' ? '' : Number(val) }));
-                  }}
-                  placeholder="Enter cost price"
-                />
+                <Label>Cost Price (RWF) *</Label>
+                <Input type="number" value={newProduct.costPrice} onChange={e => setNewProduct(p => ({ ...p, costPrice: e.target.value === '' ? '' : Number(e.target.value) }))} />
               </div>
               <div className="grid gap-2">
                 <Label>Quantity *</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={newProduct.quantity}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setNewProduct(prev => ({ ...prev, quantity: val === '' ? '' : Number(val) }));
-                  }}
-                  placeholder="Enter quantity"
-                />
+                <Input type="number" min="1" value={newProduct.quantity} onChange={e => setNewProduct(p => ({ ...p, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} />
               </div>
 
-              {newProduct.costPrice !== '' && newProduct.quantity !== '' && Number(newProduct.costPrice) > 0 && Number(newProduct.quantity) > 0 && (
+              {/* Safe total value display */}
+              {typeof newProduct.costPrice === 'number' && newProduct.costPrice > 0 &&
+               typeof newProduct.quantity === 'number' && newProduct.quantity > 0 && (
                 <Card className="bg-indigo-50 dark:bg-indigo-950 border-indigo-200">
                   <CardContent className="pt-6">
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total Cost Value:</span>
-                      <span>{(Number(newProduct.costPrice) * Number(newProduct.quantity)).toLocaleString()} RWF</span>
+                      <span>{(newProduct.costPrice * newProduct.quantity).toLocaleString()} RWF</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -770,59 +713,102 @@ const ProductsStorePage: React.FC = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-              <Button
-                onClick={handleAddProduct}
-                disabled={actionLoading || !newProduct.productName || !newProduct.category || newProduct.costPrice === '' || newProduct.quantity === ''}
-              >
+              <Button onClick={handleAddProduct} disabled={actionLoading}>
                 {actionLoading ? 'Adding...' : 'Add Product'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Edit Product Dialog */}
+        {/* Edit Product Dialog – Fixed null error */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Edit Product</DialogTitle></DialogHeader>
-            {currentProduct && (
+          <DialogContent className="max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Product</DialogTitle>
+              <DialogDescription>Update all product details including quantity</DialogDescription>
+            </DialogHeader>
+
+            {currentProduct ? (
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label>Product Name</Label>
-                  <Input value={currentProduct.productName} onChange={e => setCurrentProduct(prev => prev ? { ...prev, productName: e.target.value } : null)} />
+                  <Label>Product Name *</Label>
+                  <Input
+                    value={currentProduct.productName}
+                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, productName: e.target.value } : null)}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Category</Label>
-                  <Input value={currentProduct.category} onChange={e => setCurrentProduct(prev => prev ? { ...prev, category: e.target.value } : null)} />
+                  <Label>Category *</Label>
+                  <Input
+                    value={currentProduct.category}
+                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, category: e.target.value } : null)}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Model</Label>
-                  <Input value={currentProduct.model || ''} onChange={e => setCurrentProduct(prev => prev ? { ...prev, model: e.target.value } : null)} />
+                  <Label>Model (optional)</Label>
+                  <Input
+                    value={currentProduct.model || ''}
+                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, model: e.target.value || null } : null)}
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Cost Price</Label>
-                  <Input type="number" value={currentProduct.costPrice} onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)} />
+                  <Label>Cost Price (RWF) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={currentProduct.costPrice}
+                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)}
+                  />
                 </div>
+                <div className="grid gap-2">
+                  <Label>Quantity *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={currentProduct.quantity}
+                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, quantity: Number(e.target.value) || 0 } : null)}
+                  />
+                </div>
+
+                {/* Safe total value card */}
+                {typeof currentProduct.costPrice === 'number' &&
+                 typeof currentProduct.quantity === 'number' &&
+                 currentProduct.costPrice > 0 &&
+                 currentProduct.quantity > 0 && (
+                  <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200">
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total Stock Value:</span>
+                        <span>{(currentProduct.costPrice * currentProduct.quantity).toLocaleString()} RWF</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                Loading product details...
               </div>
             )}
+
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateProduct} disabled={actionLoading}>
+              <Button variant="outline" onClick={() => { setEditDialogOpen(false); setCurrentProduct(null); }}>Cancel</Button>
+              <Button onClick={handleUpdateProduct} disabled={actionLoading || !currentProduct}>
                 {actionLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Sell Product Dialog */}
+        {/* Sell Dialog */}
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Sell Product</DialogTitle>
               <DialogDescription>
-                {currentProduct?.productName} (Available: {currentProduct?.quantity})
+                {currentProduct?.productName} (Available: {currentProduct?.quantity ?? 0})
               </DialogDescription>
             </DialogHeader>
-
             {currentProduct && (
               <div className="space-y-6 py-4">
                 <div className="grid gap-4">
@@ -831,73 +817,53 @@ const ProductsStorePage: React.FC = () => {
                     <Input
                       type="number"
                       min="1"
-                      placeholder="Enter quantity"
+                      max={currentProduct.quantity}
                       value={sellForm.quantity}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSellForm(s => ({ ...s, quantity: val === '' ? '' : Number(val) }));
-                      }}
+                      onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
                     />
                   </div>
-
                   <div className="grid gap-2">
                     <Label>Selling Price per Unit (RWF)</Label>
                     <Input
                       type="number"
-                      placeholder="Enter selling price"
                       value={sellForm.sellingPrice}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
-                      }}
+                      onChange={e => setSellForm(s => ({ ...s, sellingPrice: e.target.value === '' ? '' : Number(e.target.value) }))}
                     />
                   </div>
-
                   <div className="grid gap-2">
                     <Label>Return Deadline (optional)</Label>
                     <Input
                       type="date"
                       value={sellForm.deadline}
-                      onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+                      onChange={e => setSellForm(s => ({ ...s, deadline: e.target.value }))}
                     />
                   </div>
                 </div>
 
-                {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
+                {Number(sellForm.quantity) > currentProduct.quantity && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Quantity entered ({sellForm.quantity}) exceeds available stock ({currentProduct.quantity}).
-                    </AlertDescription>
+                    <AlertDescription>Quantity exceeds available stock.</AlertDescription>
                   </Alert>
                 )}
 
-                {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
+                {Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
                   <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
                     <CardContent className="pt-6 space-y-3">
                       <div className="flex justify-between text-lg">
-                        <span>Total Money Received:</span>
+                        <span>Total Received:</span>
                         <span className="font-bold">
                           {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
                         </span>
                       </div>
                       <div className="flex justify-between text-lg">
                         <span>Cost of Goods:</span>
-                        <span>
-                          {(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF
-                        </span>
+                        <span>{(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF</span>
                       </div>
                       <div className="flex justify-between text-xl font-bold pt-2 border-t">
-                        <span>Profit / Loss:</span>
-                        <span className={
-                          Number(sellForm.sellingPrice) * Number(sellForm.quantity) >= currentProduct.costPrice * Number(sellForm.quantity)
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                        }>
-                          {(
-                            Number(sellForm.sellingPrice) * Number(sellForm.quantity) -
-                            currentProduct.costPrice * Number(sellForm.quantity)
-                          ).toLocaleString()} RWF
+                        <span>Profit:</span>
+                        <span className={Number(sellForm.sellingPrice) >= currentProduct.costPrice ? 'text-green-600' : 'text-red-600'}>
+                          {((Number(sellForm.sellingPrice) - currentProduct.costPrice) * Number(sellForm.quantity)).toLocaleString()} RWF
                         </span>
                       </div>
                     </CardContent>
@@ -905,23 +871,18 @@ const ProductsStorePage: React.FC = () => {
                 )}
               </div>
             )}
-
             <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setSellDialogOpen(false);
-                setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
-              }}>
+              <Button variant="outline" onClick={() => { setSellDialogOpen(false); setSellForm({ quantity: '', sellingPrice: '', deadline: '' }); }}>
                 Cancel
               </Button>
               <Button
                 onClick={openConfirmSale}
                 disabled={
                   actionLoading ||
-                  sellForm.quantity === '' ||
-                  sellForm.sellingPrice === '' ||
+                  !currentProduct ||
                   Number(sellForm.quantity) <= 0 ||
                   Number(sellForm.sellingPrice) <= 0 ||
-                  Number(sellForm.quantity) > currentProduct?.quantity
+                  Number(sellForm.quantity) > currentProduct.quantity
                 }
               >
                 Proceed to Confirm
@@ -930,51 +891,41 @@ const ProductsStorePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Final Sale Confirmation Dialog */}
+        {/* Confirm Sale Dialog */}
         <Dialog open={confirmSaleDialogOpen} onOpenChange={setConfirmSaleDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirm Sale</DialogTitle>
-              <DialogDescription className="space-y-3">
-                <p>Are you sure you want to confirm this sale?</p>
-                <div className="font-medium">
-                  <p>Product: <strong>{currentProduct?.productName}</strong></p>
-                  <p>Quantity: <strong>{sellForm.quantity}</strong></p>
-                  <p>Selling Price per Unit: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
-                  <p className="text-lg pt-2">
-                    Total Amount: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong>
-                  </p>
-                </div>
-              </DialogDescription>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Confirm Sale</DialogTitle></DialogHeader>
+            <DialogDescription className="space-y-3">
+              <p>Are you sure you want to confirm this sale?</p>
+              <div className="font-medium">
+                <p>Product: <strong>{currentProduct?.productName}</strong></p>
+                <p>Quantity: <strong>{sellForm.quantity}</strong></p>
+                <p>Selling Price: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
+                <p className="text-lg pt-2">Total: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
+              </div>
+            </DialogDescription>
             <DialogFooter>
               <Button variant="outline" onClick={() => setConfirmSaleDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSellConfirm} disabled={actionLoading}>
-                {actionLoading ? 'Selling...' : 'Yes, Confirm Sale'}
-              </Button>
+              <Button onClick={handleSellConfirm} disabled={actionLoading}>Yes, Confirm Sale</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Confirm Product Status Dialog (Admin only) */}
+        {/* Confirm Product Status */}
         <Dialog open={confirmProductDialogOpen} onOpenChange={setConfirmProductDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Change Confirmation Status</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to <strong>{productToConfirm && !productToConfirm.current ? 'confirm' : 'unconfirm'}</strong> this product?
-              </DialogDescription>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Change Confirmation Status</DialogTitle></DialogHeader>
+            <DialogDescription>
+              Are you sure you want to <strong>{productToConfirm && !productToConfirm.current ? 'confirm' : 'unconfirm'}</strong> this product?
+            </DialogDescription>
             <DialogFooter>
               <Button variant="outline" onClick={() => setConfirmProductDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleConfirmProduct} disabled={actionLoading}>
-                {actionLoading ? 'Processing...' : 'Yes, Confirm Change'}
-              </Button>
+              <Button onClick={handleConfirmProduct} disabled={actionLoading}>Confirm Change</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Product Details Dialog */}
+        {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Product Details</DialogTitle></DialogHeader>
@@ -988,7 +939,7 @@ const ProductsStorePage: React.FC = () => {
                 <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
                 <p><strong>Status:</strong> {getStatusBadge(currentProduct.quantity)}</p>
                 <p><strong>Confirmed:</strong> {currentProduct.confirm ? 'Yes' : 'No'}</p>
-                <p><strong>Added At:</strong> {currentProduct.addedDate ? new Date(currentProduct.addedDate).toLocaleDateString() : '-'}</p>
+                <p><strong>Added:</strong> {currentProduct.addedDate ? new Date(currentProduct.addedDate).toLocaleDateString() : '-'}</p>
               </div>
             )}
             <DialogFooter>
@@ -997,48 +948,14 @@ const ProductsStorePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Confirmation Dialog */}
+        {/* Delete Confirmation */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Product?</DialogTitle>
-              <DialogDescription>
-                This action cannot be undone. The product will be marked as deleted.
-              </DialogDescription>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Delete Product?</DialogTitle></DialogHeader>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
             <DialogFooter>
               <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Update Quantity Dialog */}
-        <Dialog open={updateQtyDialogOpen} onOpenChange={setUpdateQtyDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Update Product Quantity</DialogTitle>
-              <DialogDescription>
-                {currentProduct?.productName} - Current: {currentProduct?.quantity}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <Label>New Quantity</Label>
-              <Input
-                type="number"
-                min="0"
-                value={newQuantity}
-                onChange={e => setNewQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="Enter new quantity"
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setUpdateQtyDialogOpen(false); setNewQuantity(''); }}>Cancel</Button>
-              <Button onClick={handleUpdateQuantity} disabled={actionLoading || newQuantity === ''}>
-                {actionLoading ? 'Updating...' : 'Update Quantity'}
-              </Button>
+              <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>Delete</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
