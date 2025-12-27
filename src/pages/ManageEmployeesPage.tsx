@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Search, PlusCircle, Eye, Edit, Trash2, UserPlus, CloudOff, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,67 +31,6 @@ import {
   setEmployeeTransactionContext,
 } from '@/functions/employees';
 import { getBranches, Branch } from '@/functions/branch';
-
-const EmployeeRowSkeleton = () => (
-  <TableRow>
-    <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-64" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-36" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-36" /></TableCell>
-    <TableCell className="text-right">
-      <div className="flex justify-end gap-1">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-8 rounded-md" />
-      </div>
-    </TableCell>
-  </TableRow>
-);
-
-const PageSkeleton = () => (
-  <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <Skeleton className="h-9 w-80 mb-2" />
-        <Skeleton className="h-5 w-96" />
-      </div>
-      <div className="flex gap-3">
-        <Skeleton className="h-10 w-40 rounded-md" />
-        <Skeleton className="h-10 w-44 rounded-md" />
-      </div>
-    </div>
-    <Skeleton className="h-10 w-full max-w-md rounded-md" />
-    <div className="overflow-x-auto border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"><Skeleton className="h-4 w-4" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-64" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-36" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-40" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-36" /></TableHead>
-            <TableHead className="text-right"><Skeleton className="h-5 w-32 ml-auto" /></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[...Array(10)].map((_, i) => <EmployeeRowSkeleton key={i} />)}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
-);
 
 const ManageEmployeesPage: React.FC = () => {
   const { toast } = useToast();
@@ -135,7 +73,7 @@ const ManageEmployeesPage: React.FC = () => {
   const businessId = user?.businessId;
   const businessName = user?.businessName || 'RwandaScratch';
 
-  // Set transaction logging context when user + branches are ready
+  // Set transaction logging context
   useEffect(() => {
     if (user && branches.length > 0) {
       setEmployeeTransactionContext({
@@ -203,164 +141,33 @@ const ManageEmployeesPage: React.FC = () => {
       .includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateEmployee = async () => {
-    if (!newEmployee.email || !newEmployee.firstName || !newEmployee.lastName) {
-      toast({ title: 'Error', description: 'Email, First Name and Last Name required', variant: 'destructive' });
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      const created = await createEmployee({
-        ...newEmployee,
-        businessId,
-        businessName,
-      });
-
-      if (created) {
-        setEmployees(prev => [...prev, created]);
-        toast({ title: 'Success', description: 'Employee created! Password: 1234567' });
-        setNewEmployee({
-          email: '',
-          firstName: '',
-          lastName: '',
-          phone: '',
-          district: '',
-          sector: '',
-          cell: '',
-          village: '',
-          gender: 'male',
-          branch: null,
-        });
-        setIsCreateDialogOpen(false);
-      }
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleAssignBranch = async () => {
-    if (!currentEmployee?.id) return;
-    setActionLoading(true);
-    try {
-      const success = await assignBranchToEmployee(currentEmployee.id, assignBranchId);
-      if (success) {
-        setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? { ...e, branch: assignBranchId } : e));
-        
-        if (currentEmployee.id === user?.id) {
-          updateUser({ branch: assignBranchId });
-          toast({ 
-            title: 'Success', 
-            description: 'Branch assigned. Your session has been updated.' 
-          });
-        } else {
-          toast({ title: 'Success', description: 'Branch assigned' });
-        }
-        setIsAssignBranchDialogOpen(false);
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Failed to assign branch', variant: 'destructive' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleUpdateEmployee = async () => {
-    if (!currentEmployee?.id) return;
-    setActionLoading(true);
-    try {
-      const success = await updateEmployee(currentEmployee.id, {
-        firstName: currentEmployee.firstName,
-        lastName: currentEmployee.lastName,
-        phone: currentEmployee.phone,
-        district: currentEmployee.district,
-        sector: currentEmployee.sector,
-        cell: currentEmployee.cell,
-        village: currentEmployee.village,
-        role: currentEmployee.role,
-        branch: currentEmployee.branch,
-        isActive: currentEmployee.isActive,
-      });
-      if (success) {
-        setEmployees(prev => prev.map(e => e.id === currentEmployee.id ? currentEmployee : e));
-        
-        if (currentEmployee.id === user?.id) {
-          updateUser({
-            firstName: currentEmployee.firstName,
-            lastName: currentEmployee.lastName,
-            fullName: `${currentEmployee.firstName} ${currentEmployee.lastName}`.trim(),
-            phone: currentEmployee.phone,
-            branch: currentEmployee.branch,
-            role: currentEmployee.role,
-            isActive: currentEmployee.isActive,
-          });
-        }
-        
-        toast({ title: 'Success', description: 'Employee updated' });
-        setIsUpdateDialogOpen(false);
-      }
-    } catch {
-      toast({ title: 'Error', description: 'Update failed', variant: 'destructive' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDeleteEmployee = async () => {
-    if (!employeeToDelete) return;
-    setActionLoading(true);
-    try {
-      await deleteEmployee(employeeToDelete);
-      setEmployees(prev => prev.filter(e => e.id !== employeeToDelete));
-      setSelectedEmployees(prev => prev.filter(id => id !== employeeToDelete));
-      toast({ title: 'Deleted', description: 'Employee removed' });
-      setIsDeleteConfirmOpen(false);
-    } catch {
-      toast({ title: 'Error', description: 'Delete failed', variant: 'destructive' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedEmployees.length === 0) return;
-    setActionLoading(true);
-    try {
-      await deleteMultipleEmployees(selectedEmployees);
-      setEmployees(prev => prev.filter(e => !selectedEmployees.includes(e.id!)));
-      setSelectedEmployees([]);
-      toast({ title: 'Deleted', description: `${selectedEmployees.length} employees removed` });
-      setIsDeleteSelectedConfirmOpen(false);
-    } catch {
-      toast({ title: 'Error', description: 'Bulk delete failed', variant: 'destructive' });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleSelect = (id: string) => {
-    setSelectedEmployees(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const selectAll = () => {
-    if (selectedEmployees.length === filteredEmployees.length && filteredEmployees.length > 0) {
-      setSelectedEmployees([]);
-    } else {
-      setSelectedEmployees(filteredEmployees.map(e => e.id!));
-    }
-  };
-
+  // NEW: Consistent clean loading state (same as all other pages)
   if (loading) {
     return (
-      <>
-        <SEOHelmet title="Manage Employees" />
-        <PageSkeleton />
-      </>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          {/* Loading Text */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Employees
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your team members...
+            </p>
+          </div>
+
+          {/* Subtle pulsing dots */}
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
+          </div>
+        </div>
+      </div>
     );
   }
 
+  // Staff view (read-only)
   if (!isAdmin) {
     return (
       <>
@@ -407,6 +214,7 @@ const ManageEmployeesPage: React.FC = () => {
     );
   }
 
+  // Admin full management view (everything below remains unchanged)
   return (
     <>
       <SEOHelmet title="Manage Employees" />
@@ -449,8 +257,7 @@ const ManageEmployeesPage: React.FC = () => {
             className="pl-10"
           />
         </div>
-
-        {/* Table */}
+ {/* Table */}
         <div className="overflow-x-auto border rounded-lg bg-white dark:bg-gray-900">
           <Table>
             <TableHeader>

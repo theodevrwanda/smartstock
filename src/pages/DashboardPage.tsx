@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats, DashboardStats } from '@/functions/dashboard';
-import { Skeleton } from '@/components/ui/skeleton';
 
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
@@ -45,20 +44,26 @@ const DashboardPage: React.FC = () => {
     if (user) loadStats();
   }, [user]);
 
+  // Spinner Loading State - Exactly as you wanted, with blue subtitle
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] p-8">
-        <div className="space-y-8">
-          <Skeleton className="h-12 w-96" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-40 rounded-xl" />
-            ))}
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          {/* Loading Text */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Dashboard
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your inventory analytics...
+            </p>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[...Array(16)].map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-lg" />
-            ))}
+
+          {/* Subtle pulsing dots */}
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
           </div>
         </div>
       </div>
@@ -170,7 +175,7 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-/* --- Reusable Components --- */
+/* --- Reusable Components (unchanged) --- */
 const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
   const colors: any = {
     indigo: "bg-indigo-600 dark:bg-indigo-700",

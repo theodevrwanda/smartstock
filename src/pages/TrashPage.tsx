@@ -1,3 +1,5 @@
+// src/pages/ProductsDeletedPage.tsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, Loader2, ArrowUpDown, Undo, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +34,6 @@ import {
   DeletedProduct,
 } from '@/functions/deleted';
 import { getBranches, Branch } from '@/functions/branch';
-import { Skeleton } from '@/components/ui/skeleton';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsDeletedPage: React.FC = () => {
@@ -265,19 +266,27 @@ const ProductsDeletedPage: React.FC = () => {
     setDeleteConfirmOpen(true);
   };
 
+  // NEW: Consistent clean loading state (same as every other page)
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
-        <Skeleton className="h-12 w-96" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-        <div className="space-y-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          {/* Loading Text */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Deleted Products
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your trash items...
+            </p>
+          </div>
+
+          {/* Subtle pulsing dots */}
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
+          </div>
         </div>
       </div>
     );
@@ -467,7 +476,7 @@ const ProductsDeletedPage: React.FC = () => {
           </Table>
         </div>
 
-        {/* Details Dialog */}
+ {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
             <DialogHeader>

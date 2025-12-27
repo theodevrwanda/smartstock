@@ -1,3 +1,5 @@
+// src/pages/ProfilePage.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,15 +14,13 @@ import {
   Mail, 
   MapPin, 
   LogOut,
-  ToggleLeft,
-  ToggleRight,
-  Loader2,
   Key,
   Trash2,
   ArrowRight,
   Check,
   Building2,
   WifiOff,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +43,6 @@ import {
   sendPasswordResetEmail,
   deleteUser,
   updateEmail,
-  verifyBeforeUpdateEmail,
 } from 'firebase/auth';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
@@ -63,8 +62,8 @@ interface BusinessInfo {
 
 const ProfilePage: React.FC = () => {
   const { toast } = useToast();
-  const { user, logout, loading: authLoading, updateUser, updateUserAndSync } = useAuth();
-  const { isOnline, addPendingChange, pendingCount } = useOffline();
+  const { user, logout, loading: authLoading, updateUser } = useAuth();
+  const { isOnline, pendingCount } = useOffline();
   const auth = getAuth();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,19 +75,14 @@ const ProfilePage: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [localImageData, setLocalImageData] = useState<string | null>(null);
 
-  // Business info state
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
-  const [businessFormData, setBusinessFormData] = useState({
-    businessName: '',
-  });
+  const [businessFormData, setBusinessFormData] = useState({ businessName: '' });
 
-  // Dialogs
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
 
-  // Multi-step Change Password
   const [passwordStep, setPasswordStep] = useState<1 | 2>(1);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -97,10 +91,7 @@ const ProfilePage: React.FC = () => {
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [currentPasswordError, setCurrentPasswordError] = useState('');
 
-  // Reset email
   const [resetEmail, setResetEmail] = useState('');
-  
-  // Email update states
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
@@ -121,53 +112,7 @@ const ProfilePage: React.FC = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  // Fetch business info
-  useEffect(() => {
-    const fetchBusinessInfo = async () => {
-      if (user?.businessId) {
-        try {
-          const businessDoc = await getDoc(doc(db, 'businesses', user.businessId));
-          if (businessDoc.exists()) {
-            const data = businessDoc.data();
-            setBusinessInfo({
-              id: businessDoc.id,
-              businessName: data.businessName || '',
-              district: data.district || '',
-              sector: data.sector || '',
-              cell: data.cell || '',
-              village: data.village || '',
-              isActive: data.isActive !== false,
-              createdAt: data.createdAt,
-            });
-            setBusinessFormData({
-              businessName: data.businessName || '',
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching business info:', error);
-        }
-      }
-    };
-
-    if (!authLoading && user) {
-      fetchBusinessInfo();
-      setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        fullName: user.fullName || '',
-        phone: user.phone || '',
-        district: user.district || '',
-        sector: user.sector || '',
-        cell: user.cell || '',
-        village: user.village || '',
-        gender: user.gender || '',
-        businessName: user.businessName || '',
-      });
-      setPreviewImage(user.profileImage || '');
-      setResetEmail(user.email || '');
-      setIsLoading(false);
-    }
-  }, [user, authLoading]);
+  // =================== ALL HANDLERS (DEFINED BEFORE USE) ===================
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -188,7 +133,7 @@ const ProfilePage: React.FC = () => {
       reader.onloadend = () => {
         const base64Data = reader.result as string;
         setPreviewImage(base64Data);
-        setLocalImageData(base64Data); // Store for offline use
+        setLocalImageData(base64Data);
       };
       reader.readAsDataURL(file);
 
@@ -206,7 +151,6 @@ const ProfilePage: React.FC = () => {
     try {
       let newImageUrl = user.profileImage || null;
 
-      // Handle image upload
       if (selectedFile) {
         if (isOnline) {
           try {
@@ -220,9 +164,8 @@ const ProfilePage: React.FC = () => {
               description: 'Image saved locally. Will upload when connection improves.',
               variant: 'destructive',
             });
-            // Queue image for later upload
             if (localImageData) {
-              await addPendingChange('updateProduct', {
+              await addPendingOperation('updateProduct', {
                 type: 'imageUpload',
                 userId: user.id,
                 imageData: localImageData,
@@ -230,13 +173,12 @@ const ProfilePage: React.FC = () => {
             }
           }
         } else {
-          // Offline: store image locally and queue for upload
           toast({
             title: 'Offline Mode',
             description: 'Image saved locally. Will upload when online.',
           });
           if (localImageData) {
-            await addPendingChange('updateProduct', {
+            await addPendingOperation('updateProduct', {
               type: 'imageUpload',
               userId: user.id,
               imageData: localImageData,
@@ -259,28 +201,23 @@ const ProfilePage: React.FC = () => {
         imagephoto: newImageUrl,
       };
 
-      // Immediately update local auth state for instant UI feedback
       updateUser({
         ...updateData,
-        // Use local preview if we have it
         profileImage: localImageData || newImageUrl,
         imagephoto: localImageData || newImageUrl,
       });
 
       if (isOnline) {
-        // Online: save to Firestore directly
         const userRef = doc(db, 'users', user.id);
         await updateDoc(userRef, { ...updateData, updatedAt: new Date().toISOString() });
       } else {
-        // Offline: queue for sync
-        await addPendingChange('updateProduct', {
+        await addPendingOperation('updateProduct', {
           collection: 'users',
           id: user.id,
           updates: updateData,
         });
       }
 
-      // Only admin can update business name
       if (isAdmin && businessInfo && businessFormData.businessName !== businessInfo.businessName) {
         if (isOnline) {
           const businessRef = doc(db, 'businesses', businessInfo.id);
@@ -289,22 +226,19 @@ const ProfilePage: React.FC = () => {
             updatedAt: new Date().toISOString(),
           });
         } else {
-          await addPendingChange('updateProduct', {
+          await addPendingOperation('updateProduct', {
             collection: 'businesses',
             id: businessInfo.id,
             updates: { businessName: businessFormData.businessName },
           });
         }
         setBusinessInfo(prev => prev ? { ...prev, businessName: businessFormData.businessName } : null);
-        // Update auth state with new business name
         updateUser({ businessName: businessFormData.businessName });
       }
 
       toast({ 
         title: 'Success', 
-        description: isOnline 
-          ? 'Profile updated successfully!' 
-          : 'Profile updated locally. Will sync when online.' 
+        description: isOnline ? 'Profile updated successfully!' : 'Profile updated locally. Will sync when online.' 
       });
       setIsEditing(false);
       setSelectedFile(null);
@@ -349,9 +283,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Removed manual offline toggle - now using OfflineContext
-
-  // Step 1: Verify current password
   const handleVerifyCurrentPassword = async () => {
     if (!currentPassword.trim()) {
       setCurrentPasswordError('Please enter your current password.');
@@ -387,7 +318,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Step 2: Update password
   const handleUpdateNewPassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
@@ -415,7 +345,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Reset password email
   const handleResetPassword = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
       toast({ title: 'Error', description: 'Valid email required.', variant: 'destructive' });
@@ -431,7 +360,6 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  // Delete account
   const handleDeleteAccount = async () => {
     if (!auth.currentUser) return;
 
@@ -452,7 +380,6 @@ const ProfilePage: React.FC = () => {
     setDeleteAccountOpen(false);
   };
 
-  // Update email
   const handleUpdateEmail = async () => {
     if (!auth.currentUser?.email || !emailPassword.trim() || !newEmail.trim()) {
       setEmailUpdateError('Please fill all fields.');
@@ -468,19 +395,14 @@ const ProfilePage: React.FC = () => {
     setEmailUpdateError('');
 
     try {
-      // Re-authenticate user first
       const credential = EmailAuthProvider.credential(auth.currentUser.email, emailPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
 
-      // Update email in Firebase Auth
       await updateEmail(auth.currentUser, newEmail);
 
-      // Update email in Firestore
       if (user) {
         const userRef = doc(db, 'users', user.id);
         await updateDoc(userRef, { email: newEmail, updatedAt: new Date().toISOString() });
-        
-        // Update local state
         updateUser({ email: newEmail });
       }
 
@@ -490,15 +412,10 @@ const ProfilePage: React.FC = () => {
       setEmailPassword('');
     } catch (error: any) {
       let message = 'Failed to update email.';
-      if (error.code === 'auth/wrong-password') {
-        message = 'Incorrect password.';
-      } else if (error.code === 'auth/email-already-in-use') {
-        message = 'This email is already in use.';
-      } else if (error.code === 'auth/invalid-email') {
-        message = 'Invalid email address.';
-      } else if (error.code === 'auth/requires-recent-login') {
-        message = 'Please log out and log in again before changing email.';
-      }
+      if (error.code === 'auth/wrong-password') message = 'Incorrect password.';
+      else if (error.code === 'auth/email-already-in-use') message = 'This email is already in use.';
+      else if (error.code === 'auth/invalid-email') message = 'Invalid email address.';
+      else if (error.code === 'auth/requires-recent-login') message = 'Please log out and log in again.';
       setEmailUpdateError(message);
       toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
@@ -512,10 +429,73 @@ const ProfilePage: React.FC = () => {
     </Badge>
   );
 
+  // =================== DATA FETCHING ===================
+
+  useEffect(() => {
+    const fetchBusinessInfo = async () => {
+      if (user?.businessId) {
+        try {
+          const businessDoc = await getDoc(doc(db, 'businesses', user.businessId));
+          if (businessDoc.exists()) {
+            const data = businessDoc.data();
+            setBusinessInfo({
+              id: businessDoc.id,
+              businessName: data.businessName || '',
+              district: data.district || '',
+              sector: data.sector || '',
+              cell: data.cell || '',
+              village: data.village || '',
+              isActive: data.isActive !== false,
+              createdAt: data.createdAt,
+            });
+            setBusinessFormData({ businessName: data.businessName || '' });
+          }
+        } catch (error) {
+          console.error('Error fetching business info:', error);
+        }
+      }
+    };
+
+    if (!authLoading && user) {
+      fetchBusinessInfo();
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        district: user.district || '',
+        sector: user.sector || '',
+        cell: user.cell || '',
+        village: user.village || '',
+        gender: user.gender || '',
+        businessName: user.businessName || '',
+      });
+      setPreviewImage(user.profileImage || '');
+      setResetEmail(user.email || '');
+      setIsLoading(false);
+    }
+  }, [user, authLoading]);
+
+  // =================== CONSISTENT LOADING STATE ===================
+
   if (authLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Profile
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your account information...
+            </p>
+          </div>
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -527,6 +507,8 @@ const ProfilePage: React.FC = () => {
       </div>
     );
   }
+
+  // =================== MAIN RENDER ===================
 
   return (
     <>
@@ -558,7 +540,7 @@ const ProfilePage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Information */}
+          {/* Personal Information Card */}
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>
@@ -715,7 +697,6 @@ const ProfilePage: React.FC = () => {
                       <Input 
                         value={businessFormData.businessName} 
                         onChange={e => setBusinessFormData(prev => ({ ...prev, businessName: e.target.value }))} 
-                        placeholder="Enter business name"
                       />
                     ) : (
                       <p className="mt-2 text-gray-900 dark:text-white font-medium">
@@ -757,7 +738,6 @@ const ProfilePage: React.FC = () => {
 
           {/* Settings Sidebar */}
           <div className="space-y-6">
-            {/* Connection Status */}
             <Card>
               <CardHeader>
                 <CardTitle>Connection Status</CardTitle>
@@ -812,7 +792,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Multi-Step Change Password Dialog */}
+        {/* Change Password Dialog */}
         <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
           <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>
@@ -911,7 +891,7 @@ const ProfilePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Reset Password via Email Dialog */}
+        {/* Reset Password Dialog */}
         <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
           <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>
@@ -941,7 +921,7 @@ const ProfilePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Account Confirmation Dialog */}
+        {/* Delete Account Dialog */}
         <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
           <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>

@@ -38,7 +38,6 @@ import {
   setTransactionContext,
 } from '@/functions/store';
 import { getBranches, Branch } from '@/functions/branch';
-import { Skeleton } from '@/components/ui/skeleton';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsStorePage: React.FC = () => {
@@ -274,7 +273,7 @@ const ProductsStorePage: React.FC = () => {
     return 'text-red-600 font-bold';
   };
 
-  // Handlers
+  // Handlers (unchanged – kept all logic intact)
   const handleAddProduct = async () => {
     if (!userBranch) {
       toast.error('You are not assigned to any branch');
@@ -317,7 +316,6 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
-  // Full edit – safe update with null guards
   const handleUpdateProduct = async () => {
     if (!currentProduct) {
       toast.error('No product selected');
@@ -412,15 +410,27 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
+  // NEW: Clean spinner loading state (same as Dashboard)
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
-        <Skeleton className="h-12 w-96" />
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-        </div>
-        <div className="space-y-4">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          {/* Loading Text */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Store Products
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your store products...
+            </p>
+          </div>
+
+          {/* Subtle pulsing dots */}
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
+          </div>
         </div>
       </div>
     );
@@ -468,8 +478,7 @@ const ProductsStorePage: React.FC = () => {
             </Button>
           </div>
         </div>
-
-        {/* Filters */}
+ {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
           <div className="relative col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />

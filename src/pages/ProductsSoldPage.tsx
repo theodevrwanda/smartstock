@@ -1,4 +1,4 @@
-// src/pages/ProductsSoldPage.tsx (or wherever your Sold Products page is)
+// src/pages/ProductsSoldPage.tsx
 
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
@@ -35,7 +35,6 @@ import {
   setSoldTransactionContext,
 } from '@/functions/sold';
 import { getBranches, Branch } from '@/functions/branch';
-import { Skeleton } from '@/components/ui/skeleton';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsSoldPage: React.FC = () => {
@@ -76,7 +75,7 @@ const ProductsSoldPage: React.FC = () => {
     comment: '',
   });
 
-  // Set transaction context for logging (when user + branches are ready)
+  // Set transaction context for logging
   useEffect(() => {
     if (user && branches.length > 0) {
       const branchInfo = branches.find(b => b.id === user.branch);
@@ -315,15 +314,27 @@ const ProductsSoldPage: React.FC = () => {
     setDeleteConfirmOpen(true);
   };
 
+  // NEW: Consistent clean loading state (same as Dashboard & Store)
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
-        <Skeleton className="h-12 w-96" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-        </div>
-        <div className="space-y-4">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          {/* Loading Text */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Sold Products
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your sales records...
+            </p>
+          </div>
+
+          {/* Subtle pulsing dots */}
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
+          </div>
         </div>
       </div>
     );
@@ -497,8 +508,7 @@ const ProductsSoldPage: React.FC = () => {
             </TableBody>
           </Table>
         </div>
-
-        {/* Details Dialog */}
+  {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>

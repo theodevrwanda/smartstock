@@ -1,4 +1,4 @@
-// src/pages/ManageBranchPage.tsx (or wherever your branch management page is)
+// src/pages/ManageBranchPage.tsx
 
 import React, { useState, useEffect } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
@@ -15,7 +15,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,69 +27,6 @@ import {
   Branch,
   setBranchTransactionContext,
 } from '@/functions/branch';
-
-// Skeleton for a single table row (admin view)
-const BranchRowSkeleton = () => (
-  <TableRow>
-    <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-    <TableCell><Skeleton className="h-5 w-36" /></TableCell>
-    <TableCell className="text-right">
-      <div className="flex justify-end gap-2">
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-8 rounded-md" />
-        <Skeleton className="h-8 w-8 rounded-md" />
-      </div>
-    </TableCell>
-  </TableRow>
-);
-
-// Full page skeleton loader
-const PageSkeleton = () => (
-  <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
-    {/* Header */}
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <Skeleton className="h-9 w-72 mb-2" />
-        <Skeleton className="h-5 w-96" />
-      </div>
-      <div className="flex gap-3">
-        <Skeleton className="h-10 w-36 rounded-md" />
-        <Skeleton className="h-10 w-40 rounded-md" />
-      </div>
-    </div>
-
-    {/* Search bar */}
-    <Skeleton className="h-10 w-full max-w-md rounded-md" />
-
-    {/* Table */}
-    <div className="overflow-x-auto border rounded-lg">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"><Skeleton className="h-4 w-4" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-            <TableHead><Skeleton className="h-5 w-28" /></TableHead>
-            <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {[...Array(10)].map((_, i) => (
-            <BranchRowSkeleton key={i} />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  </div>
-);
 
 const ManageBranchPage: React.FC = () => {
   const { user } = useAuth();
@@ -206,7 +142,6 @@ const ManageBranchPage: React.FC = () => {
 
       if (createdBranch) {
         setBranches((prev) => [...prev, createdBranch]);
-
         toast.success('Branch created successfully');
       }
 
@@ -306,13 +241,29 @@ const ManageBranchPage: React.FC = () => {
     }
   };
 
-  // Loading state with custom skeleton
+  // NEW: Consistent clean loading state (same as all other pages)
   if (loading) {
     return (
-      <>
-        <SEOHelmet title="Manage Branches" description="Loading branches..." />
-        <PageSkeleton />
-      </>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
+        <div className="text-center space-y-6">
+          {/* Loading Text */}
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
+              Loading Branches
+            </h2>
+            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
+              Fetching your branch information...
+            </p>
+          </div>
+
+          {/* Subtle pulsing dots */}
+          <div className="flex justify-center gap-2">
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
+            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -363,7 +314,7 @@ const ManageBranchPage: React.FC = () => {
     );
   }
 
-  // Admin full management view
+  // Admin full management view (unchanged below)
   return (
     <>
       <SEOHelmet title="Manage Branches" description="Create, update, delete branches" />
@@ -492,7 +443,7 @@ const ManageBranchPage: React.FC = () => {
           </Table>
         </div>
 
-        {/* Create Dialog */}
+  {/* Create Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
