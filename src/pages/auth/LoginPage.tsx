@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import PWAInstallButton from '@/components/PWAInstallButton';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -234,6 +235,11 @@ export default function LoginPage() {
               Sign up
             </Link>
           </p>
+        </div>
+
+        {/* PWA Install Button */}
+        <div className="pt-4 border-t border-slate-200">
+          <PWAInstallButton variant="secondary" className="bg-slate-100 hover:bg-slate-200 text-slate-700" />
         </div>
       </div>
     </AuthLayout>

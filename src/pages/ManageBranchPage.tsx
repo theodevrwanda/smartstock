@@ -127,7 +127,7 @@ const ManageBranchPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setBranchTransactionContext({
-        userId: user.uid || '',
+        userId: user.id || '',
         userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
         userRole: user.role || 'staff',
         businessId: user.businessId || '',

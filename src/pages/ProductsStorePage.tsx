@@ -104,7 +104,7 @@ const ProductsStorePage: React.FC = () => {
     if (user && branches.length > 0) {
       const branchInfo = branches.find(b => b.id === user.branch);
       setTransactionContext({
-        userId: user.uid || '',
+        userId: user.id || '',
         userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
         userRole: user.role || 'staff',
         businessId: user.businessId || '',
@@ -497,7 +497,8 @@ const ProductsStorePage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -580,6 +581,93 @@ const ProductsStorePage: React.FC = () => {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {sortedProducts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No products found matching your filters.
+            </div>
+          ) : (
+            sortedProducts.map(p => (
+              <Card key={p.id} className="overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base truncate">{p.productName}</h3>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs">{p.category}</Badge>
+                        {p.model && <Badge variant="outline" className="text-xs">{p.model}</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className="font-bold">{p.quantity}</Badge>
+                      {getStatusBadge(p.quantity)}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                    <span className={`text-sm font-medium ${getPriceColor(p.costPrice)}`}>
+                      {p.costPrice.toLocaleString()} RWF
+                    </span>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-8 gap-1">
+                          Actions
+                          <ArrowUpDown className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+                        {p.quantity > 0 && (
+                          <DropdownMenuItem onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Sell Product
+                          </DropdownMenuItem>
+                        )}
+                        {isAdmin && (
+                          <>
+                            <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Product
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => openConfirmProductDialog(p.id!, p.confirm)}
+                              disabled={actionLoading}
+                            >
+                              {p.confirm ? (
+                                <>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Unconfirm
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Confirm
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Add Product Dialog */}

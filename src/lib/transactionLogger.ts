@@ -6,16 +6,20 @@ import { db } from '@/firebase/firebase';
 export type TransactionType =
   | 'stock_added'
   | 'stock_updated'
+  | 'product_added'
   | 'product_sold'
   | 'product_deleted'
   | 'product_restored'
+  | 'product_updated'
   | 'resold_restored'
+  | 'resold_restored_product'
   | 'employee_added'
   | 'employee_updated'
   | 'employee_deleted'
   | 'branch_created'
   | 'branch_updated'
-  | 'branch_deleted';
+  | 'branch_deleted'
+  | 'profile_updated';
 
 export interface TransactionLog {
   id?: string;
@@ -43,16 +47,20 @@ export interface TransactionLog {
 export const transactionTypeLabels: Record<TransactionType, string> = {
   stock_added: 'Stock Added',
   stock_updated: 'Stock Updated',
+  product_added: 'Product Added',
   product_sold: 'Product Sold',
   product_deleted: 'Product Deleted',
   product_restored: 'Product Restored',
+  product_updated: 'Product Updated',
   resold_restored: 'Restored Re-sold',
+  resold_restored_product: 'Restored Re-sold',
   employee_added: 'Employee Added',
   employee_updated: 'Employee Updated',
   employee_deleted: 'Employee Deleted',
   branch_created: 'Branch Created',
   branch_updated: 'Branch Updated',
   branch_deleted: 'Branch Deleted',
+  profile_updated: 'Profile Updated',
 };
 
 export const getTransactionColor = (type: TransactionType): string => {
@@ -75,14 +83,18 @@ export const getTransactionColor = (type: TransactionType): string => {
 };
 
 // Log a transaction (call this from functions)
-export const logTransaction = async (tx: Omit<TransactionLog, 'createdAt'>): Promise<void> => {
+export const logTransaction = async (tx: Omit<TransactionLog, 'createdAt'> & { model?: string }): Promise<string | null> => {
   try {
-    await addDoc(collection(db, 'transactions'), {
-      ...tx,
+    // Remove model if present (not in TransactionLog interface)
+    const { model, ...txData } = tx as any;
+    const docRef = await addDoc(collection(db, 'transactions'), {
+      ...txData,
       createdAt: new Date().toISOString(),
     });
+    return docRef.id;
   } catch (error) {
     console.error('Failed to log transaction:', error);
+    return null;
   }
 };
 
