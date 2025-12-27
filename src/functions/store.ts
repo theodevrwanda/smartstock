@@ -15,14 +15,14 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
-import { logTransaction } from '@/lib/transactionLogger'; // New reusable logger
+import { logTransaction } from '@/lib/transactionLogger';
 
 export interface Product {
   id?: string;
   productName: string;
   category: string;
   model?: string;
-  costPrice: number; // Now explicitly allows 0
+  costPrice: number;
   sellingPrice?: number | null;
   status: 'store' | 'sold' | 'restored' | 'deleted';
   restoreComment?: string;
@@ -40,7 +40,6 @@ export interface Product {
   modelLower?: string;
 }
 
-// Transaction context - must be set before calling any function that logs
 let txContext: {
   userId: string;
   userName: string;
@@ -55,7 +54,6 @@ export const setTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
 };
 
-// Local queue key for pending operations (offline support)
 const OFFLINE_QUEUE_KEY = 'offline_product_operations';
 
 const getOfflineQueue = (): any[] => {
@@ -71,7 +69,6 @@ const clearOfflineQueue = () => {
   localStorage.removeItem(OFFLINE_QUEUE_KEY);
 };
 
-// Sync offline operations when back online
 export const syncOfflineOperations = async (): Promise<void> => {
   const queue = getOfflineQueue();
   if (queue.length === 0) return;
@@ -92,7 +89,7 @@ export const syncOfflineOperations = async (): Promise<void> => {
           where('branch', '==', op.data.branch),
           where('productNameLower', '==', normalizedName),
           where('categoryLower', '==', normalizedCategory),
-          where('costPrice', '==', op.data.costPrice), // Allows 0
+          where('costPrice', '==', op.data.costPrice),
           where('status', '==', 'store')
         );
 
@@ -162,24 +159,26 @@ export const syncOfflineOperations = async (): Promise<void> => {
   }
 };
 
-// Get products with branch access control
+// UPDATED: Always filter by branch — even for admins
 export const getProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
   branchId?: string | null
 ): Promise<Product[]> => {
+  if (!branchId) {
+    toast.error('No branch assigned to user');
+    return [];
+  }
+
   try {
     const productsRef = collection(db, 'products');
 
-    let q = query(
+    const q = query(
       productsRef,
       where('businessId', '==', businessId),
+      where('branch', '==', branchId),        // Always restrict to user's branch
       where('status', '==', 'store')
     );
-
-    if (userRole === 'staff' && branchId) {
-      q = query(q, where('branch', '==', branchId));
-    }
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({
@@ -193,13 +192,12 @@ export const getProducts = async (
   }
 };
 
-// Add or update product + log transaction (now fully supports costPrice = 0)
 export const addOrUpdateProduct = async (
   data: {
     productName: string;
     category: string;
     model?: string;
-    costPrice: number; // Allows 0
+    costPrice: number;
     quantity: number;
     branch: string;
     businessId: string;
@@ -243,7 +241,7 @@ export const addOrUpdateProduct = async (
       where('branch', '==', data.branch),
       where('productNameLower', '==', normalizedName),
       where('categoryLower', '==', normalizedCategory),
-      where('costPrice', '==', data.costPrice), // Supports 0
+      where('costPrice', '==', data.costPrice),
       where('status', '==', 'store')
     );
 
@@ -260,11 +258,10 @@ export const addOrUpdateProduct = async (
         updatedAt: new Date().toISOString(),
       });
 
-      // Log stock update
       if (txContext) {
         await logTransaction({
           transactionType: 'stock_updated',
-          actionDetails: `Added ${data.quantity} units to existing stock: ${data.productName} (Cost: ${data.costPrice})`,
+          actionDetails: `Added ${data.quantity} units to existing stock: ${data.productName}`,
           userId: txContext.userId,
           userName: txContext.userName,
           userRole: txContext.userRole,
@@ -282,10 +279,7 @@ export const addOrUpdateProduct = async (
 
       toast.success(`Added ${data.quantity} units`);
       const updatedData = (await getDoc(existingDoc.ref)).data();
-      return {
-        id: existingDoc.id,
-        ...updatedData,
-      } as Product;
+      return { id: existingDoc.id, ...updatedData } as Product;
     } else {
       const newRef = doc(productsRef);
       const newProduct: Product = {
@@ -296,7 +290,7 @@ export const addOrUpdateProduct = async (
         categoryLower: normalizedCategory,
         model: data.model?.trim() || null,
         modelLower: normalizedModel || null,
-        costPrice: data.costPrice, // Can be 0
+        costPrice: data.costPrice,
         sellingPrice: null,
         status: 'store',
         addedDate: new Date().toISOString(),
@@ -309,11 +303,10 @@ export const addOrUpdateProduct = async (
 
       await setDoc(newRef, newProduct);
 
-      // Log new stock added
       if (txContext) {
         await logTransaction({
           transactionType: 'stock_added',
-          actionDetails: `Added new product: ${data.productName} (Qty: ${data.quantity}, Cost: ${data.costPrice})`,
+          actionDetails: `Added new product: ${data.productName} (Qty: ${data.quantity})`,
           userId: txContext.userId,
           userName: txContext.userName,
           userRole: txContext.userRole,
@@ -339,7 +332,6 @@ export const addOrUpdateProduct = async (
   }
 };
 
-// Sell product + log transaction (handles costPrice = 0 correctly)
 export const sellProduct = async (
   id: string,
   quantity: number,
@@ -403,13 +395,13 @@ export const sellProduct = async (
       return false;
     }
 
-    if (quantity > original.quantity || sellingPrice < 0) { // Only block negative selling price
+    if (quantity > original.quantity || sellingPrice <= 0 || quantity <= 0) {
       toast.error('Invalid quantity or price');
       return false;
     }
 
     const totalAmount = quantity * sellingPrice;
-    const costTotal = quantity * original.costPrice; // Can be 0
+    const costTotal = quantity * original.costPrice;
     const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
     const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
 
@@ -432,11 +424,10 @@ export const sellProduct = async (
       });
     });
 
-    // Log product sold
     if (txContext) {
       await logTransaction({
         transactionType: 'product_sold',
-        actionDetails: `Sold ${quantity} unit(s) of ${original.productName} at ${sellingPrice.toLocaleString()} RWF each`,
+        actionDetails: `Sold ${quantity} unit(s) of ${original.productName}`,
         userId: txContext.userId,
         userName: txContext.userName,
         userRole: txContext.userRole,
@@ -464,7 +455,6 @@ export const sellProduct = async (
   }
 };
 
-// Update product + log
 export const updateProduct = async (id: string, updates: Partial<Product>): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'products', id), {
@@ -476,7 +466,7 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
       const changedFields = Object.keys(updates).filter(k => k !== 'updatedAt').join(', ') || 'details';
       await logTransaction({
         transactionType: 'stock_updated',
-        actionDetails: `Updated product: ${updates.productName || id} (${changedFields})`,
+        actionDetails: `Updated product details (${changedFields})`,
         userId: txContext.userId,
         userName: txContext.userName,
         userRole: txContext.userRole,
@@ -495,7 +485,6 @@ export const updateProduct = async (id: string, updates: Partial<Product>): Prom
   }
 };
 
-// Delete (soft) product + log
 export const deleteProduct = async (id: string): Promise<boolean> => {
   try {
     const productDoc = await getDoc(doc(db, 'products', id));
@@ -512,7 +501,7 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
     if (txContext) {
       await logTransaction({
         transactionType: 'product_deleted',
-        actionDetails: `Deleted product: ${productData.productName} (Qty: ${productData.quantity})`,
+        actionDetails: `Deleted product: ${productData.productName}`,
         userId: txContext.userId,
         userName: txContext.userName,
         userRole: txContext.userRole,

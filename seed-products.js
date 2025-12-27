@@ -1,130 +1,104 @@
-import { initializeApp }  from 'firebase/app';
-import { getFirestore, collection, doc, writeBatch } from 'firebase/firestore';
+import { initializeApp }from'firebase/app';
+import { getFirestore, collection, doc, writeBatch }from'firebase/firestore';
 
 // ==================== FIREBASE CONFIG ====================
 const firebaseConfig = {
 };
 
+// Fixed IDs (Verified)
 const BUSINESS_ID = 'ytrEr0KWRkhIL0285YY0';
-const BRANCH_ID = '0wUcZTkLmuMoOrWvNGFO';
+const BRANCH_ID = '6yBRjAKZua16KolwrnMV';
 
-// ==================== PRODUCT DATA LIST (214 ITEMS) ====================
+// ==================== PRODUCT DATA (161 ITEMS) ====================
 const rawProducts = [
-  { category: "LCD", model: "A50/A30 ORG", qty: 1 }, { category: "LCD", model: "A51 ORG", qty: 1 },
-  { category: "LCD", model: "A30S ORG", qty: 1 }, { category: "LCD", model: "A31 ORG", qty: 1 },
-  { category: "LCD", model: "A32 4G ORG", qty: 1 }, { category: "LCD", model: "A20 ORG", qty: 1 },
-  { category: "LCD", model: "A20S", qty: 1 }, { category: "LCD", model: "A21", qty: 1 },
-  { category: "LCD", model: "A21S", qty: 1 }, { category: "LCD", model: "A22", qty: 1 },
-  { category: "LCD", model: "A23", qty: 1 }, { category: "LCD", model: "A24 ORG", qty: 1 },
-  { category: "LCD", model: "A10", qty: 2 }, { category: "LCD", model: "A10S", qty: 2 },
-  { category: "LCD", model: "A10E", qty: 1 }, { category: "LCD", model: "A11, M11", qty: 1 },
-  { category: "LCD", model: "A12, M02, A02", qty: 2 }, { category: "LCD", model: "A13", qty: 1 },
-  { category: "LCD", model: "A750", qty: 1 }, { category: "LCD", model: "A720", qty: 1 },
-  { category: "LCD", model: "A6/J6 ORG", qty: 1 }, { category: "LCD", model: "A6+ ORG", qty: 1 },
-  { category: "LCD", model: "A500 ORG", qty: 1 }, { category: "LCD", model: "A520 ORG", qty: 1 },
-  { category: "LCD", model: "A04S", qty: 1 }, { category: "LCD", model: "A04E", qty: 1 },
-  { category: "LCD", model: "A03, A03s, A02s", qty: 1 }, { category: "LCD", model: "A03core", qty: 1 },
-  { category: "LCD", model: "A01core", qty: 1 }, { category: "LCD", model: "A01", qty: 1 },
-  { category: "LCD", model: "A05", qty: 1 }, { category: "LCD", model: "A50 A30", qty: 1 },
-  { category: "LCD", model: "A750", qty: 1 }, { category: "LCD", model: "A32", qty: 1 },
-  { category: "LCD", model: "A20", qty: 1 }, { category: "LCD", model: "A600 J600", qty: 1 },
-  { category: "LCD", model: "A6+", qty: 1 }, { category: "LCD", model: "A500", qty: 1 },
-  { category: "LCD", model: "A520", qty: 1 }, { category: "LCD", model: "A530", qty: 1 },
-  { category: "LCD", model: "J730", qty: 1 }, { category: "LCD", model: "J530", qty: 2 },
-  { category: "LCD", model: "J500 J300", qty: 2 }, { category: "LCD", model: "J250", qty: 1 },
-  { category: "LCD", model: "J200", qty: 1 }, { category: "LCD", model: "J110", qty: 2 },
-  { category: "LCD", model: "J330", qty: 1 }, { category: "LCD", model: "J810", qty: 1 },
-  { category: "LCD", model: "J610 J415", qty: 1 }, { category: "LCD", model: "J 730 ORG", qty: 2 },
-  { category: "LCD", model: "J530 ORG", qty: 2 }, { category: "LCD", model: "J260", qty: 1 },
-  { category: "LCD", model: "G610", qty: 1 }, { category: "LCD", model: "G570", qty: 1 },
-  { category: "LCD", model: "M30 M31", qty: 1 }, { category: "LCD", model: "M20", qty: 1 },
-  { category: "LCD", model: "X", qty: 5 }, { category: "LCD", model: "XR", qty: 1 },
-  { category: "LCD", model: "X11", qty: 1 }, { category: "LCD", model: "X11, X 12pro", qty: 1 },
-  { category: "LCD", model: "XSMAX", qty: 1 }, { category: "LCD", model: "8 +", qty: 2 },
-  { category: "LCD", model: "8G", qty: 2 }, { category: "LCD", model: "7+", qty: 2 },
-  { category: "LCD", model: "7G", qty: 2 }, { category: "LCD", model: "6+", qty: 2 },
-  { category: "LCD", model: "6S", qty: 2 }, { category: "LCD", model: "6G", qty: 2 },
-  { category: "LCD", model: "5 G", qty: 1 }, { category: "LCD", model: "5S", qty: 1 },
-  { category: "LCD", model: "Z 21", qty: 1 }, { category: "LCD", model: "X Z 2", qty: 1 },
-  { category: "LCD", model: "X Z1", qty: 1 }, { category: "LCD", model: "X Z", qty: 1 },
-  { category: "LCD", model: "C1", qty: 1 }, { category: "LCD", model: "C10, C20", qty: 1 },
-  { category: "LCD", model: "N 1. 4", qty: 1 }, { category: "LCD", model: "S 5", qty: 1 },
-  { category: "LCD", model: "9A 9C", qty: 1 }, { category: "LCD", model: "C15 A11", qty: 1 },
-  { category: "LCD", model: "AB7", qty: 1 }, { category: "LCD", model: "X6517/A6O", qty: 4 },
-  { category: "LCD", model: "KG5/X665", qty: 3 }, { category: "LCD", model: "KD7", qty: 5 },
-  { category: "LCD", model: "KD6/LC7", qty: 1 }, { category: "LCD", model: "X683/CE7", qty: 1 },
-  { category: "LCD", model: "X657/KE5", qty: 5 }, { category: "LCD", model: "X650/KC8", qty: 5 },
-  { category: "LCD", model: "KF6/BD3", qty: 5 }, { category: "LCD", model: "X6816/X6835", qty: 1 },
-  { category: "LCD", model: "X6525/BG6", qty: 1 }, { category: "LCD", model: "X6511/BD4", qty: 1 },
-  { category: "LCD", model: "KF7/X689", qty: 2 }, { category: "LCD", model: "CD8/X660", qty: 1 },
-  { category: "LCD", model: "X653/BB4", qty: 2 }, { category: "LCD", model: "X624/KB7", qty: 3 },
-  { category: "LCD", model: "CC9/LB8", qty: 2 }, { category: "LCD", model: "X688/LE6", qty: 2 },
-  { category: "LCD", model: "CH7/CH6", qty: 1 }, { category: "LCD", model: "Ci7/CI6", qty: 2 },
-  { category: "LCD", model: "CG6/KF8", qty: 1 }, { category: "LCD", model: "CA6", qty: 1 },
-  { category: "LCD", model: "CA7", qty: 1 }, { category: "LCD", model: "BA2", qty: 1 },
-  { category: "LCD", model: "BB2", qty: 1 }, { category: "LCD", model: "BC2", qty: 2 },
-  { category: "LCD", model: "BC3", qty: 1 }, { category: "LCD", model: "BD2", qty: 1 },
-  { category: "LCD", model: "A56", qty: 1 }, { category: "LCD", model: "A58, S 17", qty: 1 },
-  { category: "LCD", model: "X559", qty: 1 }, { category: "LCD", model: "X612", qty: 1 },
-  { category: "LCD", model: "X626", qty: 1 }, { category: "LCD", model: "X606", qty: 1 },
-  { category: "LCD", model: "X5515", qty: 1 }, { category: "LCD", model: "X5516", qty: 1 },
-  { category: "LCD", model: "X680", qty: 2 }, { category: "LCD", model: "KA7", qty: 5 },
-  { category: "LCD", model: "LA7", qty: 1 }, { category: "LCD", model: "LC6", qty: 1 },
-  { category: "LCD", model: "LB6", qty: 1 }, { category: "LCD", model: "3A ORG", qty: 2 },
-  { category: "LCD", model: "3A COPY", qty: 2 }, { category: "TC", model: "BD2", qty: 2 },
-  { category: "TC", model: "BA2", qty: 5 }, { category: "TC", model: "LA7", qty: 3 },
-  { category: "TC", model: "BD3", qty: 5 }, { category: "TC", model: "X680", qty: 5 },
-  { category: "TC", model: "KD6", qty: 2 }, { category: "TC", model: "KC8", qty: 10 },
-  { category: "TC", model: "W5", qty: 2 }, { category: "TC", model: "KB7", qty: 2 },
-  { category: "TC", model: "KD7", qty: 5 }, { category: "TC", model: "LC6", qty: 10 },
-  { category: "TC", model: "G532", qty: 2 }, { category: "TC", model: "KC6", qty: 5 },
-  { category: "TC", model: "KA7", qty: 5 }, { category: "TC", model: "B1F", qty: 10 },
-  { category: "TC", model: "BC1", qty: 3 }, { category: "TC", model: "F1", qty: 10 },
-  { category: "TC", model: "BE6", qty: 5 }, { category: "TC", model: "BC3", qty: 2 },
-  { category: "TC", model: "B1P", qty: 5 }, { category: "TC", model: "B1G", qty: 5 },
-  { category: "TC", model: "A33+", qty: 3 }, { category: "TC", model: "A33", qty: 2 },
-  { category: "TC", model: "Y2", qty: 10 }, { category: "TC", model: "WX3P", qty: 5 },
-  { category: "TC", model: "W2", qty: 2 }, { category: "TC", model: "F3", qty: 3 },
-  { category: "TC", model: "BB2", qty: 5 }, { category: "TC", model: "RIO MBCL", qty: 4 },
-  { category: "TC", model: "BD1", qty: 2 }, { category: "TC", model: "A56", qty: 5 },
-  { category: "TC", model: "BC2", qty: 5 }, { category: "TC", model: "X653", qty: 5 },
-  { category: "LCD", model: "A16/A33", qty: 2 }, { category: "LCD", model: "24s", qty: 5 },
-  { category: "LCD", model: "17BIG", qty: 10 }, { category: "LCD", model: "37S", qty: 10 },
-  { category: "LCD", model: "16s", qty: 10 }, { category: "LCD", model: "11s", qty: 5 },
-  { category: "LCD", model: "24BIG", qty: 5 }, { category: "LCD", model: "37BIG", qty: 5 },
-  { category: "LCD", model: "B1F", qty: 2 }, { category: "LCD", model: "20 PIN", qty: 5 },
-  { category: "FLEX", model: "A20", qty: 2 }, { category: "FLEX", model: "A20s", qty: 2 },
-  { category: "FLEX", model: "A50", qty: 2 }, { category: "FLEX", model: "A31", qty: 2 },
-  { category: "FLEX", model: "B1F", qty: 5 }, { category: "FLEX", model: "BF7", qty: 3 },
-  { category: "FLEX", model: "B1P", qty: 5 }, { category: "FLEX", model: "LC6", qty: 5 },
-  { category: "FLEX", model: "X657", qty: 10 }, { category: "FLEX", model: "KD7", qty: 5 },
-  { category: "FLEX", model: "KA7", qty: 5 }, { category: "FLEX", model: "KF6", qty: 5 },
-  { category: "FLEX", model: "X653", qty: 5 }, { category: "FLEX", model: "CF7", qty: 5 },
-  { category: "ON/OFF", model: "KB8", qty: 5 }, { category: "ON/OFF", model: "KC8", qty: 10 },
-  { category: "ON/OFF", model: "KA7", qty: 5 }, { category: "ON/OFF", model: "X657", qty: 10 },
-  { category: "CAM", model: "KC8", qty: 10 }, { category: "CAM", model: "KD6", qty: 3 },
-  { category: "CAM", model: "KG5", qty: 3 }, { category: "CAM", model: "KC6", qty: 3 },
-  { category: "CAM", model: "KB7", qty: 2 }, { category: "CAM", model: "KD7", qty: 5 },
-  { category: "CAM", model: "X657", qty: 10 }, { category: "CAM", model: "POP 4", qty: 2 },
-  { category: "CAM", model: "X680", qty: 2 }, { category: "CAM", model: "CF7", qty: 3 },
-  { category: "DOOR", model: "A750", qty: 2 }, { category: "DOOR", model: "A520", qty: 2 },
-  { category: "DOOR", model: "A710", qty: 1 }, { category: "DOOR", model: "A510", qty: 1 },
-  { category: "DOOR", model: "A310", qty: 1 }, { category: "DOOR", model: "A710 (Alt)", qty: 1 },
-  { category: "DOOR", model: "A530", qty: 1 }, { category: "DOOR", model: "A30", qty: 1 },
-  { category: "DOOR", model: "S8+", qty: 1 }, { category: "DOOR", model: "S9+", qty: 1 },
-  { category: "DOOR", model: "S9", qty: 1 }, { category: "DOOR", model: "S6", qty: 1 },
-  { category: "DOOR", model: "S7 E", qty: 2 }, { category: "DOOR", model: "S6 E", qty: 1 },
-  { category: "DOOR", model: "S6E+", qty: 1 }, { category: "DOOR", model: "NOTE 8", qty: 1 },
-  { category: "DOOR", model: "NOTE 9", qty: 1 }, { category: "FLEX", model: "A03 CORE", qty: 1 },
-  { category: "ON/OFF", model: "KD7", qty: 5 }
+  { category: "lcd", model: "X657", qty: 10 }, { category: "lcd", model: "KC8", qty: 9 },
+  { category: "lcd", model: "KA7", qty: 4 }, { category: "lcd", model: "KB7", qty: 3 },
+  { category: "lcd", model: "KB8", qty: 3 }, { category: "lcd", model: "X688", qty: 4 },
+  { category: "lcd", model: "X680", qty: 2 }, { category: "lcd", model: "X682", qty: 2 },
+  { category: "lcd", model: "CF7", qty: 2 }, { category: "lcd", model: "A60/ki5/BF7", qty: 5 },
+  { category: "lcd", model: "X6516", qty: 0 }, { category: "lcd", model: "X6517", qty: 0 },
+  { category: "lcd", model: "BF6", qty: 0 }, { category: "lcd", model: "X653", qty: 2 },
+  { category: "lcd", model: "KD7", qty: 4 }, { category: "lcd", model: "LA7", qty: 1 },
+  { category: "lcd", model: "LB6", qty: 1 }, { category: "lcd", model: "LC6", qty: 1 },
+  { category: "lcd", model: "BA2", qty: 1 }, { category: "lcd", model: "B1G", qty: 1 },
+  { category: "lcd", model: "X689/KF7", qty: 2 }, { category: "lcd", model: "BD3/KF6/X658/KG6", qty: 5 },
+  { category: "lcd", model: "KG5", qty: 5 }, { category: "lcd", model: "KG6", qty: 0 },
+  { category: "lcd", model: "KG7", qty: 1 }, { category: "lcd", model: "CG6", qty: 1 },
+  { category: "lcd", model: "LB7", qty: 1 }, { category: "lcd", model: "A56", qty: 1 },
+  { category: "lcd", model: "BC2", qty: 2 }, { category: "lcd", model: "BC1", qty: 1 },
+  { category: "lcd", model: "BC3", qty: 1 }, { category: "lcd", model: "BD2", qty: 2 },
+  { category: "lcd", model: "BD1", qty: 1 }, { category: "lcd", model: "BD4", qty: 1 },
+  { category: "lcd", model: "CA6", qty: 1 }, { category: "lcd", model: "KD6", qty: 2 },
+  { category: "lcd", model: "BB2", qty: 1 }, { category: "lcd", model: "X5516", qty: 1 },
+  { category: "lcd", model: "X5515", qty: 1 }, { category: "lcd", model: "X612", qty: 1 },
+  { category: "lcd", model: "K7/W5", qty: 2 }, { category: "lcd", model: "CA8", qty: 1 },
+  { category: "lcd", model: "X559", qty: 1 }, { category: "lcd", model: "CH6", qty: 1 },
+  { category: "lcd", model: "KC6", qty: 1 }, { category: "lcd", model: "CC9 copy", qty: 1 },
+  { category: "lcd", model: "CD8", qty: 1 }, { category: "lcd", model: "C8", qty: 0 },
+  { category: "lcd", model: "C9", qty: 1 }, { category: "lcd", model: "S17", qty: 1 },
+  { category: "lcd", model: "J1 copy", qty: 2 }, { category: "lcd", model: "J2 copy", qty: 2 },
+  { category: "lcd", model: "J3/5 copy", qty: 2 }, { category: "lcd", model: "J4 copy", qty: 1 },
+  { category: "lcd", model: "J6 copy", qty: 1 }, { category: "lcd", model: "J7 copy", qty: 1 },
+  { category: "lcd", model: "J730 copy", qty: 1 }, { category: "lcd", model: "J250 copy", qty: 1 },
+  { category: "lcd", model: "A530 copy", qty: 1 }, { category: "lcd", model: "A20 copy", qty: 1 },
+  { category: "lcd", model: "A30 copy", qty: 1 }, { category: "lcd", model: "A10s org", qty: 1 },
+  { category: "lcd", model: "A20 org", qty: 1 }, { category: "lcd", model: "A30 org", qty: 1 },
+  { category: "lcd", model: "A21 org", qty: 1 }, { category: "lcd", model: "A12/A02 org", qty: 2 },
+  { category: "lcd", model: "A03/A02s/A03s", qty: 2 }, { category: "lcd", model: "J260", qty: 1 },
+  { category: "lcd", model: "A260", qty: 1 }, { category: "lcd", model: "A520 org", qty: 1 },
+  { category: "lcd", model: "J730 org", qty: 1 }, { category: "lcd", model: "J530 org", qty: 1 },
+  { category: "lcd", model: "A750 org", qty: 1 }, { category: "lcd", model: "A03 core", qty: 1 },
+  { category: "lcd", model: "A01", qty: 1 }, { category: "lcd", model: "A01 core", qty: 1 },
+  { category: "lcd", model: "A04s", qty: 1 }, { category: "lcd", model: "A51 org", qty: 1 },
+  { category: "lcd", model: "A31 org", qty: 1 }, { category: "lcd", model: "G610 copy", qty: 1 },
+  { category: "lcd", model: "J610 org", qty: 1 }, { category: "lcd", model: "A20E", qty: 1 },
+  { category: "lcd", model: "A11", qty: 1 }, { category: "lcd", model: "J330", qty: 1 },
+  { category: "lcd", model: "A13", qty: 1 }, { category: "lcd", model: "G570", qty: 1 },
+  { category: "lcd", model: "A6+ copy", qty: 1 }, { category: "lcd", model: "J810 copy", qty: 1 },
+  { category: "lcd", model: "iPhone 6", qty: 2 }, { category: "lcd", model: "iPhone 6s", qty: 2 },
+  { category: "lcd", model: "iPhone 7", qty: 1 }, { category: "lcd", model: "iPhone 7+", qty: 2 },
+  { category: "lcd", model: "iPhone 8+", qty: 2 }, { category: "lcd", model: "iPhone 6+", qty: 2 },
+  { category: "lcd", model: "iPhone 6s+", qty: 2 }, { category: "lcd", model: "iPhone 5", qty: 0 },
+  { category: "lcd", model: "iPhone 8", qty: 1 }, { category: "lcd", model: "iPhone X", qty: 1 },
+  { category: "Switch", model: "Switch KC8", qty: 0 }, { category: "Switch", model: "Switch KA7", qty: 0 },
+  { category: "Switch", model: "Switch X657", qty: 0 }, { category: "Switch", model: "Switch KB7", qty: 0 },
+  { category: "Switch", model: "Switch KB8", qty: 0 }, { category: "Switch", model: "Switch CF7", qty: 0 },
+  { category: "Switch", model: "Switch B1", qty: 0 }, { category: "Touch", model: "Touch B1F", qty: 10 },
+  { category: "Touch", model: "Touch B1p", qty: 5 }, { category: "Touch", model: "Touch B1G", qty: 5 },
+  { category: "Touch", model: "Touch F1", qty: 7 }, { category: "Touch", model: "Touch WX3P", qty: 0 },
+  { category: "Touch", model: "Touch WX3", qty: 0 }, { category: "Touch", model: "Touch K7/W5", qty: 2 },
+  { category: "Touch", model: "Touch mobicel", qty: 6 }, { category: "Touch", model: "Touch Y2", qty: 6 },
+  { category: "Touch", model: "Touch A56", qty: 2 }, { category: "Touch", model: "Touch BC2", qty: 4 },
+  { category: "Touch", model: "Touch BA2", qty: 5 }, { category: "Touch", model: "Touch LC6", qty: 5 },
+  { category: "Touch", model: "Touch KC6", qty: 2 }, { category: "Touch", model: "Touch KA7", qty: 2 },
+  { category: "Touch", model: "Touch KC8", qty: 3 }, { category: "Touch", model: "Touch BD3/KG5/X658/K15/A60/BF7/smart 7", qty: 3 },
+  { category: "Touch", model: "Touch A33", qty: 2 }, { category: "Touch", model: "Touch W2", qty: 2 },
+  { category: "Touch", model: "Touch A14", qty: 2 }, { category: "Touch", model: "Touch G532", qty: 2 },
+  { category: "Touch", model: "Touch KD7/CD6/CD7/CC6/X655", qty: 5 }, { category: "Touch", model: "Touch KB7/624", qty: 2 },
+  { category: "Touch", model: "Touch CF7", qty: 2 }, { category: "Flex", model: "Flex KC8/KD7/X650/KC2", qty: 0 },
+  { category: "Flex", model: "Flex X657", qty: 0 }, { category: "Flex", model: "Flex KB7", qty: 0 },
+  { category: "Flex", model: "Flex CF7", qty: 0 }, { category: "Flex", model: "Flex KG5", qty: 0 },
+  { category: "Flex", model: "Flex KA7", qty: 0 }, { category: "Flex", model: "Flex X688/X680", qty: 0 },
+  { category: "Flex", model: "Flex KF6", qty: 0 }, { category: "Flex", model: "Flex BC2", qty: 0 },
+  { category: "Flex", model: "Flex BF6", qty: 0 }, { category: "Flex", model: "Flex BF7", qty: 0 },
+  { category: "Flex", model: "Flex KB8", qty: 0 }, { category: "Flex", model: "Flex W5", qty: 0 },
+  { category: "Flex", model: "Flex BIF", qty: 0 }, { category: "Flex", model: "Flex BIP", qty: 0 },
+  { category: "Flex", model: "Flex K7", qty: 0 }, { category: "Flex", model: "Flex BIG", qty: 0 },
+  { category: "Touch", model: "Touch KB8", qty: 0 }, { category: "Touch", model: "Touch A35", qty: 2 },
+  { category: "Touch", model: "Touch A33+", qty: 0 }, { category: "Touch", model: "Touch S15", qty: 1 },
+  { category: "Touch", model: "Touch BD2", qty: 1 }, { category: "Touch", model: "Touch 508", qty: 0 },
+  { category: "Touch", model: "Touch 680/688/LC6/KF7/X689", qty: 2 }, { category: "Touch", model: "Touch mobicel big", qty: 2 },
+  { category: "Touch", model: "Touch A16", qty: 2 }, { category: "Touch", model: "Touch Y6", qty: 2 },
+  { category: "Touch", model: "Touch Y3", qty: 0 }, { category: "Touch", model: "Touch S1", qty: 2 },
+  { category: "Touch", model: "Touch V12", qty: 2 }, { category: "Touch", model: "Touch V18", qty: 1 },
+  { category: "Touch", model: "Touch V11", qty: 2 }
 ];
 
-async function seedFinal214() {
-  console.log(`🚀 Starting Seed for Branch: ${BRANCH_ID} (${rawProducts.length} items)`);
-
+async function seedFinalData() {
+  console.log(`🚀 Starting Re-Upload of ${rawProducts.length} items...`);
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-  const CHUNK_SIZE = 400;
+  const CHUNK_SIZE = 450; 
 
   for (let i = 0; i < rawProducts.length; i += CHUNK_SIZE) {
     const batch = writeBatch(db);
@@ -133,12 +107,14 @@ async function seedFinal214() {
 
     chunk.forEach((item) => {
       const newRef = doc(productsRef);
+      const categoryName = (item.category || "General").trim();
+      
       const productData = {
         id: newRef.id,
         productName: item.model.trim(),
         productNameLower: item.model.trim().toLowerCase(),
-        category: item.category.trim(),
-        categoryLower: item.category.trim().toLowerCase(),
+        category: categoryName,
+        categoryLower: categoryName.toLowerCase(),
         model: item.model.trim(),
         modelLower: item.model.trim().toLowerCase(),
         costPrice: 0,
@@ -155,16 +131,14 @@ async function seedFinal214() {
     });
 
     try {
-      console.log(`📦 Committing batch ${Math.floor(i/CHUNK_SIZE) + 1}...`);
       await batch.commit();
+      console.log(`✅ Batch ${Math.floor(i/CHUNK_SIZE) + 1} uploaded.`);
     } catch (e) {
-      console.error("❌ Batch Error:", e.message);
-      process.exit(1);
+      console.error("❌ Error uploading batch:", e.message);
     }
   }
-
-  console.log("\n✨ SUCCESS: 214 products uploaded with updated stock.");
+  console.log("\n✨ ALL PRODUCTS REPLACED SUCCESSFULLY.");
   process.exit(0);
 }
 
-seedFinal214();
+seedFinalData();

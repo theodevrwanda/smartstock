@@ -43,9 +43,13 @@ import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 const ProductsStorePage: React.FC = () => {
   const { user } = useAuth();
 
-  const isAdmin = user?.role === 'admin';
   const userBranch = typeof user?.branch === 'string' ? user.branch : null;
   const businessId = user?.businessId;
+  const isAdmin = user?.role === 'admin';
+
+  const canAddProduct = !!userBranch;
+  const canDelete = isAdmin;
+  const canConfirm = isAdmin;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -55,9 +59,8 @@ const ProductsStorePage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Filters
+  // Filters (branch filter REMOVED)
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [branchFilter, setBranchFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minQty, setMinQty] = useState<string>('');
@@ -65,10 +68,10 @@ const ProductsStorePage: React.FC = () => {
   const [confirmFilter, setConfirmFilter] = useState<string>('All');
 
   // Sorting
-  const [sortColumn, setSortColumn] = useState<keyof Product | 'branchName'>('productName');
+  const [sortColumn, setSortColumn] = useState<keyof Product>('productName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-  // Dialog states
+  // Dialogs
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [sellDialogOpen, setSellDialogOpen] = useState(false);
@@ -77,12 +80,12 @@ const ProductsStorePage: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  // Current product states
+  // Current product
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productToConfirm, setProductToConfirm] = useState<{ id: string; current: boolean } | null>(null);
 
-  // Add product form
+  // Forms
   const [newProduct, setNewProduct] = useState({
     productName: '',
     category: '',
@@ -91,36 +94,35 @@ const ProductsStorePage: React.FC = () => {
     quantity: '' as string | number,
   });
 
-  // Sell form
   const [sellForm, setSellForm] = useState({
     quantity: '' as string | number,
     sellingPrice: '' as string | number,
     deadline: '',
   });
 
-  // Set transaction logging context
+  // Transaction context
   useEffect(() => {
-    if (user && branches.length > 0) {
-      const branchInfo = branches.find(b => b.id === user.branch);
+    if (user && branches.length > 0 && userBranch) {
+      const branchInfo = branches.find(b => b.id === userBranch);
       setTransactionContext({
         userId: user.id || '',
-        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User',
+        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
         userRole: user.role || 'staff',
         businessId: user.businessId || '',
         businessName: user.businessName || '',
-        branchId: user.branch || undefined,
+        branchId: userBranch,
         branchName: branchInfo?.branchName,
       });
     }
-  }, [user, branches]);
+  }, [user, branches, userBranch]);
 
-  // Online/Offline Detection & Sync
+  // Online/offline sync
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      toast.success('Back Online – Syncing your offline changes...');
+      toast.success('Back Online – Syncing...');
       syncOfflineOperations().then(() => {
-        if (businessId) {
+        if (businessId && userBranch) {
           getProducts(businessId, user?.role || 'staff', userBranch).then(setProducts);
         }
       });
@@ -128,11 +130,10 @@ const ProductsStorePage: React.FC = () => {
 
     const handleOffline = () => {
       setIsOnline(false);
-      toast.warning('You are Offline – Working locally. Changes will sync when you reconnect.');
+      toast.warning('Offline – Changes will sync later');
     };
 
     if (!navigator.onLine) handleOffline();
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
@@ -140,11 +141,11 @@ const ProductsStorePage: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [businessId, user?.role, userBranch]);
+  }, [businessId, userBranch]);
 
-  // Load Products & Branches
+  // Load data
   useEffect(() => {
-    if (!businessId) {
+    if (!businessId || !userBranch) {
       setLoading(false);
       return;
     }
@@ -164,20 +165,20 @@ const ProductsStorePage: React.FC = () => {
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
       } catch (err) {
-        toast.warning(isOnline ? 'Failed to load latest data' : 'Using cached data (offline)');
+        toast.warning(isOnline ? 'Failed to load data' : 'Using cached data');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [businessId, user?.role, userBranch, isOnline]);
+  }, [businessId, userBranch, isOnline]);
 
-  const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
+  const currentBranchName = userBranch ? branchMap.get(userBranch) || 'Your Branch' : 'No Branch';
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
-  // Client-side filtering
+  // Client-side filtering (NO branch filter)
   const filteredProducts = useMemo(() => {
     return products
       .filter(p =>
@@ -186,24 +187,17 @@ const ProductsStorePage: React.FC = () => {
         (p.model || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
       .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
-      .filter(p => branchFilter === 'All' || p.branch === branchFilter)
       .filter(p => minPrice === '' || p.costPrice >= Number(minPrice))
       .filter(p => maxPrice === '' || p.costPrice <= Number(maxPrice))
       .filter(p => minQty === '' || p.quantity >= Number(minQty))
       .filter(p => maxQty === '' || p.quantity <= Number(maxQty))
       .filter(p => confirmFilter === 'All' || (confirmFilter === 'Confirmed' ? p.confirm : !p.confirm));
-  }, [products, searchTerm, categoryFilter, branchFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter]);
+  }, [products, searchTerm, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter]);
 
-  // Sorting
   const sortedProducts = useMemo(() => {
     return [...filteredProducts].sort((a, b) => {
-      let aVal: any = a[sortColumn as keyof Product];
-      let bVal: any = b[sortColumn as keyof Product];
-
-      if (sortColumn === 'branchName') {
-        aVal = getBranchName(a.branch);
-        bVal = getBranchName(b.branch);
-      }
+      let aVal: any = a[sortColumn];
+      let bVal: any = b[sortColumn];
 
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
@@ -212,7 +206,7 @@ const ProductsStorePage: React.FC = () => {
     });
   }, [filteredProducts, sortColumn, sortDirection]);
 
-  const handleSort = (column: keyof Product | 'branchName') => {
+  const handleSort = (column: keyof Product) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
@@ -227,7 +221,6 @@ const ProductsStorePage: React.FC = () => {
     { header: 'Category', key: 'category', width: 15 },
     { header: 'Model', key: 'model', width: 15 },
     { header: 'Quantity', key: 'quantity', width: 10 },
-    { header: 'Branch', key: 'branchName', width: 20 },
     { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
     { header: 'Status', key: 'status', width: 12 },
     { header: 'Confirmed', key: 'confirmed', width: 10 },
@@ -240,7 +233,6 @@ const ProductsStorePage: React.FC = () => {
       category: p.category,
       model: p.model || '-',
       quantity: p.quantity,
-      branchName: getBranchName(p.branch),
       costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
       status: p.quantity === 0 ? 'Out of Stock' : p.quantity <= 5 ? 'Low Stock' : 'In Stock',
       confirmed: p.confirm ? 'Yes' : 'No',
@@ -249,16 +241,15 @@ const ProductsStorePage: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    exportToExcel(getExportData(), storeExportColumns, 'store-products');
+    exportToExcel(getExportData(), storeExportColumns, `store-products-${currentBranchName}`);
     toast.success('Exported to Excel');
   };
 
   const handleExportPDF = () => {
-    exportToPDF(getExportData(), storeExportColumns, 'store-products', 'Store Products Report');
+    exportToPDF(getExportData(), storeExportColumns, `store-products-${currentBranchName}`, `Store Products - ${currentBranchName}`);
     toast.success('Exported to PDF');
   };
 
-  // UI Helpers
   const getStatusBadge = (quantity: number) => {
     if (quantity === 0) return <Badge variant="destructive">Out of Stock</Badge>;
     if (quantity <= 5) return <Badge variant="secondary">Low Stock</Badge>;
@@ -273,21 +264,14 @@ const ProductsStorePage: React.FC = () => {
     return 'text-red-600 font-bold';
   };
 
-  // Handlers (unchanged – kept all logic intact)
+  // Handlers
   const handleAddProduct = async () => {
     if (!userBranch) {
-      toast.error('You are not assigned to any branch');
+      toast.error('No branch assigned');
       return;
     }
-    if (
-      !newProduct.productName ||
-      !newProduct.category ||
-      newProduct.costPrice === '' ||
-      newProduct.quantity === '' ||
-      Number(newProduct.quantity) < 1 ||
-      Number(newProduct.costPrice) < 0
-    ) {
-      toast.error('Please fill all required fields correctly');
+    if (!newProduct.productName || !newProduct.category || newProduct.costPrice === '' || newProduct.quantity === '' || Number(newProduct.quantity) < 1 || Number(newProduct.costPrice) < 0) {
+      toast.error('Fill all required fields correctly');
       return;
     }
 
@@ -309,7 +293,7 @@ const ProductsStorePage: React.FC = () => {
         if (existing) return prev.map(p => p.id === result.id ? result : p);
         return [...prev, result];
       });
-      toast.success(isOnline ? 'Product added successfully' : 'Product added locally – will sync when online');
+      toast.success(isOnline ? 'Product added' : 'Added locally');
       setAddDialogOpen(false);
       setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '' });
     }
@@ -317,23 +301,13 @@ const ProductsStorePage: React.FC = () => {
   };
 
   const handleUpdateProduct = async () => {
-    if (!currentProduct) {
-      toast.error('No product selected');
-      return;
-    }
-
-    if (
-      !currentProduct.productName.trim() ||
-      !currentProduct.category.trim() ||
-      currentProduct.costPrice < 0 ||
-      currentProduct.quantity < 0
-    ) {
-      toast.error('Please fill all fields correctly');
+    if (!currentProduct) return;
+    if (!currentProduct.productName.trim() || !currentProduct.category.trim() || currentProduct.costPrice < 0 || currentProduct.quantity < 0) {
+      toast.error('Invalid data');
       return;
     }
 
     setActionLoading(true);
-
     const updates: Partial<Product> = {
       productName: currentProduct.productName.trim(),
       category: currentProduct.category.trim(),
@@ -345,25 +319,21 @@ const ProductsStorePage: React.FC = () => {
     const success = await updateProduct(currentProduct.id!, updates);
     if (success) {
       setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, ...updates } : p));
-      toast.success(isOnline ? 'Product updated successfully' : 'Product updated locally – will sync when online');
+      toast.success('Updated');
       setEditDialogOpen(false);
       setCurrentProduct(null);
     }
     setActionLoading(false);
   };
 
-  const openConfirmSale = () => {
-    setConfirmSaleDialogOpen(true);
-  };
+  const openConfirmSale = () => setConfirmSaleDialogOpen(true);
 
   const handleSellConfirm = async () => {
     if (!currentProduct || sellForm.quantity === '' || sellForm.sellingPrice === '') return;
-
     const qty = Number(sellForm.quantity);
     const price = Number(sellForm.sellingPrice);
-
     if (qty > currentProduct.quantity || price <= 0 || qty <= 0) {
-      toast.error('Invalid quantity or price');
+      toast.error('Invalid sale');
       return;
     }
 
@@ -371,7 +341,7 @@ const ProductsStorePage: React.FC = () => {
     const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
     if (success) {
       setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
-      toast.success(isOnline ? `Sold ${qty} unit(s)` : `Sale recorded locally – will sync when online`);
+      toast.success(`Sold ${qty} unit(s)`);
       setSellDialogOpen(false);
       setConfirmSaleDialogOpen(false);
       setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
@@ -385,7 +355,7 @@ const ProductsStorePage: React.FC = () => {
     const success = await deleteProduct(productToDelete);
     if (success) {
       setProducts(prev => prev.filter(p => p.id !== productToDelete));
-      toast.success(isOnline ? 'Product marked as deleted' : 'Product marked as deleted locally – will sync when online');
+      toast.success('Deleted');
       setDeleteConfirmOpen(false);
     }
     setActionLoading(false);
@@ -397,35 +367,30 @@ const ProductsStorePage: React.FC = () => {
   };
 
   const handleConfirmProduct = async () => {
-    if (!productToConfirm || !isAdmin) return;
-
+    if (!productToConfirm || !canConfirm) return;
     setActionLoading(true);
     const success = await updateProduct(productToConfirm.id, { confirm: !productToConfirm.current });
     if (success) {
       setProducts(prev => prev.map(p => p.id === productToConfirm.id ? { ...p, confirm: !productToConfirm.current } : p));
-      toast.success(`Product ${!productToConfirm.current ? 'confirmed' : 'unconfirmed'} successfully`);
+      toast.success('Status updated');
       setConfirmProductDialogOpen(false);
       setProductToConfirm(null);
     }
     setActionLoading(false);
   };
 
-  // NEW: Clean spinner loading state (same as Dashboard)
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
         <div className="text-center space-y-6">
-          {/* Loading Text */}
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
               Loading Store Products
             </h2>
             <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
-              Fetching your store products...
+              Fetching products for {currentBranchName}...
             </p>
           </div>
-
-          {/* Subtle pulsing dots */}
           <div className="flex justify-center gap-2">
             <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
             <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
@@ -441,16 +406,11 @@ const ProductsStorePage: React.FC = () => {
       <SEOHelmet title="Store Products" description="Manage store inventory" />
 
       <div className="space-y-6 p-4 md:p-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Store Products</h1>
             <p className="text-muted-foreground">
-              {isAdmin
-                ? 'All products across branches'
-                : userBranch
-                ? `Products in ${getBranchName(userBranch)}`
-                : 'You are not assigned to any branch'}
+              {canAddProduct ? `Products in ${currentBranchName}` : 'No branch assigned'}
             </p>
           </div>
           <div className="flex gap-3">
@@ -463,27 +423,26 @@ const ProductsStorePage: React.FC = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={handleExportExcel}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export to Excel
+                  <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportPDF}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Export to PDF
+                  <FileText className="mr-2 h-4 w-4" /> PDF
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => setAddDialogOpen(true)} disabled={!userBranch}>
+            <Button onClick={() => setAddDialogOpen(true)} disabled={!canAddProduct}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Product {!userBranch && '(No Branch)'}
+              Add Product
             </Button>
           </div>
         </div>
- {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
-          <div className="relative col-span-1">
+
+        {/* Filters - No Branch Filter */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
-              placeholder="Search by name, category, model..."
+              placeholder="Search name, category, model..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -498,16 +457,6 @@ const ProductsStorePage: React.FC = () => {
             </SelectContent>
           </Select>
 
-          {isAdmin && (
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
-                {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-
           <div className="grid grid-cols-2 gap-2">
             <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
             <Input type="number" placeholder="Max Price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
@@ -518,7 +467,7 @@ const ProductsStorePage: React.FC = () => {
             <Input type="number" placeholder="Max Qty" value={maxQty} onChange={e => setMaxQty(e.target.value)} />
           </div>
 
-          {isAdmin && (
+          {canConfirm && (
             <Select value={confirmFilter} onValueChange={setConfirmFilter}>
               <SelectTrigger><SelectValue placeholder="Confirmation" /></SelectTrigger>
               <SelectContent>
@@ -530,7 +479,7 @@ const ProductsStorePage: React.FC = () => {
           )}
         </div>
 
-        {/* Desktop Table */}
+        {/* Desktop Table - No Branch Column */}
         <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
@@ -545,11 +494,6 @@ const ProductsStorePage: React.FC = () => {
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
                   <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                {isAdmin && (
-                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
-                  </TableHead>
-                )}
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
                   <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -561,8 +505,8 @@ const ProductsStorePage: React.FC = () => {
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 9 : 8} className="text-center py-12 text-muted-foreground">
-                    No products found matching your filters.
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    No products found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -572,7 +516,6 @@ const ProductsStorePage: React.FC = () => {
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.model || '-'}</TableCell>
                     <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
-                    {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
                     <TableCell className={getPriceColor(p.costPrice)}>{p.costPrice.toLocaleString()} RWF</TableCell>
                     <TableCell>{getStatusBadge(p.quantity)}</TableCell>
                     <TableCell>
@@ -581,7 +524,7 @@ const ProductsStorePage: React.FC = () => {
                           variant="ghost"
                           size="icon"
                           onClick={() => openConfirmProductDialog(p.id!, p.confirm)}
-                          disabled={!isAdmin || actionLoading}
+                          disabled={!canConfirm || actionLoading}
                         >
                           {p.confirm ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
                         </Button>
@@ -600,7 +543,7 @@ const ProductsStorePage: React.FC = () => {
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
                         )}
-                        {isAdmin && (
+                        {canDelete && (
                           <Button size="sm" variant="ghost" onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
@@ -647,25 +590,25 @@ const ProductsStorePage: React.FC = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
-                          <Eye className="mr-2 h-4 w-4" /> View Details
+                          <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit Product
+                          <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         {p.quantity > 0 && (
                           <DropdownMenuItem onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
                             <ShoppingCart className="mr-2 h-4 w-4" /> Sell
                           </DropdownMenuItem>
                         )}
-                        {isAdmin && (
-                          <>
-                            <DropdownMenuItem onClick={() => openConfirmProductDialog(p.id!, p.confirm)} disabled={actionLoading}>
-                              {p.confirm ? <><XCircle className="mr-2 h-4 w-4" /> Unconfirm</> : <><CheckCircle className="mr-2 h-4 w-4" /> Confirm</>}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </>
+                        {canConfirm && (
+                          <DropdownMenuItem onClick={() => openConfirmProductDialog(p.id!, p.confirm)}>
+                            {p.confirm ? <><XCircle className="mr-2 h-4 w-4" /> Unconfirm</> : <><CheckCircle className="mr-2 h-4 w-4" /> Confirm</>}
+                          </DropdownMenuItem>
+                        )}
+                        {canDelete && (
+                          <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -676,13 +619,13 @@ const ProductsStorePage: React.FC = () => {
           )}
         </div>
 
-        {/* Add Product Dialog */}
+        {/* All Dialogs - Add, Edit, Sell, Confirm, Details, Delete */}
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
               <DialogDescription>
-                {isAdmin ? 'Product will be confirmed automatically' : 'Product will need admin confirmation'}
+                {isAdmin ? 'Auto-confirmed' : 'Requires admin confirmation'}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -706,14 +649,11 @@ const ProductsStorePage: React.FC = () => {
                 <Label>Quantity *</Label>
                 <Input type="number" min="1" value={newProduct.quantity} onChange={e => setNewProduct(p => ({ ...p, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} />
               </div>
-
-              {/* Safe total value display */}
-              {typeof newProduct.costPrice === 'number' && newProduct.costPrice > 0 &&
-               typeof newProduct.quantity === 'number' && newProduct.quantity > 0 && (
+              {(typeof newProduct.costPrice === 'number' && newProduct.costPrice > 0 && typeof newProduct.quantity === 'number' && newProduct.quantity > 0) && (
                 <Card className="bg-indigo-50 dark:bg-indigo-950 border-indigo-200">
                   <CardContent className="pt-6">
                     <div className="flex justify-between text-lg font-bold">
-                      <span>Total Cost Value:</span>
+                      <span>Total Value:</span>
                       <span>{(newProduct.costPrice * newProduct.quantity).toLocaleString()} RWF</span>
                     </div>
                   </CardContent>
@@ -728,8 +668,7 @@ const ProductsStorePage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        {/* Edit Product Dialog – Fixed null error */}
+  {/* Edit Product Dialog – Fixed null error */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -968,6 +907,7 @@ const ProductsStorePage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
     </>
   );
