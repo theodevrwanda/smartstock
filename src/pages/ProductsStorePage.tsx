@@ -77,11 +77,13 @@ const ProductsStorePage: React.FC = () => {
   const [confirmProductDialogOpen, setConfirmProductDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [updateQtyDialogOpen, setUpdateQtyDialogOpen] = useState(false);
 
   // Current product states
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productToConfirm, setProductToConfirm] = useState<{ id: string; current: boolean } | null>(null);
+  const [newQuantity, setNewQuantity] = useState<string | number>('');
 
   // Add product form
   const [newProduct, setNewProduct] = useState({
@@ -387,6 +389,26 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
+  // Handle update quantity
+  const handleUpdateQuantity = async () => {
+    if (!currentProduct || newQuantity === '') return;
+    const qty = Number(newQuantity);
+    if (qty < 0) {
+      toast.error('Quantity cannot be negative');
+      return;
+    }
+    setActionLoading(true);
+    const success = await updateProduct(currentProduct.id!, { quantity: qty });
+    if (success) {
+      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: qty } : p));
+      toast.success('Quantity updated successfully');
+      setUpdateQtyDialogOpen(false);
+      setNewQuantity('');
+      setCurrentProduct(null);
+    }
+    setActionLoading(false);
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 p-6">
@@ -559,11 +581,12 @@ const ProductsStorePage: React.FC = () => {
                         <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {isAdmin && (
-                          <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setCurrentProduct(p); setNewQuantity(p.quantity); setUpdateQtyDialogOpen(true); }}>
+                          Qty
+                        </Button>
                         {p.quantity > 0 && (
                           <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
                             <ShoppingCart className="h-4 w-4" />
@@ -630,12 +653,16 @@ const ProductsStorePage: React.FC = () => {
                             Sell Product
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Product
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setNewQuantity(p.quantity); setUpdateQtyDialogOpen(true); }}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Update Quantity
+                        </DropdownMenuItem>
                         {isAdmin && (
                           <>
-                            <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Product
-                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => openConfirmProductDialog(p.id!, p.confirm)}
                               disabled={actionLoading}
@@ -983,6 +1010,34 @@ const ProductsStorePage: React.FC = () => {
               <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>
                 {actionLoading ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Quantity Dialog */}
+        <Dialog open={updateQtyDialogOpen} onOpenChange={setUpdateQtyDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Product Quantity</DialogTitle>
+              <DialogDescription>
+                {currentProduct?.productName} - Current: {currentProduct?.quantity}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label>New Quantity</Label>
+              <Input
+                type="number"
+                min="0"
+                value={newQuantity}
+                onChange={e => setNewQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="Enter new quantity"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setUpdateQtyDialogOpen(false); setNewQuantity(''); }}>Cancel</Button>
+              <Button onClick={handleUpdateQuantity} disabled={actionLoading || newQuantity === ''}>
+                {actionLoading ? 'Updating...' : 'Update Quantity'}
               </Button>
             </DialogFooter>
           </DialogContent>

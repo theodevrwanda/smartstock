@@ -578,10 +578,8 @@ export default function RegisterPage() {
               </p>
             </div>
 
-            {/* PWA Install Button */}
-            <div className="pt-4 border-t border-slate-200">
-              <PWAInstallButton variant="secondary" className="bg-slate-100 hover:bg-slate-200 text-slate-700" />
-            </div>
+            {/* PWA Install Button - Only shows if installed or iOS */}
+            <PWAInstallButton variant="secondary" className="bg-slate-100 hover:bg-slate-200 text-slate-700" />
           </form>
         )}
       </div>
