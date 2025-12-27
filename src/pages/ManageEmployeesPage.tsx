@@ -34,7 +34,7 @@ import { getBranches, Branch } from '@/functions/branch';
 
 const ManageEmployeesPage: React.FC = () => {
   const { toast } = useToast();
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [branchMap, setBranchMap] = useState<Map<string, string>>(new Map());
@@ -141,12 +141,109 @@ const ManageEmployeesPage: React.FC = () => {
       .includes(searchTerm.toLowerCase())
   );
 
-  // NEW: Consistent clean loading state (same as all other pages)
+  // Selection handlers - FIXED
+  const handleSelect = (employeeId: string) => {
+    setSelectedEmployees(prev =>
+      prev.includes(employeeId)
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const selectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedEmployees(filteredEmployees.map(emp => emp.id!).filter(Boolean));
+    } else {
+      setSelectedEmployees([]);
+    }
+  };
+
+  // Action handlers
+  const handleCreateEmployee = async () => {
+    if (!newEmployee.email || !newEmployee.firstName || !newEmployee.lastName) {
+      toast({ title: 'Error', description: 'Email, first name, and last name are required', variant: 'destructive' });
+      return;
+    }
+
+    setActionLoading(true);
+    const result = await createEmployee({
+      ...newEmployee,
+      businessId: businessId!,
+      businessName,
+    });
+
+    if (result) {
+      setEmployees(prev => [...prev, result]);
+      setNewEmployee({
+        email: '',
+        firstName: '',
+        lastName: '',
+        phone: '',
+        district: '',
+        sector: '',
+        cell: '',
+        village: '',
+        gender: 'male',
+        branch: null,
+      });
+      setIsCreateDialogOpen(false);
+    }
+    setActionLoading(false);
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!currentEmployee) return;
+    setActionLoading(true);
+    const success = await updateEmployee(currentEmployee.id!, currentEmployee);
+    if (success) {
+      setEmployees(prev => prev.map(e => (e.id === currentEmployee.id ? currentEmployee : e)));
+      setIsUpdateDialogOpen(false);
+    }
+    setActionLoading(false);
+  };
+
+  const handleAssignBranch = async () => {
+    if (!currentEmployee || assignBranchId === undefined) return;
+    setActionLoading(true);
+    const branchName = getBranchName(assignBranchId);
+    const success = await assignBranchToEmployee(currentEmployee.id!, assignBranchId, branchName);
+    if (success) {
+      setEmployees(prev =>
+        prev.map(e => (e.id === currentEmployee.id ? { ...e, branch: assignBranchId } : e))
+      );
+      setIsAssignBranchDialogOpen(false);
+    }
+    setActionLoading(false);
+  };
+
+  const handleDeleteEmployee = async () => {
+    if (!employeeToDelete) return;
+    setActionLoading(true);
+    const success = await deleteEmployee(employeeToDelete);
+    if (success) {
+      setEmployees(prev => prev.filter(e => e.id !== employeeToDelete));
+      setIsDeleteConfirmOpen(false);
+    }
+    setActionLoading(false);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedEmployees.length === 0) return;
+    setActionLoading(true);
+    const success = await deleteMultipleEmployees(selectedEmployees);
+    if (success) {
+      setEmployees(prev => prev.filter(e => !selectedEmployees.includes(e.id!)));
+      setSelectedEmployees([]);
+      setIsDeleteSelectedConfirmOpen(false);
+    }
+    setActionLoading(false);
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
         <div className="text-center space-y-6">
-          {/* Loading Text */}
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
               Loading Employees
@@ -155,8 +252,6 @@ const ManageEmployeesPage: React.FC = () => {
               Fetching your team members...
             </p>
           </div>
-
-          {/* Subtle pulsing dots */}
           <div className="flex justify-center gap-2">
             <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
             <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
@@ -214,7 +309,7 @@ const ManageEmployeesPage: React.FC = () => {
     );
   }
 
-  // Admin full management view (everything below remains unchanged)
+  // Admin full management view
   return (
     <>
       <SEOHelmet title="Manage Employees" />
@@ -257,7 +352,8 @@ const ManageEmployeesPage: React.FC = () => {
             className="pl-10"
           />
         </div>
- {/* Table */}
+
+        {/* Table */}
         <div className="overflow-x-auto border rounded-lg bg-white dark:bg-gray-900">
           <Table>
             <TableHeader>
@@ -265,7 +361,7 @@ const ManageEmployeesPage: React.FC = () => {
                 <TableHead className="w-12">
                   <Checkbox
                     checked={selectedEmployees.length === filteredEmployees.length && filteredEmployees.length > 0}
-                    onCheckedChange={selectAll}
+                    onCheckedChange={(checked) => selectAll(!!checked)}
                   />
                 </TableHead>
                 <TableHead className="w-16">Photo</TableHead>
