@@ -42,6 +42,8 @@ import {
   updatePassword,
   sendPasswordResetEmail,
   deleteUser,
+  updateEmail,
+  verifyBeforeUpdateEmail,
 } from 'firebase/auth';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
@@ -84,6 +86,7 @@ const ProfilePage: React.FC = () => {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
 
   // Multi-step Change Password
   const [passwordStep, setPasswordStep] = useState<1 | 2>(1);
@@ -96,6 +99,12 @@ const ProfilePage: React.FC = () => {
 
   // Reset email
   const [resetEmail, setResetEmail] = useState('');
+  
+  // Email update states
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [emailUpdateError, setEmailUpdateError] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -443,6 +452,60 @@ const ProfilePage: React.FC = () => {
     setDeleteAccountOpen(false);
   };
 
+  // Update email
+  const handleUpdateEmail = async () => {
+    if (!auth.currentUser?.email || !emailPassword.trim() || !newEmail.trim()) {
+      setEmailUpdateError('Please fill all fields.');
+      return;
+    }
+
+    if (!newEmail.includes('@')) {
+      setEmailUpdateError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+    setEmailUpdateError('');
+
+    try {
+      // Re-authenticate user first
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, emailPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+
+      // Update email in Firebase Auth
+      await updateEmail(auth.currentUser, newEmail);
+
+      // Update email in Firestore
+      if (user) {
+        const userRef = doc(db, 'users', user.id);
+        await updateDoc(userRef, { email: newEmail, updatedAt: new Date().toISOString() });
+        
+        // Update local state
+        updateUser({ email: newEmail });
+      }
+
+      toast({ title: 'Success', description: 'Email updated successfully!' });
+      setChangeEmailOpen(false);
+      setNewEmail('');
+      setEmailPassword('');
+    } catch (error: any) {
+      let message = 'Failed to update email.';
+      if (error.code === 'auth/wrong-password') {
+        message = 'Incorrect password.';
+      } else if (error.code === 'auth/email-already-in-use') {
+        message = 'This email is already in use.';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address.';
+      } else if (error.code === 'auth/requires-recent-login') {
+        message = 'Please log out and log in again before changing email.';
+      }
+      setEmailUpdateError(message);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
   const getRoleBadge = (role: 'admin' | 'staff') => (
     <Badge className={role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}>
       {role.charAt(0).toUpperCase() + role.slice(1)}
@@ -571,10 +634,19 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <p className="mt-2 flex items-center gap-2 text-gray-900 dark:text-white">
+                  <div className="mt-2 flex items-center gap-2">
                     <Mail className="h-4 w-4 text-gray-500" />
-                    {user.email}
-                  </p>
+                    <span className="text-gray-900 dark:text-white">{user.email}</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => { setNewEmail(user.email || ''); setChangeEmailOpen(true); }}
+                      className="ml-2"
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Change
+                    </Button>
+                  </div>
                 </div>
                 <div>
                   <Label>Phone Number</Label>
@@ -720,6 +792,9 @@ const ProfilePage: React.FC = () => {
                 <CardTitle>Account Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start" onClick={() => { setNewEmail(user?.email || ''); setChangeEmailOpen(true); }}>
+                  <Mail className="mr-2 h-4 w-4" /> Change Email
+                </Button>
                 <Button variant="outline" className="w-full justify-start" onClick={() => setChangePasswordOpen(true)}>
                   <Key className="mr-2 h-4 w-4" /> Change Password
                 </Button>
@@ -881,6 +956,56 @@ const ProfilePage: React.FC = () => {
               </Button>
               <Button variant="destructive" onClick={handleDeleteAccount}>
                 Delete My Account
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Change Email Dialog */}
+        <Dialog open={changeEmailOpen} onOpenChange={setChangeEmailOpen}>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Change Email Address</DialogTitle>
+              <DialogDescription>
+                Enter your password and new email address to update.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div>
+                <Label htmlFor="email-password">Current Password</Label>
+                <Input
+                  id="email-password"
+                  type="password"
+                  value={emailPassword}
+                  onChange={(e) => { setEmailPassword(e.target.value); setEmailUpdateError(''); }}
+                  placeholder="Enter your current password"
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-email">New Email Address</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => { setNewEmail(e.target.value); setEmailUpdateError(''); }}
+                  placeholder="Enter new email address"
+                />
+              </div>
+              {emailUpdateError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{emailUpdateError}</p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setChangeEmailOpen(false); setEmailPassword(''); setNewEmail(''); setEmailUpdateError(''); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateEmail} disabled={isUpdatingEmail || !emailPassword.trim() || !newEmail.trim()}>
+                {isUpdatingEmail ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                Update Email
               </Button>
             </DialogFooter>
           </DialogContent>
