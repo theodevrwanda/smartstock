@@ -24,6 +24,7 @@ import {
   getEmployees,
   createEmployee,
   updateEmployee,
+  updateEmployeeEmail, // ← NEW IMPORT
   assignBranchToEmployee,
   deleteEmployee,
   deleteMultipleEmployees,
@@ -141,7 +142,7 @@ const ManageEmployeesPage: React.FC = () => {
       .includes(searchTerm.toLowerCase())
   );
 
-  // Selection handlers - FIXED
+  // Selection handlers
   const handleSelect = (employeeId: string) => {
     setSelectedEmployees(prev =>
       prev.includes(employeeId)
@@ -193,12 +194,37 @@ const ManageEmployeesPage: React.FC = () => {
 
   const handleUpdateEmployee = async () => {
     if (!currentEmployee) return;
+
     setActionLoading(true);
-    const success = await updateEmployee(currentEmployee.id!, currentEmployee);
-    if (success) {
-      setEmployees(prev => prev.map(e => (e.id === currentEmployee.id ? currentEmployee : e)));
-      setIsUpdateDialogOpen(false);
+
+    // Check if email changed
+    const originalEmail = employees.find(e => e.id === currentEmployee.id)?.email;
+    const emailChanged = originalEmail !== currentEmployee.email;
+
+    let success = true;
+
+    if (emailChanged) {
+      success = await updateEmployeeEmail(currentEmployee.id!, currentEmployee.email);
+      if (!success) {
+        setActionLoading(false);
+        return;
+      }
     }
+
+    // Update other fields
+    if (success) {
+      success = await updateEmployee(currentEmployee.id!, {
+        ...currentEmployee,
+        username: currentEmployee.email, // Keep username in sync
+      });
+
+      if (success) {
+        setEmployees(prev => prev.map(e => (e.id === currentEmployee.id ? currentEmployee : e)));
+        setIsUpdateDialogOpen(false);
+        toast({ title: 'Success', description: 'Employee updated successfully' });
+      }
+    }
+
     setActionLoading(false);
   };
 
@@ -571,7 +597,7 @@ const ManageEmployeesPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Update Dialog */}
+        {/* Update Dialog - Email now editable */}
         <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -580,8 +606,12 @@ const ManageEmployeesPage: React.FC = () => {
             {currentEmployee && (
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label>Email</Label>
-                  <Input value={currentEmployee.email} disabled />
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    value={currentEmployee.email}
+                    onChange={e => setCurrentEmployee(prev => prev ? { ...prev, email: e.target.value.trim().toLowerCase() } : null)}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label>First Name</Label>
@@ -686,7 +716,7 @@ const ManageEmployeesPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Assign Branch Dialog */}
+        {/* Remaining dialogs unchanged */}
         <Dialog open={isAssignBranchDialogOpen} onOpenChange={setIsAssignBranchDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -725,7 +755,6 @@ const ManageEmployeesPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Details Dialog */}
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -765,7 +794,6 @@ const ManageEmployeesPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Single Confirm Dialog */}
         <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
@@ -785,7 +813,6 @@ const ManageEmployeesPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Selected Confirm Dialog */}
         <Dialog open={isDeleteSelectedConfirmOpen} onOpenChange={setIsDeleteSelectedConfirmOpen}>
           <DialogContent>
             <DialogHeader>

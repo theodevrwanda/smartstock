@@ -10,8 +10,12 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { db, secondaryAuth } from '@/firebase/firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  updateEmail as firebaseUpdateEmail 
+} from 'firebase/auth';
+import { db, secondaryAuth, auth } from '@/firebase/firebase'; // Make sure auth is imported
 import { toast } from 'sonner';
 import { logTransaction } from '@/lib/transactionLogger';
 
@@ -39,7 +43,7 @@ export interface Employee {
   updatedAt?: string;
 }
 
-// Transaction context (set before calling functions that log)
+// Transaction context
 let txContext: {
   userId: string;
   userName: string;
@@ -52,7 +56,6 @@ export const setEmployeeTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
 };
 
-// Simple duplicate check for email and phone
 const checkDuplicates = async (email: string, phone: string): Promise<string | null> => {
   const usersRef = collection(db, 'users');
   const checks = [
@@ -70,7 +73,54 @@ const checkDuplicates = async (email: string, phone: string): Promise<string | n
   return null;
 };
 
-// Create employee using secondary auth + log transaction
+// NEW: Update email in Firebase Auth (admin only)
+export const updateEmployeeEmail = async (uid: string, newEmail: string): Promise<boolean> => {
+  try {
+    // Use secondaryAuth to update any user's email (admin privilege required in security rules)
+    const user = secondaryAuth.currentUser;
+    if (!user) {
+      toast.error('Authentication required');
+      return false;
+    }
+
+    await firebaseUpdateEmail(user, newEmail.trim().toLowerCase());
+
+    // Also update in Firestore
+    await updateDoc(doc(db, 'users', uid), {
+      email: newEmail.trim().toLowerCase(),
+      username: newEmail.trim().toLowerCase(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Log transaction
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'employee_updated',
+        actionDetails: `Changed employee email to: ${newEmail}`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: txContext.businessId,
+        businessName: txContext.businessName,
+        metadata: { employeeId: uid, newEmail },
+      });
+    }
+
+    toast.success('Email updated successfully');
+    return true;
+  } catch (error: any) {
+    console.error('Update email error:', error);
+    let msg = 'Failed to update email';
+    if (error.code === 'auth/email-already-in-use') msg = 'This email is already in use';
+    else if (error.code === 'auth/invalid-email') msg = 'Invalid email address';
+    else if (error.code === 'auth/requires-recent-login') msg = 'Please re-login to update email';
+
+    toast.error(msg);
+    return false;
+  }
+};
+
+// Create employee
 export const createEmployee = async (
   data: {
     email: string;
@@ -88,14 +138,12 @@ export const createEmployee = async (
   }
 ): Promise<Employee | null> => {
   try {
-    // Check duplicates
     const dup = await checkDuplicates(data.email, data.phone);
     if (dup) {
       toast.error(dup);
       return null;
     }
 
-    // Create Auth user using SECONDARY auth instance
     const userCredential = await createUserWithEmailAndPassword(
       secondaryAuth,
       data.email.trim().toLowerCase(),
@@ -103,11 +151,8 @@ export const createEmployee = async (
     );
 
     const uid = userCredential.user.uid;
-
-    // Sign out from secondary auth immediately
     await signOut(secondaryAuth);
 
-    // Prepare data
     const fullName = `${data.firstName.trim()} ${data.lastName.trim()}`;
 
     const employeeData = {
@@ -133,10 +178,8 @@ export const createEmployee = async (
       updatedAt: new Date().toISOString(),
     };
 
-    // Save to Firestore
     await setDoc(doc(db, 'users', uid), employeeData);
 
-    // Log employee added transaction
     if (txContext) {
       await logTransaction({
         transactionType: 'employee_added',
@@ -157,25 +200,18 @@ export const createEmployee = async (
     }
 
     toast.success('Employee created! Default password: 1234567');
-
-    return {
-      id: uid,
-      ...employeeData,
-    };
+    return { id: uid, ...employeeData };
   } catch (error: any) {
     console.error('Create employee error:', error);
-
     let msg = 'Failed to create employee';
     if (error.code === 'auth/email-already-in-use') msg = 'Email already registered';
     else if (error.code === 'auth/invalid-email') msg = 'Invalid email';
-    else if (error.code === 'auth/weak-password') msg = 'Password too weak';
-
     toast.error(msg);
     return null;
   }
 };
 
-// Update employee + log transaction
+// Update employee (other fields)
 export const updateEmployee = async (id: string, updates: Partial<Omit<Employee, 'id'>>): Promise<boolean> => {
   try {
     await updateDoc(doc(db, 'users', id), {
@@ -183,7 +219,6 @@ export const updateEmployee = async (id: string, updates: Partial<Omit<Employee,
       updatedAt: new Date().toISOString(),
     });
 
-    // Log employee updated transaction
     if (txContext) {
       const changedFields = Object.keys(updates)
         .filter(k => k !== 'updatedAt' && k !== 'fullName')
@@ -209,7 +244,7 @@ export const updateEmployee = async (id: string, updates: Partial<Omit<Employee,
   }
 };
 
-// Assign branch to employee + log transaction
+// Rest of functions unchanged...
 export const assignBranchToEmployee = async (
   employeeId: string,
   branchId: string | null,
@@ -221,7 +256,6 @@ export const assignBranchToEmployee = async (
       updatedAt: new Date().toISOString(),
     });
 
-    // Log branch assignment
     if (txContext) {
       await logTransaction({
         transactionType: 'employee_updated',
@@ -245,12 +279,10 @@ export const assignBranchToEmployee = async (
   }
 };
 
-// Delete employee + log transaction
 export const deleteEmployee = async (id: string, employeeName?: string): Promise<boolean> => {
   try {
     await deleteDoc(doc(db, 'users', id));
 
-    // Log employee deleted transaction
     if (txContext) {
       await logTransaction({
         transactionType: 'employee_deleted',
