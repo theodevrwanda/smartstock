@@ -642,7 +642,7 @@ const ProfilePage: React.FC = () => {
                       <span className="text-[15px]">Works at <strong>{businessInfo?.businessName || 'SmartStock'}</strong></span>
                     </div>
 
-                    {(formData.district || formData.city) && (
+                    {formData.district && (
                       <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
                         <MapPin className="w-5 h-5 text-[#8C939D]" />
                         <span className="text-[15px]">Lives in <strong>{formData.district || 'Rwanda'}</strong></span>

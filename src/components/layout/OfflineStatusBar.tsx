@@ -25,7 +25,9 @@ const OfflineStatusBar: React.FC = () => {
   const { isOnline, pendingCount, syncPendingChanges, isSyncing } = useOffline();
   const [language, setLanguage] = useState<Language>('en');
 
-  if (isOnline && pendingCount === 0) return null;
+  // Only show when online and there are pending changes.
+  // We do not show the "You are offline" banner anymore, as pages handle this via header icons.
+  if (!isOnline || pendingCount === 0) return null;
 
   const t = messages[language];
 

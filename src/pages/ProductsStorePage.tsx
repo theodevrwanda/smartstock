@@ -177,6 +177,10 @@ const ProductsStorePage: React.FC = () => {
 
   const currentBranchName = userBranch ? branchMap.get(userBranch) || 'Your Branch' : 'No Branch';
 
+  const getBranchName = (branchId: string) => {
+    return branchMap.get(branchId) || 'Unknown Branch';
+  };
+
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
   // Client-side filtering (NO branch filter)
