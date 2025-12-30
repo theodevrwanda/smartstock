@@ -505,488 +505,371 @@ const ProfilePage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="My Profile" description="View and edit your profile" />
-      <div className="min-h-[calc(100vh-64px)] bg-gray-50 dark:bg-gray-950">
-        {/* Modern Hero Section with Gradient */}
-        <div className="relative bg-gradient-to-br from-[#FCD34D] via-amber-400 to-yellow-500 dark:from-amber-600 dark:via-amber-700 dark:to-amber-800 pb-32 pt-8">
-          <div className="absolute inset-0 bg-black/5 dark:bg-black/20"></div>
+      <div className="min-h-[calc(100vh-64px)] bg-[#F0F2F5] dark:bg-[#18191A]">
+        {/* Cover Photo Section */}
+        <div className="relative w-full h-[350px] md:h-[400px] bg-gray-300 dark:bg-gray-800 overflow-hidden">
+          <img
+            src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1600&h=400&fit=crop"
+            alt="Cover"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/10"></div>
 
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-            {/* Header Actions */}
-            <div className="flex justify-end mb-6">
-              {!isEditing ? (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  className="bg-white/90 hover:bg-white text-gray-900 shadow-lg backdrop-blur-sm"
-                >
-                  <Edit className="mr-2 h-4 w-4" /> Edit Profile
-                </Button>
-              ) : (
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="bg-white/90 hover:bg-white text-gray-900 shadow-lg backdrop-blur-sm"
-                  >
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Changes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleCancel}
-                    className="bg-white/50 hover:bg-white/70 border-white/50 backdrop-blur-sm"
-                  >
-                    <X className="mr-2 h-4 w-4" /> Cancel
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Profile Header */}
-            <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
-              {/* Avatar */}
-              <div className="relative group">
-                <div
-                  className="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden bg-white shadow-2xl cursor-pointer ring-4 ring-white/50 transition-all duration-300 group-hover:ring-white/80"
-                  onClick={handleImageClick}
-                >
-                  {previewImage ? (
-                    <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
-                      <UserIcon className="h-16 w-16 md:h-20 md:w-20 text-gray-400" />
-                    </div>
-                  )}
-                  {isEditing && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="text-center">
-                        <Camera className="h-8 w-8 text-white mx-auto mb-1" />
-                        <p className="text-xs text-white font-medium">Change Photo</p>
-                      </div>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageChange}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
-              </div>
-
-              {/* User Info */}
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">
-                  {user.fullName || `${user.firstName} ${user.lastName}`}
-                </h1>
-                <p className="text-white/90 text-lg mb-3 drop-shadow">{user.email}</p>
-                <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                  {getRoleBadge(user.role)}
-                  <Badge variant={user.isActive ? "default" : "secondary"} className="bg-white/90 text-gray-900 hover:bg-white">
-                    {user.isActive ? (
-                      <>
-                        <Check className="h-3 w-3 mr-1" />
-                        Active
-                      </>
-                    ) : (
-                      'Pending Approval'
-                    )}
-                  </Badge>
-                  {isOnline ? (
-                    <Badge className="bg-emerald-500/90 hover:bg-emerald-500 text-white">
-                      Online
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-white/70">
-                      <WifiOff className="h-3 w-3 mr-1" />
-                      Offline
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8">
+            <Button variant="secondary" className="bg-white/90 text-black hover:bg-white shadow-sm font-semibold opacity-70 cursor-not-allowed">
+              <Camera className="mr-2 h-4 w-4" /> Edit Cover Photo
+            </Button>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-24 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Personal Information Card */}
-            <Card className="lg:col-span-2 shadow-xl border-0 dark:bg-gray-800">
-              <CardHeader className="border-b dark:border-gray-700">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <UserIcon className="h-5 w-5 text-[#FCD34D]" />
-                  Personal Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* First Name */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <UserIcon className="h-4 w-4 text-gray-400" />
-                      First Name
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.firstName}
-                        onChange={e => handleInputChange('firstName', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.firstName || 'Not set'}
-                      </p>
-                    )}
-                  </div>
+        {/* Profile Header Content Container */}
+        <div className="max-w-[1095px] mx-auto px-4 sm:px-6 relative">
 
-                  {/* Last Name */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <UserIcon className="h-4 w-4 text-gray-400" />
-                      Last Name
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.lastName}
-                        onChange={e => handleInputChange('lastName', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.lastName || 'Not set'}
-                      </p>
-                    )}
-                  </div>
+          {/* Profile Picture & Actions Row */}
+          <div className="flex flex-col md:flex-row items-center md:items-end -mt-[84px] md:-mt-[30px] pb-4 border-b border-gray-300 dark:border-gray-700 mb-0">
 
-                  {/* Full Name */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <Shield className="h-4 w-4 text-gray-400" />
-                      Full Name
-                    </Label>
-                    <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                      {user.fullName || 'Not set'}
+            {/* Avatar Container */}
+            <div className="relative z-10">
+              <div
+                className="relative w-[168px] h-[168px] rounded-full p-1 bg-white dark:bg-[#242526] shadow-sm cursor-pointer group"
+                onClick={handleImageClick}
+              >
+                <div className="w-full h-full rounded-full overflow-hidden border border-gray-200 dark:border-gray-700 relative">
+                  {previewImage ? (
+                    <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-400">
+                      <UserIcon className="h-20 w-20" />
+                    </div>
+                  )}
+                  {isEditing && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                </div>
+                {isEditing && (
+                  <div className="absolute bottom-2 right-2 bg-gray-100 dark:bg-gray-700 rounded-full p-2 border-2 border-white dark:border-[#242526] shadow-sm">
+                    <Camera className="h-5 w-5 text-gray-800 dark:text-gray-200" />
+                  </div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  className="hidden"
+                  accept="image/*"
+                />
+              </div>
+            </div>
+
+            {/* Name & Details */}
+            <div className="flex-1 flex flex-col items-center md:items-start pt-4 md:pt-0 md:pl-6 pb-4 md:pb-8 text-center md:text-left">
+              <h1 className="text-[32px] font-bold text-[#050505] dark:text-[#E4E6EB] leading-tight flex items-center gap-2">
+                {user.fullName || `${user.firstName} ${user.lastName}`}
+                {isOnline && <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white translate-y-1" title="Online"></div>}
+              </h1>
+              <p className="text-[#65676B] dark:text-[#B0B3B8] font-semibold text-[17px] mt-1">
+                {user.email}
+              </p>
+              <div className="flex gap-2 mt-2 justify-center md:justify-start">
+                {getRoleBadge(user.role)}
+                {user.isActive ? (
+                  <span className="text-sm text-green-600 font-medium flex items-center bg-green-50 px-2 py-0.5 rounded">
+                    <Check className="w-3 h-3 mr-1" /> Active
+                  </span>
+                ) : (
+                  <span className="text-sm text-amber-600 font-medium flex items-center bg-amber-50 px-2 py-0.5 rounded">
+                    Pending
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mb-8 md:mb-8 self-center md:self-end">
+              {!isEditing ? (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className="bg-[#1B74E4] hover:bg-[#1B74E4]/90 text-white font-semibold px-4 h-9 rounded-md transition-colors"
+                >
+                  <Edit className="mr-1.5 h-4 w-4" /> Edit Profile
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="bg-[#1B74E4] hover:bg-[#1B74E4]/90 text-white font-semibold px-6 h-9 rounded-md"
+                  >
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleCancel}
+                    className="bg-[#E4E6EB] hover:bg-[#D8DADF] text-[#050505] font-semibold px-4 h-9 rounded-md dark:bg-[#3A3B3C] dark:text-[#E4E6EB] dark:hover:bg-[#4E4F50]"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
+
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pb-12 mt-4">
+
+            {/* Left Column - Intro */}
+            <div className="md:col-span-5 h-fit space-y-4">
+              <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Intro</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-4">
+                  {/* Bio Placeholder (could come from DB later) */}
+                  <div className="text-center pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <p className="text-[#050505] dark:text-[#E4E6EB] text-[15px]">
+                      {user.role === 'admin' ? 'Administrator Account' : 'Staff Member'} at SmartStock.
                     </p>
                   </div>
 
-                  {/* Gender */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <UserIcon className="h-4 w-4 text-gray-400" />
-                      Gender
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.gender}
-                        onChange={e => handleInputChange('gender', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.gender || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      Email Address
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <p className="flex-1 text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.email}
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => { setNewEmail(user.email || ''); setChangeEmailOpen(true); }}
-                        className="rounded-xl"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Phone */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      Phone Number
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.phone}
-                        onChange={e => handleInputChange('phone', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.phone || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* District */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      District
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.district}
-                        onChange={e => handleInputChange('district', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.district || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Sector */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      Sector
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.sector}
-                        onChange={e => handleInputChange('sector', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.sector || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Cell */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      Cell
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.cell}
-                        onChange={e => handleInputChange('cell', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.cell || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Village */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      Village
-                    </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.village}
-                        onChange={e => handleInputChange('village', e.target.value)}
-                        className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                      />
-                    ) : (
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {user.village || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Business Information Card */}
-            {businessInfo && (
-              <Card className="lg:col-span-2 shadow-xl border-0 dark:bg-gray-800">
-                <CardHeader className="border-b dark:border-gray-700">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <Building2 className="h-5 w-5 text-[#FCD34D]" />
-                    Business Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Business Name */}
-                    <div className="md:col-span-2 space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <Briefcase className="h-4 w-4 text-gray-400" />
-                        Business Name {!isAdmin && '(Admin only can edit)'}
-                      </Label>
-                      {isEditing && isAdmin ? (
-                        <Input
-                          value={businessFormData.businessName}
-                          onChange={e => setBusinessFormData(prev => ({ ...prev, businessName: e.target.value }))}
-                          className="h-11 rounded-xl border-gray-200 dark:border-gray-700 focus:ring-[#FCD34D] focus:border-[#FCD34D]"
-                        />
-                      ) : (
-                        <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                          {businessInfo.businessName || 'Not set'}
-                        </p>
-                      )}
+                  {/* Details List */}
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
+                      <Briefcase className="w-5 h-5 text-[#8C939D]" />
+                      <span className="text-[15px]">Works at <strong>{businessInfo?.businessName || 'SmartStock'}</strong></span>
                     </div>
 
-                    {/* Business Location Fields */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        District
-                      </Label>
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {businessInfo.district || 'Not set'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        Sector
-                      </Label>
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {businessInfo.sector || 'Not set'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        Cell
-                      </Label>
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {businessInfo.cell || 'Not set'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        Village
-                      </Label>
-                      <p className="text-gray-900 dark:text-white font-medium px-4 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl">
-                        {businessInfo.village || 'Not set'}
-                      </p>
-                    </div>
-
-                    {/* Business Status */}
-                    <div className="md:col-span-2 space-y-2">
-                      <Label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <Shield className="h-4 w-4 text-gray-400" />
-                        Business Status
-                      </Label>
-                      <div>
-                        <Badge variant={businessInfo.isActive ? "default" : "secondary"} className="text-sm">
-                          {businessInfo.isActive ? (
-                            <>
-                              <Check className="h-3 w-3 mr-1" />
-                              Active
-                            </>
-                          ) : (
-                            'Pending Approval'
-                          )}
-                        </Badge>
+                    {(formData.district || formData.city) && (
+                      <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
+                        <MapPin className="w-5 h-5 text-[#8C939D]" />
+                        <span className="text-[15px]">Lives in <strong>{formData.district || 'Rwanda'}</strong></span>
                       </div>
+                    )}
+
+                    <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
+                      <Phone className="w-5 h-5 text-[#8C939D]" />
+                      <span className="text-[15px]">{user.phone || 'No phone'}</span>
                     </div>
                   </div>
+
+                  {isEditing && (
+                    <Button variant="secondary" className="w-full bg-[#E4E6EB] hover:bg-[#D8DADF] text-[#050505] dark:bg-[#3A3B3C] dark:text-[#E4E6EB] font-semibold h-9 mt-2">
+                      <Edit className="w-4 h-4 mr-2" /> Edit Details
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
-            )}
 
-            {/* Settings Sidebar */}
-            <div className="space-y-6">
-              {/* Connection Status Card */}
-              {pendingCount > 0 && (
-                <Card className="shadow-xl border-0 dark:bg-gray-800">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                        <WifiOff className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              {/* Personal Info Edit Section (Moving the heavy edit fields here or keeping specifically for edit flows) */}
+              <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
+                <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-center justify-between">
+                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Personal Details</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <dl className="divide-y divide-gray-100 dark:divide-gray-700">
+                    <div className="py-2 grid grid-cols-3 gap-4 items-center">
+                      <dt className="text-sm font-medium text-gray-500">First Name</dt>
+                      <dd className="col-span-2">
+                        {isEditing ? (
+                          <Input
+                            value={formData.firstName}
+                            onChange={e => handleInputChange('firstName', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{user.firstName}</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="py-2 grid grid-cols-3 gap-4 items-center">
+                      <dt className="text-sm font-medium text-gray-500">Last Name</dt>
+                      <dd className="col-span-2">
+                        {isEditing ? (
+                          <Input
+                            value={formData.lastName}
+                            onChange={e => handleInputChange('lastName', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{user.lastName}</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="py-2 grid grid-cols-3 gap-4 items-center">
+                      <dt className="text-sm font-medium text-gray-500">Gender</dt>
+                      <dd className="col-span-2">
+                        {isEditing ? (
+                          <Input
+                            value={formData.gender}
+                            onChange={e => handleInputChange('gender', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{user.gender || 'Not set'}</span>
+                        )}
+                      </dd>
+                    </div>
+                    <div className="py-2 grid grid-cols-3 gap-4 items-center">
+                      <dt className="text-sm font-medium text-gray-500">Phone</dt>
+                      <dd className="col-span-2">
+                        {isEditing ? (
+                          <Input
+                            value={formData.phone}
+                            onChange={e => handleInputChange('phone', e.target.value)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{user.phone}</span>
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Main Content */}
+            <div className="md:col-span-7 space-y-4">
+
+              {/* Business Info */}
+              {businessInfo && (
+                <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
+                  <CardHeader className="pb-2 pt-4 px-4 border-b dark:border-gray-700">
+                    <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Business Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Business Name</Label>
+                        {isEditing && isAdmin ? (
+                          <Input
+                            value={businessFormData.businessName}
+                            onChange={e => setBusinessFormData(prev => ({ ...prev, businessName: e.target.value }))}
+                          />
+                        ) : (
+                          <p className="text-lg font-medium text-gray-900 dark:text-white">{businessInfo.businessName}</p>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 dark:text-white">Pending Sync</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                          {pendingCount} change{pendingCount !== 1 ? 's' : ''} waiting to sync
-                        </p>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Province/District</Label>
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.district}</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Sector</Label>
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.sector}</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Cell</Label>
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.cell}</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Village</Label>
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.village}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Account Settings Card */}
-              <Card className="shadow-xl border-0 dark:bg-gray-800">
-                <CardHeader className="border-b dark:border-gray-700">
-                  <CardTitle className="text-lg">Account Settings</CardTitle>
+              {/* Location Fields Form (Only visible when editing for User Profile) */}
+              {isEditing && (
+                <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Address Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>District</Label>
+                      <Input value={formData.district} onChange={e => handleInputChange('district', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Sector</Label>
+                      <Input value={formData.sector} onChange={e => handleInputChange('sector', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cell</Label>
+                      <Input value={formData.cell} onChange={e => handleInputChange('cell', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Village</Label>
+                      <Input value={formData.village} onChange={e => handleInputChange('village', e.target.value)} />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Account Settings */}
+              <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
+                <CardHeader className="pb-2 pt-4 px-4 border-b dark:border-gray-700">
+                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Settings</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-4 space-y-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => { setNewEmail(user?.email || ''); setChangeEmailOpen(true); }}
-                  >
-                    <Mail className="mr-3 h-4 w-4 text-gray-500" />
-                    <span className="flex-1 text-left">Change Email</span>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setChangePasswordOpen(true)}
-                  >
-                    <Key className="mr-3 h-4 w-4 text-gray-500" />
-                    <span className="flex-1 text-left">Change Password</span>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setResetPasswordOpen(true)}
-                  >
-                    <Mail className="mr-3 h-4 w-4 text-gray-500" />
-                    <span className="flex-1 text-left">Reset via Email</span>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </Button>
-
-                  <div className="pt-2 border-t dark:border-gray-700">
+                <CardContent className="p-4">
+                  <div className="space-y-1">
                     <Button
                       variant="ghost"
-                      className="w-full justify-start h-11 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-                      onClick={() => setDeleteAccountOpen(true)}
+                      className="w-full justify-start h-12 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 px-2"
+                      onClick={() => { setNewEmail(user?.email || ''); setChangeEmailOpen(true); }}
                     >
-                      <Trash2 className="mr-3 h-4 w-4" />
-                      <span className="flex-1 text-left">Delete Account</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded-full mr-3">
+                        <Mail className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-[15px] text-[#050505] dark:text-[#E4E6EB]">Email Address</p>
+                        <p className="text-[13px] text-[#65676B] dark:text-[#B0B3B8]">Update your email address</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400" />
                     </Button>
 
                     <Button
                       variant="ghost"
-                      className="w-full justify-start h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 mt-2"
-                      onClick={handleLogout}
+                      className="w-full justify-start h-12 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 px-2"
+                      onClick={() => setChangePasswordOpen(true)}
                     >
-                      <LogOut className="mr-3 h-4 w-4 text-gray-500" />
-                      <span className="flex-1 text-left">Sign Out</span>
-                      <ArrowRight className="h-4 w-4 text-gray-400" />
+                      <div className="bg-gray-200 dark:bg-gray-700 p-2 rounded-full mr-3">
+                        <Key className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium text-[15px] text-[#050505] dark:text-[#E4E6EB]">Password</p>
+                        <p className="text-[13px] text-[#65676B] dark:text-[#B0B3B8]">Change your security password</p>
+                      </div>
+                      <ArrowRight className="h-5 w-5 text-gray-400" />
                     </Button>
+
+                    {pendingCount > 0 && (
+                      <div className="py-2 px-2 bg-amber-50 dark:bg-amber-900/20 rounded-md border border-amber-200 dark:border-amber-800 my-2">
+                        <div className="flex items-center gap-2">
+                          <WifiOff className="h-4 w-4 text-amber-600" />
+                          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">{pendingCount} pending changes</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2 mt-2 border-t dark:border-gray-700">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start h-10 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 px-2"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="mr-3 h-5 w-5" />
+                        <span className="font-medium">Log Out</span>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
             </div>
           </div>
         </div>
       </div>
+
 
       {/* Change Password Dialog */}
       <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
