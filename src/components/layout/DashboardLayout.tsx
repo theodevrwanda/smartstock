@@ -18,18 +18,18 @@ const DashboardLayout: React.FC = () => {
   }, [sidebarCollapsed]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex">
       {/* Offline Status Bar */}
       <OfflineStatusBar />
-      
+
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
-        <Sidebar 
+        <Sidebar
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header />

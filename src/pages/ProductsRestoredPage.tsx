@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -304,28 +305,11 @@ const ProductsRestoredPage: React.FC = () => {
     setDeleteConfirmOpen(true);
   };
 
-  // Consistent clean loading state (same as other pages)
+  // Consistent clean loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          {/* Loading Text */}
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-              Loading Restored Products
-            </h2>
-            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
-              Fetching your restored inventory...
-            </p>
-          </div>
-
-          {/* Subtle pulsing dots */}
-          <div className="flex justify-center gap-2">
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -333,7 +317,7 @@ const ProductsRestoredPage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Restored Products" description="View and sell restored products" />
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -370,7 +354,7 @@ const ProductsRestoredPage: React.FC = () => {
           </p>
         </div>
 
-    {/* Filters */}
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />

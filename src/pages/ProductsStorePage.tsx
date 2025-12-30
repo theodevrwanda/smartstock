@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -379,24 +380,11 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
+  // Consistent clean loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-              Loading Store Products
-            </h2>
-            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
-              Fetching products for {currentBranchName}...
-            </p>
-          </div>
-          <div className="flex justify-center gap-2">
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -405,7 +393,7 @@ const ProductsStorePage: React.FC = () => {
     <>
       <SEOHelmet title="Store Products" description="Manage store inventory" />
 
-      <div className="space-y-6 p-4 md:p-6">
+      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Store Products</h1>
@@ -668,7 +656,7 @@ const ProductsStorePage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-  {/* Edit Product Dialog – Fixed null error */}
+        {/* Edit Product Dialog – Fixed null error */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
@@ -720,18 +708,18 @@ const ProductsStorePage: React.FC = () => {
 
                 {/* Safe total value card */}
                 {typeof currentProduct.costPrice === 'number' &&
-                 typeof currentProduct.quantity === 'number' &&
-                 currentProduct.costPrice > 0 &&
-                 currentProduct.quantity > 0 && (
-                  <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200">
-                    <CardContent className="pt-6">
-                      <div className="flex justify-between text-lg font-bold">
-                        <span>Total Stock Value:</span>
-                        <span>{(currentProduct.costPrice * currentProduct.quantity).toLocaleString()} RWF</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                  typeof currentProduct.quantity === 'number' &&
+                  currentProduct.costPrice > 0 &&
+                  currentProduct.quantity > 0 && (
+                    <Card className="bg-amber-50 dark:bg-amber-950 border-amber-200">
+                      <CardContent className="pt-6">
+                        <div className="flex justify-between text-lg font-bold">
+                          <span>Total Stock Value:</span>
+                          <span>{(currentProduct.costPrice * currentProduct.quantity).toLocaleString()} RWF</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
             ) : (
               <div className="py-8 text-center text-muted-foreground">

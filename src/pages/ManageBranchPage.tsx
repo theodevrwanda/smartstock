@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -241,28 +242,11 @@ const ManageBranchPage: React.FC = () => {
     }
   };
 
-  // NEW: Consistent clean loading state (same as all other pages)
+  // Consistent clean loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          {/* Loading Text */}
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-              Loading Branches
-            </h2>
-            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
-              Fetching your branch information...
-            </p>
-          </div>
-
-          {/* Subtle pulsing dots */}
-          <div className="flex justify-center gap-2">
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -272,7 +256,7 @@ const ManageBranchPage: React.FC = () => {
     return (
       <>
         <SEOHelmet title="Branches" description="View all branches" />
-        <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
+        <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
           <h1 className="text-3xl font-bold">Branches</h1>
 
           <div className="overflow-x-auto border rounded-lg">
@@ -318,7 +302,7 @@ const ManageBranchPage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Manage Branches" description="Create, update, delete branches" />
-      <div className="space-y-6 p-4 md:p-6 min-h-[calc(100vh-64px)]">
+      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -443,7 +427,7 @@ const ManageBranchPage: React.FC = () => {
           </Table>
         </div>
 
-  {/* Create Dialog */}
+        {/* Create Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>

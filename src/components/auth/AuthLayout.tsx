@@ -5,65 +5,78 @@ interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
-const imageUrls = [
-  'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200&h=250&fit=crop',
-  'https://www.dropguys.com/cdn/shop/products/screen-protector-popup.png?v=1620120201',
-  'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=200&h=280&fit=crop',
-  'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=200&h=260&fit=crop',
-  'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=200&h=240&fit=crop',
-  'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=200&h=290&fit=crop',
-  'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=270&fit=crop',
-  'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=200&h=250&fit=crop',
-  'https://images.unsplash.com/photo-1552664730-d307ca884978?w=200&h=280&fit=crop',
-  'https://techcrunch.com/wp-content/uploads/2021/10/CMC_0556.jpg',
-  'https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=200&h=300&fit=crop',
-  'https://techstreet.ae/cdn/shop/files/ClearScreenProtector04_c2750e47-2adf-4869-ac94-d951df6e1c24.jpg?v=1694792807&width=2048',
-];
-
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-sky-100 via-blue-50 to-white">
-      {/* Left side - Form */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-16 py-12">
+    <div className="h-screen w-full flex overflow-hidden bg-white">
+      {/* Left Side - Image/Feature Area */}
+      <div className="hidden lg:block lg:w-[55%] h-full relative overflow-hidden bg-slate-900">
+        <img
+          src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=2070&auto=format&fit=crop"
+          alt="Office"
+          className="w-full h-full object-cover opacity-80"
+        />
+        {/* Overlay Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
+        {/* Floating UI Card 1 - Top Left */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-md mx-auto w-full"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="absolute top-12 left-12 bg-[#FCD34D] p-4 rounded-xl shadow-lg max-w-[240px]"
         >
-          {children}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 bg-black rounded-full" />
+            <p className="text-xs font-bold text-black uppercase">Low Stock Alert</p>
+          </div>
+          <p className="text-[10px] font-medium text-black/80">
+            Wireless Headphones (WH-1000XM5) are running low. Only 3 units remaining.
+          </p>
+        </motion.div>
+
+        {/* Floating UI Card 2 - Bottom Center/Right */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="absolute bottom-12 right-12 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-xl max-w-[280px]"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex -space-x-2">
+              <img src="https://i.pravatar.cc/100?img=1" className="w-8 h-8 rounded-full border-2 border-white" alt="User" />
+              <img src="https://i.pravatar.cc/100?img=5" className="w-8 h-8 rounded-full border-2 border-white" alt="User" />
+              <img src="https://i.pravatar.cc/100?img=8" className="w-8 h-8 rounded-full border-2 border-white" alt="User" />
+            </div>
+            <p className="text-xs text-slate-500 font-medium">+12 Sales</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-bold text-slate-900">Weekly Meeting</p>
+            <p className="text-xs text-slate-500">10:00 AM - 11:30 AM</p>
+          </div>
         </motion.div>
       </div>
 
-      {/* Right side - Image Collage */}
-      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-blue-100 to-sky-200">
-        <div className="absolute inset-0 p-8">
-          <div className="grid grid-cols-4 gap-4 h-full auto-rows-max">
-            {imageUrls.map((url, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                className="relative rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
-                style={{
-                  height: `${180 + (index % 3) * 40}px`,
-                  marginTop: index % 2 === 0 ? '0' : '20px',
-                }}
-              >
-                <img
-                  src={url}
-                  alt={`Business ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </motion.div>
-            ))}
+      {/* Right Side - Form Area */}
+      <div className="w-full lg:w-[45%] h-full flex flex-col relative overflow-y-auto">
+        <div className="flex-1 flex flex-col justify-center p-8 lg:p-12 min-h-0">
+          {/* Logo Badge */}
+          <div className="absolute top-8 right-8 lg:top-12 lg:right-12">
+            <div className="flex items-center gap-2 group cursor-pointer">
+              <div className="px-4 py-1.5 rounded-full border border-slate-200 text-sm font-semibold text-slate-800 bg-slate-50/50 backdrop-blur-sm group-hover:bg-slate-100 transition-colors">
+                SmartStock
+              </div>
+            </div>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-md mx-auto my-auto pt-20 pb-16"
+          >
+            {children}
+          </motion.div>
         </div>
-        
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-200/50 to-transparent pointer-events-none" />
       </div>
     </div>
   );

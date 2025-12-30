@@ -1,14 +1,13 @@
 export async function uploadToCloudinary(file: File): Promise<string> {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = "pixelmartrw";
+  const uploadPreset = "smartstock"; // Updated preset name
 
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", uploadPreset);
-  
-  // NOTE: We removed the "folder" and "asset_folder" lines.
-  // The preset 'pixelmartrw' will automatically put it in 'pixelmartrw/users'
-  // because you configured that in the Cloudinary Dashboard.
+  formData.append("folder", "smartstock/users");
+  // Forbidden params for unsigned upload removed:
+  // overwrite, use_filename, unique_filename, use_filename_as_display_name
 
   try {
     const response = await fetch(

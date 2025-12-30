@@ -6,8 +6,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
-  <h1><i class="fas fa-rocket"></i> Pixelmart EMS (Client)</h1>
-  <p>A role-based <strong>Inventory & Employee Management System (EMS)</strong> built with <strong>React, TypeScript, Tailwind, and Firebase</strong>. Supports access levels (<code>admin</code>, <code>staff</code>) with dashboards, product tracking, branch management, and reports. Designed for businesses in <strong>Kigali, Rwanda</strong> with support for multiple branches.</p>
+  <h1><i class="fas fa-rocket"></i> SmartStock (Client)</h1>
+  <p>A role-based <strong>Inventory & Employee Management System (EMS)</strong> built with <strong>React, TypeScript, Tailwind, and Firebase</strong>. Supports access levels (<code>admin</code>, <code>staff</code>) with dashboards, product tracking, branch management, and reports. Designed for businesses with support for multiple branches.</p>
 
   <hr>
 
@@ -168,23 +168,19 @@ service cloud.firestore {
   <hr>
 
   <h2><i class="fas fa-user"></i> Author</h2>
-  <p><strong>Theogene Iradukunda (Theo Dev Rwanda)</strong></p>
+  <p><strong>Jiridasee</strong></p>
   <ul class="contact-info">
-    <li><i class="fas fa-envelope"></i><a href="mailto:theodevrwanda@gmail.com">theodevrwanda@gmail.com</a></li>
-    <li><i class="fas fa-phone"></i><a href="tel:+250792734752">+250 792 734 752</a></li>
-    <li><i class="fas fa-globe"></i><a href="https://theodevrw.netlify.app">Portfolio</a></li>
-    <li><i class="fab fa-github"></i><a href="https://github.com/theodevrwanda">GitHub</a></li>
-    <li><i class="fab fa-linkedin"></i><a href="https://www.linkedin.com/in/theogene-iradukunda-88b07a381/">LinkedIn</a></li>
+    <li><i class="fas fa-envelope"></i><a href="mailto:support@smartstock.com">support@smartstock.com</a></li>
+    <li><i class="fab fa-github"></i><a href="#">GitHub</a></li>
   </ul>
 
   <div class="buy-me-coffee">
     <p><i class="fas fa-coffee"></i> Enjoying this project? Support my work!</p>
-    <a href="https://buymeacoffee.com/theodevrwanda" target="_blank">Buy Me a Coffee</a>
   </div>
 
   <hr>
 
   <h2><i class="fas fa-file-contract"></i> License</h2>
-  <p>MIT License &copy; 2025 <a href="https://theodev.rw">Theogene Iradukunda</a></p>
+  <p>MIT License &copy; 2025 Jiridasee</p>
 </body>
 </html>

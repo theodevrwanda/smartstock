@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  Package, Layers, Box, Clock, PlusCircle, RefreshCw, 
-  Archive, AlertTriangle, XCircle, TrendingUp, TrendingDown, 
+import LoadingSpinner from '@/components/LoadingSpinner';
+import {
+  Package, Layers, Box, Clock, PlusCircle, RefreshCw,
+  Archive, AlertTriangle, XCircle, TrendingUp, TrendingDown,
   CheckCircle, Zap, ShieldCheck, Hourglass, DollarSign
 } from 'lucide-react';
 import SEOHelmet from '@/components/SEOHelmet';
@@ -45,27 +46,11 @@ const DashboardPage: React.FC = () => {
   }, [user]);
 
   // Spinner Loading State - Exactly as you wanted, with blue subtitle
+  // Consistent clean loading state
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center p-8">
-        <div className="text-center space-y-6">
-          {/* Loading Text */}
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-200">
-              Loading Dashboard
-            </h2>
-            <p className="text-sm text-blue-500 dark:text-blue-400 font-medium">
-              Fetching your inventory analytics...
-            </p>
-          </div>
-
-          {/* Subtle pulsing dots */}
-          <div className="flex justify-center gap-2">
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-150"></div>
-            <div className="h-2 w-2 bg-amber-500 rounded-full animate-bounce delay-300"></div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -74,7 +59,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Dashboard - Pixelmart EMS" description="Inventory Management" />
+      <SEOHelmet title="Dashboard - SmartStock" description="Inventory Management" />
 
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] p-4 md:p-8 space-y-8 transition-colors duration-300">
         {/* Header */}
@@ -86,13 +71,13 @@ const DashboardPage: React.FC = () => {
             <p className="text-slate-500 dark:text-slate-400 mt-1 font-bold text-xs uppercase tracking-wider">Stock Performance Analytics</p>
           </div>
           <div className="flex items-center gap-2 bg-white dark:bg-[#1e293b] p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
-             <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5 text-white" />
-             </div>
-             <div className="pr-4">
-                <p className="text-[10px] text-slate-400 font-black uppercase">Data Engine</p>
-                <p className="text-xs font-bold text-emerald-500">Live Connection</p>
-             </div>
+            <div className="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center">
+              <ShieldCheck className="h-5 w-5 text-white" />
+            </div>
+            <div className="pr-4">
+              <p className="text-[10px] text-slate-400 font-black uppercase">Data Engine</p>
+              <p className="text-xs font-bold text-emerald-500">Live Connection</p>
+            </div>
           </div>
         </div>
 
@@ -105,26 +90,26 @@ const DashboardPage: React.FC = () => {
 
         {/* Financial Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <BigProCard 
-            title="Net Profit" 
-            value={stats.totalNetProfit.toLocaleString()} 
-            subtitle="Total RWF" 
-            icon={<DollarSign />} 
-            color={stats.totalNetProfit >= 0 ? "green" : "red"} 
+          <BigProCard
+            title="Net Profit"
+            value={stats.totalNetProfit.toLocaleString()}
+            subtitle="Total RWF"
+            icon={<DollarSign />}
+            color={stats.totalNetProfit >= 0 ? "green" : "red"}
           />
-          <BigProCard 
-            title="Stock Value" 
-            value={stats.totalStockValue.toLocaleString()} 
-            subtitle="Confirmed RWF" 
-            icon={<Package />} 
-            color="blue" 
+          <BigProCard
+            title="Stock Value"
+            value={stats.totalStockValue.toLocaleString()}
+            subtitle="Confirmed RWF"
+            icon={<Package />}
+            color="blue"
           />
-          <BigProCard 
-            title="Total Loss" 
-            value={stats.totalLoss.toLocaleString()} 
-            subtitle="From Sales RWF" 
-            icon={<DollarSign />} 
-            color="red" 
+          <BigProCard
+            title="Total Loss"
+            value={stats.totalLoss.toLocaleString()}
+            subtitle="From Sales RWF"
+            icon={<DollarSign />}
+            color="red"
           />
         </div>
 
@@ -137,11 +122,11 @@ const DashboardPage: React.FC = () => {
 
           <SmallProCard title="Never Updated" value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
           <SmallProCard title="In Stock" value={stats.activeProducts} subtitle="Confirmed stock" icon={<CheckCircle className="text-emerald-500" />} />
-          <SmallProCard 
-            title="Pending Confirmation" 
-            value={stats.pendingConfirmationCount} 
-            subtitle="Awaiting approval" 
-            icon={<Hourglass className="text-amber-500" />} 
+          <SmallProCard
+            title="Pending Confirmation"
+            value={stats.pendingConfirmationCount}
+            subtitle="Awaiting approval"
+            icon={<Hourglass className="text-amber-500" />}
             danger={stats.pendingConfirmationCount > 0}
           />
           <SmallProCard title="Sold" value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-500" />} />
@@ -155,18 +140,18 @@ const DashboardPage: React.FC = () => {
 
         {/* Stock Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <HighlightCard 
-            type="MOST STOCKED PRODUCT" 
-            name={stats.mostStockedProduct.name} 
-            quantity={stats.mostStockedProduct.quantity} 
-            icon={<TrendingUp />} 
+          <HighlightCard
+            type="MOST STOCKED PRODUCT"
+            name={stats.mostStockedProduct.name}
+            quantity={stats.mostStockedProduct.quantity}
+            icon={<TrendingUp />}
             color="emerald"
           />
-          <HighlightCard 
-            type="LEAST STOCKED PRODUCT" 
-            name={stats.leastStockedProduct.name} 
-            quantity={stats.leastStockedProduct.quantity} 
-            icon={<TrendingDown />} 
+          <HighlightCard
+            type="LEAST STOCKED PRODUCT"
+            name={stats.leastStockedProduct.name}
+            quantity={stats.leastStockedProduct.quantity}
+            icon={<TrendingDown />}
             color="amber"
           />
         </div>
@@ -221,26 +206,26 @@ const SmallProCard = ({ title, value, subtitle, icon, highlight, danger }: any) 
 const HighlightCard = ({ type, name, quantity, icon, color }: any) => {
   const accent: any = color === 'emerald' ? 'bg-emerald-500' : 'bg-amber-500';
   const text: any = color === 'emerald' ? 'text-emerald-500' : 'text-amber-500';
-  
+
   return (
     <Card className="overflow-hidden border-none shadow-xl bg-white dark:bg-[#1e293b] flex flex-col">
-       <div className={`h-1.5 ${accent} w-full`} />
-       <CardContent className="p-6 flex flex-col h-full">
-          <div className="flex items-center gap-2 mb-4">
-             <div className={`${text} p-1`}>{React.cloneElement(icon, { className: "h-5 w-5" })}</div>
-             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{type}</p>
+      <div className={`h-1.5 ${accent} w-full`} />
+      <CardContent className="p-6 flex flex-col h-full">
+        <div className="flex items-center gap-2 mb-4">
+          <div className={`${text} p-1`}>{React.cloneElement(icon, { className: "h-5 w-5" })}</div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{type}</p>
+        </div>
+        <div className="flex justify-between items-end mt-auto">
+          <div>
+            <p className="text-2xl font-black uppercase text-slate-900 dark:text-white leading-tight">{name || 'N/A'}</p>
+            <p className={`${text} text-[10px] font-black uppercase tracking-tighter mt-1`}>In-System Inventory</p>
           </div>
-          <div className="flex justify-between items-end mt-auto">
-            <div>
-              <p className="text-2xl font-black uppercase text-slate-900 dark:text-white leading-tight">{name || 'N/A'}</p>
-              <p className={`${text} text-[10px] font-black uppercase tracking-tighter mt-1`}>In-System Inventory</p>
-            </div>
-            <div className="text-right">
-              <p className={`text-4xl font-black ${text}`}>{quantity}</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase">Total Units</p>
-            </div>
+          <div className="text-right">
+            <p className={`text-4xl font-black ${text}`}>{quantity}</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase">Total Units</p>
           </div>
-       </CardContent>
+        </div>
+      </CardContent>
     </Card>
   );
 };
