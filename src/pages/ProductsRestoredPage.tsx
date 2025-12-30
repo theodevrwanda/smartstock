@@ -54,7 +54,7 @@ const ProductsRestoredPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filters
-  const [branchFilter, setBranchFilter] = useState<string>(userBranch || 'All'); // New Admin Filter
+  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'All' : (userBranch || 'All')); // Admin defaults to All
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
@@ -115,7 +115,7 @@ const ProductsRestoredPage: React.FC = () => {
     const unsubscribe = subscribeToRestoredProducts(
       businessId,
       user?.role || 'staff',
-      isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch,
+      isAdmin ? null : userBranch, // Admin loads ALL
       (products) => {
         setRestoredProducts(products);
         setLoading(false);
@@ -123,7 +123,7 @@ const ProductsRestoredPage: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [businessId, user?.role, userBranch, isAdmin, branchFilter]);
+  }, [businessId, user?.role, userBranch, isAdmin]); // removed branchFilter from deps
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 

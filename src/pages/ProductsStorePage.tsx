@@ -34,6 +34,7 @@ import {
   sellProduct,
   deleteProduct,
   syncOfflineOperations,
+  subscribeToProducts,
   toast,
   setTransactionContext,
 } from '@/functions/store';
@@ -61,7 +62,7 @@ const ProductsStorePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Filters
-  const [branchFilter, setBranchFilter] = useState<string>(userBranch || 'All'); // New Admin Filter
+  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'All' : (userBranch || 'All')); // Admin defaults to All
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
@@ -154,28 +155,33 @@ const ProductsStorePage: React.FC = () => {
       return;
     }
 
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [prods, branchList] = await Promise.all([
-          getProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch),
-          getBranches(businessId),
-        ]);
+    setLoading(true);
 
-        setProducts(prods);
+    // Fetch branches once
+    getBranches(businessId)
+      .then(branchList => {
         setBranches(branchList);
-
         const map = new Map<string, string>();
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
-      } catch (err) {
-        toast.warning(isOnline ? 'Failed to load data' : 'Using cached data');
-      } finally {
+      })
+      .catch(err => {
+        toast.warning(isOnline ? 'Failed to load branches' : 'Using cached branch data');
+      });
+
+    // Real-time subscription for products
+    const unsubscribe = subscribeToProducts(
+      businessId,
+      user?.role || 'staff',
+      isAdmin ? null : userBranch, // Admin gets ALL data (branchId=null), Staff gets their branch's data
+      null, // category filter handled in UI
+      (updatedProducts) => {
+        setProducts(updatedProducts);
         setLoading(false);
       }
-    };
+    );
 
-    load();
+    return () => unsubscribe();
   }, [businessId, userBranch, isOnline, isAdmin, branchFilter, user?.role]);
 
   const currentBranchName = userBranch ? branchMap.get(userBranch) || 'Your Branch' : 'No Branch';
@@ -194,13 +200,13 @@ const ProductsStorePage: React.FC = () => {
         p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.model || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
-      .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
+      .filter(p => branchFilter === 'All' || p.branch === branchFilter) // Ensure Client-side Branch Filter matches
       .filter(p => minPrice === '' || p.costPrice >= Number(minPrice))
       .filter(p => maxPrice === '' || p.costPrice <= Number(maxPrice))
       .filter(p => minQty === '' || p.quantity >= Number(minQty))
       .filter(p => maxQty === '' || p.quantity <= Number(maxQty))
       .filter(p => confirmFilter === 'All' || (confirmFilter === 'Confirmed' ? p.confirm : !p.confirm));
-  }, [products, searchTerm, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter]);
+  }, [products, searchTerm, branchFilter, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter]); // added branchFilter to deps
 
   const sortedProducts = useMemo(() => {
     return [...filteredProducts].sort((a, b) => {
