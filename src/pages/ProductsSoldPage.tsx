@@ -462,20 +462,17 @@ const ProductsSoldPage: React.FC = () => {
                       className="group hover:bg-muted/30 transition-colors"
                     >
                       <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
-                          <span className="text-xs text-muted-foreground">{product.model}</span>
-                        </div>
+                        <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                           {product.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-semibold text-gray-900 dark:text-gray-100">
-                        {Number(product.sellingPrice).toLocaleString()} RWF
-                      </TableCell>
                       <TableCell>
+                        <span className="text-sm text-muted-foreground">{product.model || '-'}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
                         <Badge
                           variant="outline"
                           className="border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
@@ -483,22 +480,41 @@ const ProductsSoldPage: React.FC = () => {
                           {product.quantity}
                         </Badge>
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-center">
+                          <span className="text-sm font-medium">{getBranchName(product.branch)}</span>
+                        </TableCell>
+                      )}
                       <TableCell>
-                        <div className="flex flex-col text-sm">
-                          <span className="font-medium">{product.buyerName || 'N/A'}</span>
-                          <span className="text-xs text-muted-foreground">{product.buyerPhone || '-'}</span>
-                        </div>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {Number(product.costPrice).toLocaleString()} RWF
+                        </span>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={product.paymentMethod === 'cash' ? 'default' : 'secondary'}>
-                          {product.paymentMethod || 'cash'}
-                        </Badge>
+                        <span className="font-semibold text-green-600">
+                          {Number(product.sellingPrice).toLocaleString()} RWF
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold">
+                          {(Number(product.quantity) * Number(product.sellingPrice)).toLocaleString()} RWF
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`font-bold ${getProfitLossColor(calculateProfitLoss(product))}`}>
+                          {calculateProfitLoss(product).toLocaleString()} RWF
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col text-sm text-muted-foreground">
                           <span>{new Date(product.soldDate).toLocaleDateString()}</span>
                           <span className="text-xs">{new Date(product.soldDate).toLocaleTimeString()}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={isDeadlineActive(product.deadline) ? "text-red-500 font-bold" : "text-muted-foreground"}>
+                          {product.deadline ? new Date(product.deadline).toLocaleDateString() : '-'}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
