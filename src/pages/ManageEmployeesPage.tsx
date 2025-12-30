@@ -29,8 +29,6 @@ import {
   assignBranchToEmployee,
   deleteEmployee,
   deleteMultipleEmployees,
-  deleteEmployee,
-  deleteMultipleEmployees,
   setEmployeeTransactionContext,
 } from '@/functions/employees';
 import { Employee, Branch } from '@/types/interface';

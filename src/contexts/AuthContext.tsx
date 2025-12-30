@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  onAuthStateChanged, 
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  onAuthStateChanged,
   signOut,
   sendPasswordResetEmail,
   createUserWithEmailAndPassword,
@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, addDoc, collection, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebase';
-import { AuthState, User } from '@/types';
+import { AuthState, User } from '@/types/interface';
 import { saveUserLocally, getLocalUser, addPendingOperation } from '@/lib/offlineDB';
 import axios from 'axios';
 
@@ -128,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        
+
         // Get business status if user has businessId
         let businessActive = true;
         let businessName = userData.businessName || '';
@@ -206,10 +206,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (firebaseUser) {
         const token = await firebaseUser.getIdToken();
         const userData = await getUserFromFirestore(firebaseUser);
-        
+
         if (userData) {
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          
+
           setAuthState({
             user: userData,
             isAuthenticated: true,
@@ -223,7 +223,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             async (docSnap) => {
               if (docSnap.exists()) {
                 const data = docSnap.data();
-                
+
                 // Get fresh business info
                 let businessActive = true;
                 let businessName = data.businessName || '';
@@ -282,7 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           loading: false,
           token: undefined,
         });
-        
+
         // Clean up user listener
         if (unsubscribeUser) {
           unsubscribeUser();
@@ -305,7 +305,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       let email = identifier;
-      
+
       if (!identifier.includes('@')) {
         setErrorMessage('Please use your email address to login.');
         setAuthState((prev) => ({ ...prev, loading: false }));
@@ -316,13 +316,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return true;
     } catch (error: any) {
       let message = 'Invalid email or password. Please try again.';
-      
+
       if (error.code === 'auth/user-not-found') message = 'Invalid email or password. Please try again.';
       else if (error.code === 'auth/wrong-password') message = 'Invalid email or password. Please try again.';
       else if (error.code === 'auth/invalid-email') message = 'Invalid email address.';
       else if (error.code === 'auth/too-many-requests') message = 'Too many failed attempts. Please try again later.';
       else if (error.code === 'auth/invalid-credential') message = 'Invalid email or password. Please try again.';
-      
+
       setErrorMessage(message);
       setAuthState((prev) => ({ ...prev, loading: false }));
       return false;
@@ -341,7 +341,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let message = 'Google login failed. Please try again.';
       if (error.code === 'auth/popup-closed-by-user') message = 'Login cancelled.';
       else if (error.code === 'auth/popup-blocked') message = 'Popup blocked. Please allow popups and try again.';
-      
+
       setErrorMessage(message);
       setAuthState((prev) => ({ ...prev, loading: false }));
       return false;
@@ -366,7 +366,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let message = 'Failed to send reset email.';
       if (error.code === 'auth/user-not-found') message = 'No account found with this email.';
       else if (error.code === 'auth/invalid-email') message = 'Invalid email address.';
-      
+
       throw new Error(message);
     }
   };
@@ -410,7 +410,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userRef = doc(db, 'users', authState.user.id);
       const updateData: any = { ...userData, updatedAt: new Date().toISOString() };
-      
+
       // Handle fullName
       if (userData.firstName || userData.lastName) {
         updateData.fullName = `${userData.firstName || authState.user.firstName} ${userData.lastName || authState.user.lastName}`.trim();
@@ -456,7 +456,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Step 1: Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      
+
       // Step 2: Create business document in businesses collection
       const businessData = {
         businessName: data.businessName,
@@ -471,7 +471,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       const businessRef = await addDoc(collection(db, 'businesses'), businessData);
-      
+
       // Step 3: Create user document in users collection with businessId
       const userDataToSave = {
         email: data.email,
@@ -496,14 +496,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       };
 
       await setDoc(doc(db, 'users', userCredential.user.uid), userDataToSave);
-      
+
       // Sign out immediately after registration
       await signOut(auth);
-      
+
       return true;
     } catch (error: any) {
       let message = 'Registration failed. Please try again.';
-      
+
       if (error.code === 'auth/email-already-in-use') {
         message = 'This email is already registered.';
       } else if (error.code === 'auth/weak-password') {
@@ -511,7 +511,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else if (error.code === 'auth/invalid-email') {
         message = 'Invalid email address.';
       }
-      
+
       setErrorMessage(message);
       setAuthState((prev) => ({ ...prev, loading: false }));
       return false;

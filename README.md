@@ -1,186 +1,126 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-</head>
-<body>
-  <h1><i class="fas fa-rocket"></i> SmartStock (Client)</h1>
-  <p>A role-based <strong>Inventory & Employee Management System (EMS)</strong> built with <strong>React, TypeScript, Tailwind, and Firebase</strong>. Supports access levels (<code>admin</code>, <code>staff</code>) with dashboards, product tracking, branch management, and reports. Designed for businesses with support for multiple branches.</p>
+# SmartStock - Inventory & Employee Management System
 
-  <hr>
+SmartStock is a modern, comprehensive Inventory and Employee Management System (EMS) designed for multi-branch businesses. Built with React, TypeScript, Tailwind CSS, and Firebase, it provides a robust platform for tracking products, sales, employees, and business performance in real-time.
 
-  <h2><i class="fas fa-bookmark"></i> Features</h2>
-  <h3>🔑 Authentication & Roles</h3>
-  <ul>
-    <li>Firebase Authentication (email/password)</li>
-    <li>Role-based access control (<code>admin</code> vs <code>staff</code>)</li>
-    <li>Protected routes & auto-redirect</li>
-  </ul>
-  <h3>📊 Dashboard</h3>
-  <ul>
-    <li>Product statistics (store, sold, restored, deleted)</li>
-    <li>Low/out of stock alerts</li>
-    <li>Daily, weekly, monthly reports</li>
-  </ul>
-  <h3>🏢 Branch Management</h3>
-  <ul>
-    <li>Manage multiple branches (district, sector, cell, village)</li>
-    <li>Assign employees to branches</li>
-  </ul>
-  <h3>👨‍💼 Employee Management</h3>
-  <ul>
-    <li>Add, update, deactivate staff</li>
-    <li>Restrict staff to assigned branch</li>
-  </ul>
-  <h3>📦 Product Management</h3>
-  <ul>
-    <li>Store, sell, restore, delete products</li>
-    <li>Track cost/selling prices & profit/loss</li>
-    <li>Supplier management</li>
-  </ul>
-  <h3>📑 Reports</h3>
-  <ul>
-    <li>Profit/loss tracking</li>
-    <li>Stock valuation</li>
-    <li>Product movement trends</li>
-  </ul>
-  <h3>🎨 UI & Styling</h3>
-  <ul>
-    <li>Tailwind CSS</li>
-    <li>Responsive layouts</li>
-    <li>Dark mode (via ThemeContext)</li>
-  </ul>
+## 🚀 Features
 
-  <hr>
+### 🔑 Authentication & Role-Based Access
+- **Secure Login/Registration**: Powered by Firebase Authentication.
+- **Role-Based Access Control (RBAC)**: Distinct features for `admin` and `staff` roles.
+  - **Admins**: Full control over all branches, employees, and products.
+  - **Staff**: Restricted access to their assigned branch and specific operations.
+- **Offline Support**: PWA capabilities for working without an internet connection.
 
-  <h2><i class="fas fa-tools"></i> Tech Stack</h2>
-  <ul>
-    <li><strong>Frontend:</strong> React + TypeScript + Vite</li>
-    <li><strong>Styling:</strong> Tailwind CSS</li>
-    <li><strong>Auth & DB:</strong> Firebase (Auth + Firestore)</li>
-    <li><strong>Routing:</strong> React Router DOM</li>
-    <li><strong>State Management:</strong> Context API</li>
-  </ul>
+### 📊 Interactive Dashboard
+- **Real-time Statistics**: Overview of total products, sales, and low stock alerts.
+- **Visual Analytics**: Charts and graphs for sales trends and stock distribution.
+- **Activity Feed**: Recent actions by users across the system.
 
-  <hr>
+### 📦 Product Management ("Store")
+- **Centralized Inventory**: Add, update, and track products with details like category, model, and cost price.
+- **Branch-Specific View**: Admins can view stock across all branches; staff see only their branch's stock.
+- **Lifecycle Tracking**: Track products through statuses: `Store` -> `Sold` -> `Restored` -> `Deleted`.
+- **Advanced Filtering**: Filter by category, price range, quantity, and branch.
 
-  <h2><i class="fas fa-folder"></i> Project Structure</h2>
-  <pre><code>
-src/
-├── components/       # Reusable components (SEOHelmet, ProtectedRoute, layout, ui)
-├── contexts/         # Auth, Theme, Search contexts
-├── firebase/         # Firebase config
-├── hooks/            # Custom hooks (toast, mobile)
-├── pages/            # Dashboard, Products, Employees, Reports, etc.
-├── types/            # TypeScript interfaces
-├── App.tsx           # Main app with routes
-├── main.tsx          # Entry point
-├── public/           # Static assets (og images, favicon, screenshots)
-  </code></pre>
+### 💰 Sales & Transactions
+- **Point of Sale**: Streamlined process for selling products.
+- **Sales History**: Detailed logs of sold items with profit/loss calculation.
+- **Restoration**: Ability to restore sold items (returns) with reason tracking.
+- **Financial Reports**: Automatic calculation of gross profit, net profit, and total loss.
 
-  <hr>
+### 🏢 Branch & Employee Management
+- **Multi-Branch Support**: Create and manage multiple business locations.
+- **Employee Directory**: Onboard staff, assign them to branches, and manage their profiles.
+- **Performance Tracking**: Monitor sales performance by branch or individual employee.
 
-  <h2><i class="fas fa-cog"></i> Setup & Installation</h2>
-  <ol>
-    <li><strong>Clone the repo</strong>
-      <pre><code>
-git clone https://github.com/theodevrwanda/pixelmartrwClient.git
-cd pixelmartrwClient
-      </code></pre>
-    </li>
-    <li><strong>Install dependencies</strong>
-      <pre><code>
+### 📑 Reporting & Exports
+- **Detailed Reports**: Generate reports for inventory, sales, and employee activity.
+- **Export Options**: Download data in Excel or PDF formats for offline analysis.
+- **Blockchain Ledger**: Immutable record of critical transactions for auditability.
+
+## 🛠️ Technology Stack
+
+- **Frontend**: [React](https://reactjs.org/) + [Vite](https://vitejs.dev/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn UI](https://ui.shadcn.com/)
+- **Backend / Database**: [Firebase](https://firebase.google.com/) (Auth + Firestore)
+- **State Management**: React Context API
+- **Icons**: [Lucide React](https://lucide.dev/)
+
+## ⚙️ Setup & Installation
+
+Follow these steps to get the project running locally within minutes.
+
+### Prerequisites
+- Node.js (v18 or higher)
+- npm or yarn
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/smartstock.git
+cd smartstock
+```
+
+### 2. Install Dependencies
+```bash
 npm install
-      </code></pre>
-    </li>
-    <li><strong>Configure Firebase</strong>
-      <ul>
-        <li>Create a Firebase project</li>
-        <li>Enable <strong>Authentication (Email/Password)</strong></li>
-        <li>Enable <strong>Cloud Firestore</strong></li>
-        <li>Add <code>.env</code> in the project root:</li>
-      </ul>
-      <pre><code>
-VITE_API_URL=your_backend_url
+```
+
+### 3. Configure Environment Variables
+Create a `.env` file in the root directory and add your Firebase configuration:
+
+```env
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=sender_id
-VITE_FIREBASE_APP_ID=app_id
-      </code></pre>
-    </li>
-    <li><strong>Run locally</strong>
-      <pre><code>
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
+
+### 4. Run Locally
+Start the development server:
+
+```bash
 npm run dev
-      </code></pre>
-    </li>
-    <li><strong>Build for production</strong>
-      <pre><code>
+```
+The app will be available at `http://localhost:5173`.
+
+### 5. Build for Production
+To create a production-ready build:
+
+```bash
 npm run build
-      </code></pre>
-    </li>
-  </ol>
+```
 
-  <hr>
+## 📂 Project Structure
 
-  <h2><i class="fas fa-lock"></i> Example Firestore Security Rules</h2>
-  <pre><code>
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Employees
-    match /employees/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-    }
-    // Products
-    match /products/{id} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.role == "admin";
-    }
-  }
-}
-  </code></pre>
+```
+src/
+├── components/       # Reusable UI components (Layouts, Charts, UI kit)
+├── contexts/         # Global state (Auth, Theme)
+├── firebase/         # Firebase configuration and initialization
+├── functions/        # Business logic and Firestore operations (store, sold, etc.)
+├── hooks/            # Custom React hooks
+├── lib/              # Utilities and helpers
+├── pages/            # Application pages (Dashboard, Products, Settings)
+├── types/            # TypeScript interfaces (interface.ts)
+└── App.tsx           # Main application entry point
+```
 
-  <hr>
+## 🤝 Contributing
 
-  <h2><i class="fas fa-paint-brush"></i> UI Style Guide</h2>
-  <ul>
-    <li><strong>Cards & Panels:</strong> <code>bg-white dark:bg-gray-800 rounded-2xl shadow p-4</code></li>
-    <li><strong>Buttons:</strong>
-      <ul>
-        <li>Primary: <code>bg-blue-600 text-white rounded-xl px-4 py-2 hover:bg-blue-700</code></li>
-        <li>Secondary: <code>border border-gray-300 rounded-xl px-4 py-2</code></li>
-      </ul>
-    </li>
-    <li><strong>Typography:</strong>
-      <ul>
-        <li>Headings: <code>text-xl font-semibold</code></li>
-        <li>Subtext: <code>text-sm text-gray-500</code></li>
-      </ul>
-    </li>
-    <li><strong>Layout:</strong> Responsive grid with <code>grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4</code></li>
-  </ul>
+Contributions are welcome! Please follow these steps:
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
-  <hr>
+## 📄 License
 
-  <h2><i class="fas fa-user"></i> Author</h2>
-  <p><strong>Jiridasee</strong></p>
-  <ul class="contact-info">
-    <li><i class="fas fa-envelope"></i><a href="mailto:support@smartstock.com">support@smartstock.com</a></li>
-    <li><i class="fab fa-github"></i><a href="#">GitHub</a></li>
-  </ul>
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-  <div class="buy-me-coffee">
-    <p><i class="fas fa-coffee"></i> Enjoying this project? Support my work!</p>
-  </div>
+---
 
-  <hr>
-
-  <h2><i class="fas fa-file-contract"></i> License</h2>
-  <p>MIT License &copy; 2025 Jiridasee</p>
-</body>
-</html>
+**SmartStock** — Empowering businesses with smart inventory solutions.

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ThemeContextType } from '@/types';
+import { ThemeContextType } from '@/types/interface';
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 

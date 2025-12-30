@@ -34,7 +34,6 @@ import {
   sellProduct,
   deleteProduct,
   syncOfflineOperations,
-  syncOfflineOperations,
   toast,
   setTransactionContext,
 } from '@/functions/store';
