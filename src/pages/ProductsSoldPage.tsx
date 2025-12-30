@@ -53,8 +53,8 @@ const ProductsSoldPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filters
+  const [branchFilter, setBranchFilter] = useState<string>(userBranch || 'All'); // New Admin Filter
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [branchFilter, setBranchFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minQty, setMinQty] = useState<string>('');
@@ -103,7 +103,7 @@ const ProductsSoldPage: React.FC = () => {
       setLoading(true);
       try {
         const [soldProds, branchList] = await Promise.all([
-          getSoldProducts(businessId, user?.role || 'staff', userBranch),
+          getSoldProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch),
           getBranches(businessId),
         ]);
 
@@ -121,7 +121,7 @@ const ProductsSoldPage: React.FC = () => {
     };
 
     load();
-  }, [businessId, user?.role, userBranch]);
+  }, [businessId, user?.role, userBranch, isAdmin, branchFilter]);
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 
@@ -474,7 +474,7 @@ const ProductsSoldPage: React.FC = () => {
                         <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {(isAdmin || p.branch === userBranch) && isDeadlineActive(p.deadline) && p.quantity > 0 && (
+                        {(isAdmin || (p.branch === userBranch)) && isDeadlineActive(p.deadline) && p.quantity > 0 && (
                           <Button size="sm" variant="ghost" onClick={() => openRestore(p)}>
                             <Undo className="h-4 w-4 text-blue-600" />
                           </Button>

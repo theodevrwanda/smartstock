@@ -53,8 +53,8 @@ const ProductsRestoredPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filters
+  const [branchFilter, setBranchFilter] = useState<string>(userBranch || 'All'); // New Admin Filter
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [branchFilter, setBranchFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minQty, setMinQty] = useState<string>('');
@@ -103,7 +103,7 @@ const ProductsRestoredPage: React.FC = () => {
     setLoading(true);
     try {
       const [restoredProds, branchList] = await Promise.all([
-        getRestoredProducts(businessId, user?.role || 'staff', userBranch),
+        getRestoredProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch),
         getBranches(businessId),
       ]);
 
@@ -118,7 +118,7 @@ const ProductsRestoredPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [businessId, user?.role, userBranch]);
+  }, [businessId, user?.role, userBranch, isAdmin, branchFilter]);
 
   useEffect(() => {
     loadData();

@@ -44,7 +44,7 @@ export const setSoldTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
 };
 
-// Get sold products - strict branch access control
+// Get sold products - Admin sees all (filterable), Staff sees theirs
 export const getSoldProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -63,6 +63,8 @@ export const getSoldProducts = async (
       if (!branchId) {
         return [];
       }
+      q = query(q, where('branch', '==', branchId));
+    } else if (userRole === 'admin' && branchId && branchId !== 'All') {
       q = query(q, where('branch', '==', branchId));
     }
 

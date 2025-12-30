@@ -159,26 +159,33 @@ export const syncOfflineOperations = async (): Promise<void> => {
   }
 };
 
-// UPDATED: Always filter by branch — even for admins
+// UPDATED: Admin can see all (or filter). Staff restricted to their branch.
 export const getProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
   branchId?: string | null
 ): Promise<Product[]> => {
-  if (!branchId) {
-    toast.error('No branch assigned to user');
-    return [];
-  }
-
   try {
     const productsRef = collection(db, 'products');
 
-    const q = query(
+    let q = query(
       productsRef,
       where('businessId', '==', businessId),
-      where('branch', '==', branchId),        // Always restrict to user's branch
       where('status', '==', 'store')
     );
+
+    // If Staff, STRICTLY filter by their assigned branch
+    if (userRole === 'staff') {
+      if (!branchId) {
+        toast.error('No branch assigned to user');
+        return [];
+      }
+      q = query(q, where('branch', '==', branchId));
+    }
+    // If Admin, ONLY filter if a specific branchId is provided (and not 'All' which the UI might handle by passing null)
+    else if (userRole === 'admin' && branchId && branchId !== 'All') {
+      q = query(q, where('branch', '==', branchId));
+    }
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => ({

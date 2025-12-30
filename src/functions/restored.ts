@@ -44,7 +44,7 @@ export const setRestoredTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
 };
 
-// Get restored products - robust mapping + branch access control
+// Get restored products - Admin sees all (filterable), Staff sees theirs
 export const getRestoredProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -58,7 +58,13 @@ export const getRestoredProducts = async (
       where('status', '==', 'restored')
     );
 
-    if (userRole === 'staff' && branchId) {
+    if (userRole === 'staff') {
+      if (branchId) {
+        q = query(q, where('branch', '==', branchId));
+      } else {
+        return [];
+      }
+    } else if (userRole === 'admin' && branchId && branchId !== 'All') {
       q = query(q, where('branch', '==', branchId));
     }
 

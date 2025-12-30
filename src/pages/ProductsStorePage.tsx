@@ -60,7 +60,8 @@ const ProductsStorePage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Filters (branch filter REMOVED)
+  // Filters
+  const [branchFilter, setBranchFilter] = useState<string>(userBranch || 'All'); // New Admin Filter
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
@@ -93,6 +94,7 @@ const ProductsStorePage: React.FC = () => {
     model: '',
     costPrice: '' as string | number,
     quantity: '' as string | number,
+    branch: '' // New for Admin
   });
 
   const [sellForm, setSellForm] = useState({
@@ -123,8 +125,8 @@ const ProductsStorePage: React.FC = () => {
       setIsOnline(true);
       toast.success('Back Online – Syncing...');
       syncOfflineOperations().then(() => {
-        if (businessId && userBranch) {
-          getProducts(businessId, user?.role || 'staff', userBranch).then(setProducts);
+        if (businessId) {
+          getProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch).then(setProducts);
         }
       });
     };
@@ -142,11 +144,11 @@ const ProductsStorePage: React.FC = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [businessId, userBranch]);
+  }, [businessId, userBranch, isAdmin, branchFilter, user?.role]);
 
   // Load data
   useEffect(() => {
-    if (!businessId || !userBranch) {
+    if (!businessId) {
       setLoading(false);
       return;
     }
@@ -155,7 +157,7 @@ const ProductsStorePage: React.FC = () => {
       setLoading(true);
       try {
         const [prods, branchList] = await Promise.all([
-          getProducts(businessId, user?.role || 'staff', userBranch),
+          getProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch),
           getBranches(businessId),
         ]);
 
@@ -173,7 +175,7 @@ const ProductsStorePage: React.FC = () => {
     };
 
     load();
-  }, [businessId, userBranch, isOnline]);
+  }, [businessId, userBranch, isOnline, isAdmin, branchFilter, user?.role]);
 
   const currentBranchName = userBranch ? branchMap.get(userBranch) || 'Your Branch' : 'No Branch';
 
@@ -271,8 +273,10 @@ const ProductsStorePage: React.FC = () => {
 
   // Handlers
   const handleAddProduct = async () => {
-    if (!userBranch) {
-      toast.error('No branch assigned');
+    const targetBranch = isAdmin ? (newProduct.branch || userBranch) : userBranch;
+
+    if (!targetBranch) {
+      toast.error('Please select a branch');
       return;
     }
     if (!newProduct.productName || !newProduct.category || newProduct.costPrice === '' || newProduct.quantity === '' || Number(newProduct.quantity) < 1 || Number(newProduct.costPrice) < 0) {
@@ -287,7 +291,7 @@ const ProductsStorePage: React.FC = () => {
       model: newProduct.model,
       costPrice: Number(newProduct.costPrice),
       quantity: Number(newProduct.quantity),
-      branch: userBranch,
+      branch: targetBranch,
       businessId: businessId!,
       confirm: isAdmin,
     });
@@ -300,7 +304,7 @@ const ProductsStorePage: React.FC = () => {
       });
       toast.success(isOnline ? 'Product added' : 'Added locally');
       setAddDialogOpen(false);
-      setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '' });
+      setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '', branch: '' });
     }
     setActionLoading(false);
   };
@@ -402,7 +406,7 @@ const ProductsStorePage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold">Store Products</h1>
             <p className="text-muted-foreground">
-              {canAddProduct ? `Products in ${currentBranchName}` : 'No branch assigned'}
+              {isAdmin ? 'All branches' : (canAddProduct ? `Products in ${currentBranchName}` : 'No branch assigned')}
             </p>
           </div>
           <div className="flex gap-3">
@@ -422,10 +426,12 @@ const ProductsStorePage: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={() => setAddDialogOpen(true)} disabled={!canAddProduct}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => setAddDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            )}
           </div>
         </div>
 
@@ -448,6 +454,16 @@ const ProductsStorePage: React.FC = () => {
               {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
+
+          {isAdmin && (
+            <Select value={branchFilter} onValueChange={setBranchFilter}>
+              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Branches</SelectItem>
+                {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
@@ -486,6 +502,7 @@ const ProductsStorePage: React.FC = () => {
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
                   <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                {isAdmin && <TableHead>Branch</TableHead>}
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
                   <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -508,6 +525,7 @@ const ProductsStorePage: React.FC = () => {
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.model || '-'}</TableCell>
                     <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
+                    {isAdmin && <TableCell>{getBranchName(p.branch)}</TableCell>}
                     <TableCell className={getPriceColor(p.costPrice)}>{p.costPrice.toLocaleString()} RWF</TableCell>
                     <TableCell>{getStatusBadge(p.quantity)}</TableCell>
                     <TableCell>
@@ -527,15 +545,15 @@ const ProductsStorePage: React.FC = () => {
                         <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                          <Edit className="h-4 w-4" />
+                        <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
+                          <ShoppingCart className="h-4 w-4" />
                         </Button>
-                        {p.quantity > 0 && (
-                          <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
-                            <ShoppingCart className="h-4 w-4" />
+                        {isAdmin && (
+                          <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                            <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        {canDelete && (
+                        {isAdmin && (
                           <Button size="sm" variant="ghost" onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }}>
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
@@ -584,20 +602,16 @@ const ProductsStorePage: React.FC = () => {
                         <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
                           <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
+                          <ShoppingCart className="mr-2 h-4 w-4" /> Sell
                         </DropdownMenuItem>
-                        {p.quantity > 0 && (
-                          <DropdownMenuItem onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
-                            <ShoppingCart className="mr-2 h-4 w-4" /> Sell
+
+                        {isAdmin && (
+                          <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
                         )}
-                        {canConfirm && (
-                          <DropdownMenuItem onClick={() => openConfirmProductDialog(p.id!, p.confirm)}>
-                            {p.confirm ? <><XCircle className="mr-2 h-4 w-4" /> Unconfirm</> : <><CheckCircle className="mr-2 h-4 w-4" /> Confirm</>}
-                          </DropdownMenuItem>
-                        )}
-                        {canDelete && (
+                        {isAdmin && (
                           <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
                           </DropdownMenuItem>
@@ -641,6 +655,24 @@ const ProductsStorePage: React.FC = () => {
                 <Label>Quantity *</Label>
                 <Input type="number" min="1" value={newProduct.quantity} onChange={e => setNewProduct(p => ({ ...p, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} />
               </div>
+              {isAdmin && (
+                <div className="grid gap-2">
+                  <Label>Branch</Label>
+                  <Select
+                    value={newProduct.branch || userBranch || ''}
+                    onValueChange={(val) => setNewProduct(p => ({ ...p, branch: val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map(b => (
+                        <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {(typeof newProduct.costPrice === 'number' && newProduct.costPrice > 0 && typeof newProduct.quantity === 'number' && newProduct.quantity > 0) && (
                 <Card className="bg-indigo-50 dark:bg-indigo-950 border-indigo-200">
                   <CardContent className="pt-6">
