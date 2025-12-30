@@ -10,6 +10,7 @@ import {
   updateDoc,
   setDoc,
   getDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
@@ -30,6 +31,42 @@ let txContext: {
 
 export const setSoldTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
+};
+
+// Real-time subscription
+export const subscribeToSoldProducts = (
+  businessId: string,
+  userRole: 'admin' | 'staff',
+  branchId: string | null,
+  onUpdate: (products: SoldProduct[]) => void
+): () => void => {
+  const productsRef = collection(db, 'products');
+
+  let q = query(
+    productsRef,
+    where('businessId', '==', businessId),
+    where('status', '==', 'sold')
+  );
+
+  if (userRole === 'staff') {
+    if (branchId) {
+      q = query(q, where('branch', '==', branchId));
+    }
+  } else if (userRole === 'admin' && branchId && branchId !== 'All') {
+    q = query(q, where('branch', '==', branchId));
+  }
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    } as SoldProduct));
+    onUpdate(products);
+  }, (error) => {
+    console.error("Real-time sold products error:", error);
+  });
+
+  return unsubscribe;
 };
 
 // Get sold products - Admin sees all (filterable), Staff sees theirs

@@ -31,6 +31,7 @@ import {
   getRestoredProducts,
   deleteRestoredProduct,
   sellRestoredProduct,
+  subscribeToRestoredProducts,
   toast,
   setRestoredTransactionContext,
 } from '@/functions/restored';
@@ -93,36 +94,36 @@ const ProductsRestoredPage: React.FC = () => {
     }
   }, [user, branches]);
 
-  // Load data
-  const loadData = useCallback(async () => {
+  // Load data & Real-time subscription
+  useEffect(() => {
     if (!businessId) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    try {
-      const [restoredProds, branchList] = await Promise.all([
-        getRestoredProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch),
-        getBranches(businessId),
-      ]);
 
-      setRestoredProducts(restoredProds);
+    // Initial branch load
+    getBranches(businessId).then(branchList => {
       setBranches(branchList);
-
       const map = new Map<string, string>();
       branchList.forEach(b => b.id && map.set(b.id, b.branchName));
       setBranchMap(map);
-    } catch {
-      toast.error('Failed to load restored products');
-    } finally {
-      setLoading(false);
-    }
-  }, [businessId, user?.role, userBranch, isAdmin, branchFilter]);
+    });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+    // Real-time subscription
+    const unsubscribe = subscribeToRestoredProducts(
+      businessId,
+      user?.role || 'staff',
+      isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch,
+      (products) => {
+        setRestoredProducts(products);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [businessId, user?.role, userBranch, isAdmin, branchFilter]);
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 

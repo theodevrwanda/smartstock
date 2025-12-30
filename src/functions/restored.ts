@@ -10,6 +10,7 @@ import {
   updateDoc,
   setDoc,
   getDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
@@ -33,10 +34,61 @@ export const setRestoredTransactionContext = (ctx: typeof txContext) => {
 };
 
 // Get restored products - Admin sees all (filterable), Staff sees theirs
+// Real-time subscription
+export const subscribeToRestoredProducts = (
+  businessId: string,
+  userRole: 'admin' | 'staff',
+  branchId: string | null,
+  onUpdate: (products: RestoredProduct[]) => void
+): () => void => {
+  const productsRef = collection(db, 'products');
+  let q = query(
+    productsRef,
+    where('businessId', '==', businessId),
+    where('status', '==', 'restored')
+  );
+
+  if (userRole === 'staff') {
+    if (branchId) {
+      q = query(q, where('branch', '==', branchId));
+    }
+  } else if (userRole === 'admin' && branchId && branchId !== 'All') {
+    q = query(q, where('branch', '==', branchId));
+  }
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const products: RestoredProduct[] = snapshot.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        productName: data.productName || 'Unknown Product',
+        category: data.category || 'uncategorized',
+        model: data.model || undefined,
+        quantity: data.quantity || 0,
+        branch: data.branch || '',
+        costPrice: data.costPrice || 0,
+        sellingPrice: data.sellingPrice ?? null,
+        restoredDate: data.restoredDate
+          ? typeof data.restoredDate === 'string'
+            ? data.restoredDate
+            : data.restoredDate.toDate().toISOString()
+          : new Date().toISOString(),
+        restoreComment: data.restoreComment || undefined,
+        businessId: data.businessId || businessId,
+      };
+    });
+    onUpdate(products);
+  }, (error) => {
+    console.error("Real-time restored products error:", error);
+  });
+
+  return unsubscribe;
+};
+
 export const getRestoredProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
-  branchId?: string | null
+  branchId: string | null
 ): Promise<RestoredProduct[]> => {
   try {
     const productsRef = collection(db, 'products');

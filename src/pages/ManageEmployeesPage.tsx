@@ -30,6 +30,7 @@ import {
   deleteEmployee,
   deleteMultipleEmployees,
   setEmployeeTransactionContext,
+  subscribeToEmployees,
 } from '@/functions/employees';
 import { Employee, Branch } from '@/types/interface';
 import { getBranches } from '@/functions/branch';
@@ -103,36 +104,32 @@ const ManageEmployeesPage: React.FC = () => {
   }, []);
 
   // Fetch employees and branches
+  // Fetch employees and branches with Real-time
   useEffect(() => {
     if (!businessId) {
       setLoading(false);
       return;
     }
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [emps, branchList] = await Promise.all([
-          getEmployees(),
-          getBranches(businessId),
-        ]);
+    setLoading(true);
 
-        const myEmployees = emps.filter(e => e.businessId === businessId);
-        setEmployees(myEmployees);
-        setBranches(branchList);
+    // Initial branch load
+    getBranches(businessId).then(branchList => {
+      setBranches(branchList);
+      const map = new Map<string, string>();
+      map.set('unassigned', 'Unassigned');
+      branchList.forEach(b => map.set(b.id!, b.branchName));
+      setBranchMap(map);
+    });
 
-        const map = new Map<string, string>();
-        map.set('unassigned', 'Unassigned');
-        branchList.forEach(b => map.set(b.id!, b.branchName));
-        setBranchMap(map);
-      } catch {
-        toast({ title: 'Error', description: 'Failed to load data', variant: 'destructive' });
-      } finally {
-        setLoading(false);
-      }
-    };
+    const unsubscribe = subscribeToEmployees((allEmps) => {
+      // Filter for specific business
+      const myEmployees = allEmps.filter(e => e.businessId === businessId);
+      setEmployees(myEmployees);
+      setLoading(false);
+    });
 
-    fetchData();
+    return () => unsubscribe();
   }, [businessId, toast]);
 
   const getBranchName = (id: string | null) => branchMap.get(id || 'unassigned') || 'Unassigned';

@@ -12,6 +12,7 @@ import {
   getDoc,
   writeBatch,
   runTransaction,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
@@ -139,10 +140,52 @@ export const syncOfflineOperations = async (): Promise<void> => {
 };
 
 // UPDATED: Admin can see all (or filter). Staff restricted to their branch.
+// Real-time subscription
+export const subscribeToProducts = (
+  businessId: string,
+  userRole: 'admin' | 'staff',
+  branchId: string | null,
+  currCategory: string | null = null,
+  onUpdate: (products: Product[]) => void
+): () => void => {
+  const productsRef = collection(db, 'products');
+
+  let q = query(
+    productsRef,
+    where('businessId', '==', businessId),
+    where('status', '==', 'store')
+  );
+
+  if (userRole === 'staff') {
+    if (branchId) {
+      q = query(q, where('branch', '==', branchId));
+    }
+  } else if (userRole === 'admin' && branchId && branchId !== 'All') {
+    q = query(q, where('branch', '==', branchId));
+  }
+
+  // Optional category filter if we wanted to push it to DB level (currently UI handles it)
+  // For now, follow existing pattern of fetching all (or branch filtered) and letting UI filter categories
+  // unless performance dictates otherwise.
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    } as Product));
+    onUpdate(products);
+  }, (error) => {
+    console.error("Real-time products error:", error);
+    toast.error("Connection lost - reconnecting...");
+  });
+
+  return unsubscribe;
+};
+
 export const getProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
-  branchId?: string | null
+  branchId: string | null
 ): Promise<Product[]> => {
   try {
     const productsRef = collection(db, 'products');
@@ -177,6 +220,7 @@ export const getProducts = async (
     return [];
   }
 };
+
 
 export const addOrUpdateProduct = async (
   data: {

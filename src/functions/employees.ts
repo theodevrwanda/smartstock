@@ -9,6 +9,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import {
   createUserWithEmailAndPassword,
@@ -291,6 +292,18 @@ export const deleteMultipleEmployees = async (ids: string[]): Promise<boolean> =
     toast.error('Bulk delete failed');
     return false;
   }
+};
+
+export const subscribeToEmployees = (
+  onUpdate: (employees: Employee[]) => void
+): () => void => {
+  const q = query(collection(db, 'users'));
+  return onSnapshot(q, (snap) => {
+    const employees = snap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
+    onUpdate(employees);
+  }, error => {
+    console.error("Real-time employees error:", error);
+  });
 };
 
 export const getEmployees = async (): Promise<Employee[]> => {

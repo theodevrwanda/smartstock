@@ -31,6 +31,7 @@ import {
   getSoldProducts,
   deleteSoldProduct,
   restoreSoldProduct,
+  subscribeToSoldProducts,
   toast,
   setSoldTransactionContext,
 } from '@/functions/sold';
@@ -99,28 +100,28 @@ const ProductsSoldPage: React.FC = () => {
       return;
     }
 
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [soldProds, branchList] = await Promise.all([
-          getSoldProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch),
-          getBranches(businessId),
-        ]);
+    setLoading(true);
 
-        setSoldProducts(soldProds);
-        setBranches(branchList);
+    // Initial branch load (one-time or could be subbed)
+    getBranches(businessId).then(branchList => {
+      setBranches(branchList);
+      const map = new Map<string, string>();
+      branchList.forEach(b => map.set(b.id!, b.branchName));
+      setBranchMap(map);
+    });
 
-        const map = new Map<string, string>();
-        branchList.forEach(b => map.set(b.id!, b.branchName));
-        setBranchMap(map);
-      } catch {
-        toast.error('Failed to load sold products');
-      } finally {
+    // Real-time subscription
+    const unsubscribe = subscribeToSoldProducts(
+      businessId,
+      user?.role || 'staff',
+      isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch,
+      (products) => {
+        setSoldProducts(products);
         setLoading(false);
       }
-    };
+    );
 
-    load();
+    return () => unsubscribe();
   }, [businessId, user?.role, userBranch, isAdmin, branchFilter]);
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';

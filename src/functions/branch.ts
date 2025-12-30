@@ -10,6 +10,7 @@ import {
   query,
   where,
   getDoc,
+  onSnapshot
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
@@ -28,6 +29,29 @@ let txContext: {
 
 export const setBranchTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
+};
+
+// Real-time branches
+export const subscribeToBranches = (
+  businessId: string,
+  onUpdate: (branches: Branch[]) => void
+): () => void => {
+  if (!businessId) return () => { };
+
+  const branchesRef = collection(db, 'branches');
+  const q = query(branchesRef, where('businessId', '==', businessId));
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    const branches = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as Branch));
+    onUpdate(branches);
+  }, (error) => {
+    console.error("Real-time branches error:", error);
+  });
+
+  return unsubscribe;
 };
 
 // Get all branches for a specific business

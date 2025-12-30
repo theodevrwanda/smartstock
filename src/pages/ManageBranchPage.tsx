@@ -26,6 +26,7 @@ import {
   deleteBranch,
   deleteMultipleBranches,
   setBranchTransactionContext,
+  subscribeToBranches,
 } from '@/functions/branch';
 import { Branch } from '@/types/interface';
 
@@ -87,26 +88,21 @@ const ManageBranchPage: React.FC = () => {
     };
   }, []);
 
-  // Fetch branches from Firestore
+  // Subscribe to branches
   useEffect(() => {
     if (!businessId) {
       setLoading(false);
       return;
     }
 
-    const fetchBranches = async () => {
-      setLoading(true);
-      try {
-        const data = await getBranches(businessId);
-        setBranches(data);
-      } catch (error) {
-        toast.error('Failed to load branches');
-      } finally {
-        setLoading(false);
-      }
-    };
+    setLoading(true);
 
-    fetchBranches();
+    const unsubscribe = subscribeToBranches(businessId, (branchList) => {
+      setBranches(branchList);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [businessId]);
 
   const formatDate = (dateString: string) => {
