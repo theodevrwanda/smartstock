@@ -445,7 +445,7 @@ const ProductsStorePage: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {isAdmin && (
+            {(isAdmin || canAddProduct) && (
               <Button onClick={() => setAddDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Product
@@ -564,7 +564,14 @@ const ProductsStorePage: React.FC = () => {
                         <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
+                          disabled={!p.confirm}
+                          className={!p.confirm ? "opacity-50" : ""}
+                          title={!p.confirm ? "Pending Admin Confirmation" : "Sell Product"}
+                        >
                           <ShoppingCart className="h-4 w-4" />
                         </Button>
                         {isAdmin && (
@@ -621,7 +628,10 @@ const ProductsStorePage: React.FC = () => {
                         <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
                           <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}>
+                        <DropdownMenuItem
+                          onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
+                          disabled={!p.confirm}
+                        >
                           <ShoppingCart className="mr-2 h-4 w-4" /> Sell
                         </DropdownMenuItem>
 
