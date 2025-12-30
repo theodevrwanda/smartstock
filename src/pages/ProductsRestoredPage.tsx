@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Download, Eye, Trash2, ArrowUpDown, ShoppingCart, FileSpreadsheet, FileText, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -428,54 +429,114 @@ const ProductsRestoredPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
-                    No restored products found matching your filters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedProducts.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.productName}</TableCell>
-                    <TableCell>{p.category}</TableCell>
-                    <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
-                    {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
-                    <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell className={getPriceColor(p.sellingPrice || p.costPrice)}>
-                      {(p.sellingPrice || p.costPrice).toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell className="font-semibold">
-                      {(p.quantity * (p.sellingPrice || p.costPrice)).toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell className={getProfitLossColor(calculateProfitLoss(p))}>
-                      {calculateProfitLoss(p).toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell>{new Date(p.restoredDate).toLocaleDateString()}</TableCell>
-                    <TableCell className="max-w-xs truncate" title={p.restoreComment || undefined}>
-                      {p.restoreComment || '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {p.quantity > 0 && (!userBranch || p.branch === userBranch) && (
-                          <Button size="sm" variant="ghost" onClick={() => openSell(p)}>
-                            <ShoppingCart className="h-4 w-4 text-green-600" />
-                          </Button>
-                        )}
-                        {isAdmin && (
-                          <Button size="sm" variant="ghost" onClick={() => openDelete(p)}>
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        )}
-                      </div>
+              <AnimatePresence mode='popLayout'>
+                {sortedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={isAdmin ? 7 : 6} className="h-24 text-center text-muted-foreground">
+                      No restored products found.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ) : (
+                  sortedProducts.map((product) => (
+                    <motion.tr
+                      key={product.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      layout
+                      className="group hover:bg-muted/30 transition-colors"
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                          <span className="text-xs text-muted-foreground">{product.model}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {product.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
+                            {Number(product.costPrice).toLocaleString()} RWF
+                          </span>
+                          {(product.sellingPrice !== undefined && product.sellingPrice !== null && Number(product.sellingPrice) > 0) && (
+                            <span className="text-xs text-green-600 font-medium">
+                              Sell: {Number(product.sellingPrice).toLocaleString()} RWF
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
+                        >
+                          {product.quantity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[150px] truncate text-muted-foreground" title={product.restoreComment}>
+                        {product.restoreComment || '-'}
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <span className="text-sm font-medium">{getBranchName(product.branch) || 'Unknown'}</span>
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                            onClick={() => {
+                              setCurrentProduct(product);
+                              setDetailsDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => {
+                              setCurrentProduct(product);
+                              setSellForm({
+                                quantity: 1,
+                                type: 'cash',
+                                buyerName: '',
+                                buyerPhone: ''
+                              });
+                              setSellDialogOpen(true);
+                            }}
+                            disabled={!isOnline}
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setProductToDelete(product);
+                                setDeleteDialogOpen(true);
+                              }}
+                              disabled={!isOnline}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </motion.tr>
+                  ))
+                )}
+              </AnimatePresence>
             </TableBody>
           </Table>
         </div>
@@ -549,10 +610,10 @@ const ProductsRestoredPage: React.FC = () => {
               <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Sell Dialog */}
-        <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+        < Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen} >
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Sell Restored Product</DialogTitle>
@@ -676,10 +737,10 @@ const ProductsRestoredPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Delete Confirm Dialog */}
-        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        < Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Restored Product?</DialogTitle>
@@ -694,8 +755,8 @@ const ProductsRestoredPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
-      </div>
+        </Dialog >
+      </div >
     </>
   );
 };

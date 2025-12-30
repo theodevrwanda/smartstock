@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ const ProductsStorePage: React.FC = () => {
   const userBranch = typeof user?.branch === 'string' ? user.branch : null;
   const businessId = user?.businessId;
   const isAdmin = user?.role === 'admin';
+  const isStaff = user?.role === 'staff';
 
   const canAddProduct = !!userBranch;
   const canDelete = isAdmin;
@@ -537,64 +539,169 @@ const ProductsStorePage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedProducts.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.productName}</TableCell>
-                    <TableCell>{p.category}</TableCell>
-                    <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
-                    {isAdmin && <TableCell>{getBranchName(p.branch)}</TableCell>}
-                    <TableCell className={getPriceColor(p.costPrice)}>{p.costPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell>{getStatusBadge(p.quantity)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openConfirmProductDialog(p.id!, p.confirm)}
-                          disabled={!canConfirm || actionLoading}
-                        >
-                          {p.confirm ? <CheckCircle className="h-5 w-5 text-green-600" /> : <XCircle className="h-5 w-5 text-red-600" />}
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
-                          disabled={!p.confirm}
-                          className={!p.confirm ? "opacity-50" : ""}
-                          title={!p.confirm ? "Pending Admin Confirmation" : "Sell Product"}
-                        >
-                          <ShoppingCart className="h-4 w-4" />
-                        </Button>
-                        {isAdmin && (
-                          <Button size="sm" variant="ghost" onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {isAdmin && (
-                          <Button size="sm" variant="ghost" onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }}>
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        )}
-                      </div>
+              <AnimatePresence mode='popLayout'>
+                {sortedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={isAdmin ? 8 : 7} className="h-24 text-center text-muted-foreground">
+                      No products found matching your filters.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ) : (
+                  sortedProducts.map((product) => (
+                    <motion.tr
+                      key={product.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      layout // Smooth layout transitions
+                      className="group hover:bg-muted/30 transition-colors border-b last:border-0"
+                    >
+                      <TableCell className="font-medium">
+                        <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 transition-colors">
+                          {product.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{product.model || '-'}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={product.quantity <= 5 ? "destructive" : "outline"}
+                          className={`${product.quantity <= 5
+                            ? "animate-pulse"
+                            : "border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
+                            }`}
+                        >
+                          {product.quantity}
+                        </Badge>
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <div className="flex flex-col text-sm">
+                            <span className="font-medium">{getBranchName(product.branch)}</span>
+                          </div>
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100">
+                            {(product.costPrice && Number(product.costPrice) > 0) ? Number(product.costPrice).toLocaleString() : '0'} RWF
+                          </span>
+                          {(product.sellingPrice !== undefined && product.sellingPrice !== null && Number(product.sellingPrice) > 0) && (
+                            <span className="text-xs text-green-600 font-medium">
+                              Sell: {Number(product.sellingPrice).toLocaleString()} RWF
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(product.quantity)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={product.confirm ? "default" : "secondary"}
+                          className={product.confirm
+                            ? "bg-green-100 text-green-700 hover:bg-green-200 border-green-200"
+                            : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-200"
+                          }
+                        >
+                          {product.confirm ? (
+                            <span className="flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" /> Confirmed
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" /> Pending
+                            </span>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                            onClick={() => {
+                              setCurrentProduct(product);
+                              setDetailsDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {!isStaff && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                              onClick={() => {
+                                setCurrentProduct(product);
+                                // Pre-fill form
+                                setNewProduct({
+                                  productName: product.productName,
+                                  category: product.category,
+                                  model: product.model || undefined,
+                                  quantity: product.quantity,
+                                  costPrice: product.costPrice,
+                                  sellingPrice: product.sellingPrice || undefined,
+                                  branch: product.branch, // Hidden/Fixed for staff
+                                  deadline: product.deadline ? new Date(product.deadline).toISOString().split('T')[0] : '', // Format date for input
+                                  supplier: product.supplier,
+                                  confirm: product.confirm
+                                });
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            onClick={() => {
+                              setCurrentProduct(product);
+                              setSellForm({
+                                quantity: 1,
+                                type: 'cash', // Default
+                                buyerName: '',
+                                buyerPhone: ''
+                              });
+                              // Staff cannot sell unconfirmed products
+                              if (user?.role === 'staff' && !product.confirm) {
+                                toast.error("You cannot sell an unconfirmed product.");
+                                return;
+                              }
+                              setSellDialogOpen(true);
+                            }}
+                            disabled={!isOnline || (user?.role === 'staff' && !product.confirm)}
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </Button>
+                          {!isStaff && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setProductToDelete(product);
+                                setDeleteConfirmOpen(true);
+                              }}
+                              disabled={!isOnline}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </motion.tr>
+                  ))
+                )}
+              </AnimatePresence>
             </TableBody>
           </Table>
         </div>
@@ -604,59 +711,70 @@ const ProductsStorePage: React.FC = () => {
           {sortedProducts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">No products found.</div>
           ) : (
-            sortedProducts.map(p => (
-              <Card key={p.id}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold truncate">{p.productName}</h3>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">{p.category}</Badge>
-                        {p.model && <Badge variant="outline" className="text-xs">{p.model}</Badge>}
+            <AnimatePresence mode='popLayout'>
+              {sortedProducts.map(p => (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  layout // Smooth layout transitions
+                >
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold truncate">{p.productName}</h3>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">{p.category}</Badge>
+                            {p.model && <Badge variant="outline" className="text-xs">{p.model}</Badge>}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="font-bold">{p.quantity}</Badge>
+                          {getStatusBadge(p.quantity)}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className="font-bold">{p.quantity}</Badge>
-                      {getStatusBadge(p.quantity)}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                    <span className={`text-sm font-medium ${getPriceColor(p.costPrice)}`}>
-                      {p.costPrice.toLocaleString()} RWF
-                    </span>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className="h-8 gap-1">
-                          Actions <ArrowUpDown className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
-                          <Eye className="mr-2 h-4 w-4" /> View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
-                          disabled={!p.confirm}
-                        >
-                          <ShoppingCart className="mr-2 h-4 w-4" /> Sell
-                        </DropdownMenuItem>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                        <span className={`text-sm font-medium ${getPriceColor(Number(p.costPrice || 0))}`}>
+                          {(p.costPrice && Number(p.costPrice) > 0) ? Number(p.costPrice).toLocaleString() : '0'} RWF
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline" className="h-8 gap-1">
+                              Actions <ArrowUpDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
+                              <Eye className="mr-2 h-4 w-4" /> View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
+                              disabled={!p.confirm}
+                            >
+                              <ShoppingCart className="mr-2 h-4 w-4" /> Sell
+                            </DropdownMenuItem>
 
-                        {isAdmin && (
-                          <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                        )}
-                        {isAdmin && (
-                          <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                            )}
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           )}
         </div>
 

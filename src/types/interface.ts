@@ -35,6 +35,9 @@ export interface SoldProduct {
     soldDate: string;
     deadline?: string;
     businessId: string;
+    buyerName?: string;
+    buyerPhone?: string;
+    paymentMethod?: string;
 }
 
 export interface RestoredProduct {

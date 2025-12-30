@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -442,57 +443,111 @@ const ProductsSoldPage: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
-                    No sold products found matching your filters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sortedProducts.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.productName}</TableCell>
-                    <TableCell>{p.category}</TableCell>
-                    <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center"><Badge variant="outline">{p.quantity}</Badge></TableCell>
-                    {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
-                    <TableCell>{p.costPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell className={getPriceColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</TableCell>
-                    <TableCell className="font-semibold">{(p.quantity * p.sellingPrice).toLocaleString()} RWF</TableCell>
-                    <TableCell className={getProfitLossColor(calculateProfitLoss(p))}>
-                      {calculateProfitLoss(p).toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell>{new Date(p.soldDate).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      {p.deadline ? (
-                        <span className={isDeadlineActive(p.deadline) ? 'text-green-600' : 'text-red-600'}>
-                          {new Date(p.deadline).toLocaleDateString()}
-                        </span>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => openDetails(p)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {(isAdmin || (p.branch === userBranch)) && isDeadlineActive(p.deadline) && p.quantity > 0 && (
-                          <Button size="sm" variant="ghost" onClick={() => openRestore(p)}>
-                            <Undo className="h-4 w-4 text-blue-600" />
-                          </Button>
-                        )}
-                        {isAdmin && (
-                          <Button size="sm" variant="ghost" onClick={() => openDelete(p)}>
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        )}
-                      </div>
+              <AnimatePresence mode='popLayout'>
+                {sortedProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      No sold products found.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ) : (
+                  sortedProducts.map((product) => (
+                    <motion.tr
+                      key={product.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      layout
+                      className="group hover:bg-muted/30 transition-colors"
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                          <span className="text-xs text-muted-foreground">{product.model}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                          {product.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold text-gray-900 dark:text-gray-100">
+                        {Number(product.sellingPrice).toLocaleString()} RWF
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
+                        >
+                          {product.quantity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col text-sm">
+                          <span className="font-medium">{product.buyerName || 'N/A'}</span>
+                          <span className="text-xs text-muted-foreground">{product.buyerPhone || '-'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={product.paymentMethod === 'cash' ? 'default' : 'secondary'}>
+                          {product.paymentMethod || 'cash'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col text-sm text-muted-foreground">
+                          <span>{new Date(product.soldDate).toLocaleDateString()}</span>
+                          <span className="text-xs">{new Date(product.soldDate).toLocaleTimeString()}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                            onClick={() => {
+                              setCurrentProduct(product);
+                              setDetailsDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                            onClick={() => {
+                              setCurrentProduct(product);
+                              setRestoreDialogOpen(true); // Changed from setReturnDialogOpen(true)
+                            }}
+                            title="Return Product (Undo Sale)"
+                          >
+                            <Undo className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setCurrentProduct(product); // Changed from setProductToDelete(product)
+                                setDeleteConfirmOpen(true); // Changed from setDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </motion.tr>
+                  ))
+                )}
+              </AnimatePresence>
             </TableBody>
           </Table>
         </div>
+
         {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent className="max-w-lg">
@@ -557,10 +612,10 @@ const ProductsSoldPage: React.FC = () => {
               <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Restore Dialog */}
-        <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        < Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen} >
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Restore Sold Product</DialogTitle>
@@ -643,10 +698,10 @@ const ProductsSoldPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+        </Dialog >
 
         {/* Delete Confirm Dialog */}
-        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        < Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Sale Record?</DialogTitle>
@@ -661,8 +716,8 @@ const ProductsSoldPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
-      </div>
+        </Dialog >
+      </div >
     </>
   );
 };
