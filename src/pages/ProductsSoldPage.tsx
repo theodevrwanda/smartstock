@@ -31,11 +31,11 @@ import {
   getSoldProducts,
   deleteSoldProduct,
   restoreSoldProduct,
-  SoldProduct,
   toast,
   setSoldTransactionContext,
 } from '@/functions/sold';
-import { getBranches, Branch } from '@/functions/branch';
+import { SoldProduct, Branch } from '@/types/interface';
+import { getBranches } from '@/functions/branch';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsSoldPage: React.FC = () => {
@@ -406,7 +406,7 @@ const ProductsSoldPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border bg-white dark:bg-gray-900 shadow-md">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -34,11 +34,12 @@ import {
   sellProduct,
   deleteProduct,
   syncOfflineOperations,
-  Product,
+  syncOfflineOperations,
   toast,
   setTransactionContext,
 } from '@/functions/store';
-import { getBranches, Branch } from '@/functions/branch';
+import { Product, Branch } from '@/types/interface';
+import { getBranches } from '@/functions/branch';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsStorePage: React.FC = () => {
@@ -436,7 +437,7 @@ const ProductsStorePage: React.FC = () => {
         </div>
 
         {/* Filters - No Branch Filter */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-none border-b">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input

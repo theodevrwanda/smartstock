@@ -31,11 +31,11 @@ import {
   getRestoredProducts,
   deleteRestoredProduct,
   sellRestoredProduct,
-  RestoredProduct,
   toast,
   setRestoredTransactionContext,
 } from '@/functions/restored';
-import { getBranches, Branch } from '@/functions/branch';
+import { RestoredProduct, Branch } from '@/types/interface';
+import { getBranches } from '@/functions/branch';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsRestoredPage: React.FC = () => {
@@ -396,7 +396,7 @@ const ProductsRestoredPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border bg-white dark:bg-gray-900 shadow-md">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -9,31 +9,7 @@ import {
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
 
-export interface DashboardStats {
-  totalProducts: number;
-  totalCategories: number;
-  totalModels: number;
-  productsAddedToday: number;
-  productsAddedThisWeek: number;
-  productsAddedThisMonth: number;
-  productsUpdatedToday: number;
-  productsUpdatedThisMonth: number;
-  productsNeverUpdated: number;
-  activeProducts: number;
-  pendingConfirmationCount: number;
-  soldProducts: number;
-  restoredProducts: number;
-  deletedProducts: number;
-  lowStockProducts: number;
-  outOfStockProducts: number;
-  mostStockedProduct: { name: string; quantity: number };
-  leastStockedProduct: { name: string; quantity: number };
-  averageStockPerProduct: number;
-  totalStockQuantity: number;
-  totalNetProfit: number;
-  totalStockValue: number;
-  totalLoss: number;
-}
+import { DashboardStats } from '@/types/interface';
 
 interface ProductData {
   id: string;

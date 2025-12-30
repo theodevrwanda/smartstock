@@ -29,10 +29,12 @@ import {
   assignBranchToEmployee,
   deleteEmployee,
   deleteMultipleEmployees,
-  Employee,
+  deleteEmployee,
+  deleteMultipleEmployees,
   setEmployeeTransactionContext,
 } from '@/functions/employees';
-import { getBranches, Branch } from '@/functions/branch';
+import { Employee, Branch } from '@/types/interface';
+import { getBranches } from '@/functions/branch';
 
 const ManageEmployeesPage: React.FC = () => {
   const { toast } = useToast();
@@ -283,7 +285,7 @@ const ManageEmployeesPage: React.FC = () => {
         <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
           <h1 className="text-3xl font-bold">Employees</h1>
 
-          <div className="overflow-x-auto border rounded-lg">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -367,7 +369,7 @@ const ManageEmployeesPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto border rounded-lg bg-white dark:bg-gray-900">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

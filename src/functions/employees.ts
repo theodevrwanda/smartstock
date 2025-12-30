@@ -10,38 +10,16 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
-import { 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  updateEmail as firebaseUpdateEmail 
+import {
+  createUserWithEmailAndPassword,
+  signOut,
+  updateEmail as firebaseUpdateEmail
 } from 'firebase/auth';
 import { db, secondaryAuth, auth } from '@/firebase/firebase'; // Make sure auth is imported
 import { toast } from 'sonner';
 import { logTransaction } from '@/lib/transactionLogger';
 
-export interface Employee {
-  id?: string;
-  email: string;
-  username: string;
-  firstName: string;
-  lastName: string;
-  fullName?: string;
-  phone: string;
-  district: string;
-  sector: string;
-  cell: string;
-  village: string;
-  gender?: string;
-  role: 'admin' | 'staff';
-  branch: string | null;
-  businessId: string;
-  businessName?: string;
-  isActive: boolean;
-  profileImage?: string | null;
-  imagephoto?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { Employee } from '@/types/interface';
 
 // Transaction context
 let txContext: {
@@ -251,7 +229,7 @@ export const assignBranchToEmployee = async (
   branchName?: string
 ): Promise<boolean> => {
   try {
-    await updateDoc(doc(db, 'users', employeeId), { 
+    await updateDoc(doc(db, 'users', employeeId), {
       branch: branchId,
       updatedAt: new Date().toISOString(),
     });
@@ -259,7 +237,7 @@ export const assignBranchToEmployee = async (
     if (txContext) {
       await logTransaction({
         transactionType: 'employee_updated',
-        actionDetails: branchId 
+        actionDetails: branchId
           ? `Assigned employee to branch: ${branchName || branchId}`
           : `Unassigned employee from branch`,
         userId: txContext.userId,

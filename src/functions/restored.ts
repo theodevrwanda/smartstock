@@ -15,19 +15,7 @@ import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
 import { logTransaction } from '@/lib/transactionLogger';
 
-export interface RestoredProduct {
-  id: string;
-  productName: string;
-  category: string;
-  model?: string;
-  quantity: number;
-  branch: string;
-  costPrice: number;
-  sellingPrice?: number | null;
-  restoredDate: string;
-  restoreComment?: string | null;
-  businessId: string;
-}
+import { RestoredProduct } from '@/types/interface';
 
 // Transaction context (set before calling sellRestoredProduct)
 let txContext: {

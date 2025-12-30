@@ -15,19 +15,7 @@ import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
 import { logTransaction } from '@/lib/transactionLogger';
 
-export interface SoldProduct {
-  id: string;
-  productName: string;
-  category: string;
-  model?: string;
-  quantity: number;
-  branch: string;
-  costPrice: number;
-  sellingPrice: number;
-  soldDate: string;
-  deadline?: string;
-  businessId: string;
-}
+import { SoldProduct } from '@/types/interface';
 
 // Transaction context (set before calling functions that log)
 let txContext: {

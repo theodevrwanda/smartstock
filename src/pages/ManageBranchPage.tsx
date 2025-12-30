@@ -25,9 +25,9 @@ import {
   updateBranch,
   deleteBranch,
   deleteMultipleBranches,
-  Branch,
   setBranchTransactionContext,
 } from '@/functions/branch';
+import { Branch } from '@/types/interface';
 
 const ManageBranchPage: React.FC = () => {
   const { user } = useAuth();
@@ -259,7 +259,7 @@ const ManageBranchPage: React.FC = () => {
         <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
           <h1 className="text-3xl font-bold">Branches</h1>
 
-          <div className="overflow-x-auto border rounded-lg">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -343,7 +343,7 @@ const ManageBranchPage: React.FC = () => {
         </div>
 
         {/* Full-width Table */}
-        <div className="overflow-x-auto border rounded-lg bg-white dark:bg-gray-900">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

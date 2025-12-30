@@ -9,37 +9,7 @@ import {
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
 
-export interface ProductReport {
-  id: string;
-  productName: string;
-  category: string;
-  model?: string;
-  quantity: number;
-  branch: string;
-  costPrice: number;
-  sellingPrice: number | null;
-  profitLoss: number | null;
-  status: 'store' | 'sold' | 'restored' | 'deleted';
-  addedDate: string;
-  soldDate?: string;
-  deletedDate?: string;
-  restoreComment?: string;
-  businessId: string;
-}
-
-export interface ReportSummary {
-  totalProducts: number;
-  storeCount: number;
-  soldCount: number;
-  restoredCount: number;
-  deletedCount: number;
-  grossProfit: number;
-  totalLoss: number;
-  netProfit: number;
-  totalStoreValue: number;
-  lowStockCount: number;
-  outOfStockCount: number;
-}
+import { ProductReport, ReportSummary } from '@/types/interface';
 
 // Empty summary for restricted users
 const emptySummary: ReportSummary = {

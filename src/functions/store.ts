@@ -17,28 +17,7 @@ import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
 import { logTransaction } from '@/lib/transactionLogger';
 
-export interface Product {
-  id?: string;
-  productName: string;
-  category: string;
-  model?: string;
-  costPrice: number;
-  sellingPrice?: number | null;
-  status: 'store' | 'sold' | 'restored' | 'deleted';
-  restoreComment?: string;
-  addedDate: string;
-  deletedDate?: string;
-  soldDate?: string;
-  quantity: number;
-  branch: string;
-  deadline?: string;
-  confirm: boolean;
-  businessId: string;
-  updatedAt?: string;
-  productNameLower?: string;
-  categoryLower?: string;
-  modelLower?: string;
-}
+import { Product } from '@/types/interface';
 
 let txContext: {
   userId: string;
