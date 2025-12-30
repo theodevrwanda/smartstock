@@ -18,8 +18,10 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 15%;
 
-    --primary: 214 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 48 96% 64%;
+    /* #FCD34D */
+    --primary-foreground: 220 10% 15%;
+    /* Dark slate text for contrast */
 
     --secondary: 214 20% 97%;
     --secondary-foreground: 220 10% 20%;
@@ -38,13 +40,13 @@ All colors MUST be HSL.
     --ring: 214 100% 50%;
 
     --radius: 0.75rem;
-    
+
     /* Premium shadows with blue tint */
-    --shadow-sm: 0 1px 2px 0 hsl(214 100% 50% / 0.04);
-    --shadow: 0 1px 3px 0 hsl(214 100% 50% / 0.08), 0 1px 2px -1px hsl(214 100% 50% / 0.06);
-    --shadow-md: 0 4px 6px -1px hsl(214 100% 50% / 0.08), 0 2px 4px -2px hsl(214 100% 50% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(214 100% 50% / 0.08), 0 4px 6px -4px hsl(214 100% 50% / 0.06);
-    --shadow-xl: 0 20px 25px -5px hsl(214 100% 50% / 0.08), 0 8px 10px -6px hsl(214 100% 50% / 0.06);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
     /* Sidebar theme - blue gradient */
     --sidebar-background: 214 30% 98%;
@@ -68,7 +70,7 @@ All colors MUST be HSL.
     --popover: 220 25% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 214 100% 60%;
+    --primary: 48 96% 64%;
     --primary-foreground: 220 30% 8%;
 
     --secondary: 220 25% 15%;
@@ -86,14 +88,14 @@ All colors MUST be HSL.
     --border: 220 25% 18%;
     --input: 220 25% 18%;
     --ring: 214 100% 60%;
-    
+
     /* Dark mode shadows with blue tint */
-    --shadow-sm: 0 1px 2px 0 hsl(214 100% 60% / 0.12);
-    --shadow: 0 1px 3px 0 hsl(214 100% 60% / 0.15), 0 1px 2px -1px hsl(214 100% 60% / 0.12);
-    --shadow-md: 0 4px 6px -1px hsl(214 100% 60% / 0.15), 0 2px 4px -2px hsl(214 100% 60% / 0.12);
-    --shadow-lg: 0 10px 15px -3px hsl(214 100% 60% / 0.15), 0 4px 6px -4px hsl(214 100% 60% / 0.12);
-    --shadow-xl: 0 20px 25px -5px hsl(214 100% 60% / 0.15), 0 8px 10px -6px hsl(214 100% 60% / 0.12);
-    
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.2);
+
     /* Dark sidebar */
     --sidebar-background: 220 30% 10%;
     --sidebar-foreground: 0 0% 95%;
@@ -118,23 +120,24 @@ All colors MUST be HSL.
 }
 
 @layer components {
+
   /* Mobile app style cards */
   .mobile-card {
     @apply bg-card text-card-foreground rounded-xl border border-border/50;
     box-shadow: var(--shadow-lg);
   }
-  
+
   /* Smooth buttons */
   .smooth-button {
     @apply rounded-xl transition-all duration-200 ease-in-out;
     box-shadow: var(--shadow);
   }
-  
+
   .smooth-button:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-lg);
   }
-  
+
   /* Mobile app container */
   .mobile-container {
     @apply bg-background/95 backdrop-blur-sm border border-border/50 rounded-2xl;

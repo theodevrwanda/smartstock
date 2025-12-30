@@ -94,7 +94,8 @@ const ProductsStorePage: React.FC = () => {
     model: '',
     costPrice: '' as string | number,
     quantity: '' as string | number,
-    branch: '' // New for Admin
+    branch: '', // New for Admin
+    deadline: ''
   });
 
   const [sellForm, setSellForm] = useState({
@@ -284,6 +285,23 @@ const ProductsStorePage: React.FC = () => {
       return;
     }
 
+    // Date Logic
+    let finalDeadline = newProduct.deadline;
+    if (!finalDeadline) {
+      const d = new Date();
+      d.setDate(d.getDate() + 5);
+      finalDeadline = d.toISOString().split('T')[0];
+    } else {
+      // Validate past date
+      const selectedDate = new Date(finalDeadline);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (selectedDate < today) {
+        toast.error('Cannot set a past date');
+        return;
+      }
+    }
+
     setActionLoading(true);
     const result = await addOrUpdateProduct({
       productName: newProduct.productName,
@@ -293,7 +311,8 @@ const ProductsStorePage: React.FC = () => {
       quantity: Number(newProduct.quantity),
       branch: targetBranch,
       businessId: businessId!,
-      confirm: isAdmin,
+      confirm: isAdmin, // Staff always false, Admin true
+      deadline: finalDeadline,
     });
 
     if (result) {
@@ -304,7 +323,7 @@ const ProductsStorePage: React.FC = () => {
       });
       toast.success(isOnline ? 'Product added' : 'Added locally');
       setAddDialogOpen(false);
-      setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '', branch: '' });
+      setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '', branch: '', deadline: '' });
     }
     setActionLoading(false);
   };
@@ -652,8 +671,12 @@ const ProductsStorePage: React.FC = () => {
                 <Input type="number" value={newProduct.costPrice} onChange={e => setNewProduct(p => ({ ...p, costPrice: e.target.value === '' ? '' : Number(e.target.value) }))} />
               </div>
               <div className="grid gap-2">
-                <Label>Quantity *</Label>
                 <Input type="number" min="1" value={newProduct.quantity} onChange={e => setNewProduct(p => ({ ...p, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Deadline (Optional)</Label>
+                <Input type="date" value={newProduct.deadline} onChange={e => setNewProduct(p => ({ ...p, deadline: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Defaults to 5 days from now if not set.</p>
               </div>
               {isAdmin && (
                 <div className="grid gap-2">

@@ -188,6 +188,7 @@ export const addOrUpdateProduct = async (
     branch: string;
     businessId: string;
     confirm: boolean;
+    deadline?: string; // Added deadline
   }
 ): Promise<Product | null> => {
   if (!data.branch) {
@@ -212,6 +213,7 @@ export const addOrUpdateProduct = async (
       status: 'store' as const,
       sellingPrice: null,
       confirm: data.confirm,
+      deadline: data.deadline, // persist deadline
     };
   }
 
@@ -284,6 +286,7 @@ export const addOrUpdateProduct = async (
         branch: data.branch,
         businessId: data.businessId,
         confirm: data.confirm,
+        deadline: data.deadline, // field added
         updatedAt: new Date().toISOString(),
       };
 

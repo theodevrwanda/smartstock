@@ -8,21 +8,23 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
+import { Loader2 } from 'lucide-react';
+
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'md',
   className,
 }) => {
   const sizeClasses = {
-    sm: 'w-5 h-5 border-2',
-    md: 'w-10 h-10 border-4',
-    lg: 'w-16 h-16 border-[5px]'
+    sm: 'h-5 w-5',
+    md: 'h-10 w-10',
+    lg: 'h-16 w-16'
   };
 
   return (
     <div className="flex flex-col items-center justify-center p-4">
-      <div
+      <Loader2
         className={cn(
-          "animate-spin rounded-full border-slate-200 border-t-[#FCD34D]",
+          "animate-spin text-primary",
           sizeClasses[size],
           className
         )}
