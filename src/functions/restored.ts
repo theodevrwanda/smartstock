@@ -85,7 +85,6 @@ export const subscribeToRestoredProducts = (
 
   return unsubscribe;
 };
-
 export const getRestoredProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
