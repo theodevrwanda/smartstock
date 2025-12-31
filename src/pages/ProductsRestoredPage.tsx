@@ -181,7 +181,7 @@ const ProductsRestoredPage: React.FC = () => {
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
     { header: 'Model', key: 'model', width: 15 },
-    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Quantity', key: 'quantityFormatted', width: 15 },
     { header: 'Branch', key: 'branchName', width: 20 },
     { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
     { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
@@ -196,7 +196,7 @@ const ProductsRestoredPage: React.FC = () => {
       productName: p.productName,
       category: p.category,
       model: p.model || '-',
-      quantity: p.quantity,
+      quantityFormatted: `${p.quantity} ${p.unit || 'pcs'}`,
       branchName: getBranchName(p.branch),
       costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
       sellingPriceFormatted: `${(p.sellingPrice || p.costPrice).toLocaleString()} RWF`,
@@ -266,7 +266,6 @@ const ProductsRestoredPage: React.FC = () => {
         setSellDialogOpen(false);
         setCurrentProduct(null);
         setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
-        await loadData();
       }
     } catch {
       toast.error('Sale failed');
@@ -284,7 +283,6 @@ const ProductsRestoredPage: React.FC = () => {
         toast.success('Restored product deleted permanently');
         setDeleteConfirmOpen(false);
         setCurrentProduct(null);
-        await loadData();
       }
     } finally {
       setActionLoading(false);
@@ -402,23 +400,21 @@ const ProductsRestoredPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">#</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
                   <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Model</TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">Qty <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                {isAdmin && (
-                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
-                  </TableHead>
-                )}
-                <TableHead>Cost Price</TableHead>
-                <TableHead>Selling Price</TableHead>
+                <TableHead>Unit</TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
+                  <div className="flex items-center gap-1">Cost Price (Base) <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
+                <TableHead>Selling Price (Base)</TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Profit/Loss</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('restoredDate')}>
@@ -447,10 +443,13 @@ const ProductsRestoredPage: React.FC = () => {
                       layout
                       className="group hover:bg-muted/30 transition-colors"
                     >
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {sortedProducts.indexOf(product) + 1}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
                           <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
-                          <span className="text-xs text-muted-foreground">{product.model}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{product.model || '-'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -458,25 +457,40 @@ const ProductsRestoredPage: React.FC = () => {
                           {product.category}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-gray-900 dark:text-gray-100">
-                            {Number(product.costPrice).toLocaleString()} RWF
-                          </span>
-                          {(product.sellingPrice !== undefined && product.sellingPrice !== null && Number(product.sellingPrice) > 0) && (
-                            <span className="text-xs text-green-600 font-medium">
-                              Sell: {Number(product.sellingPrice).toLocaleString()} RWF
-                            </span>
-                          )}
-                        </div>
+                      <TableCell className="text-center">
+                        <span className="font-bold text-lg">
+                          {product.quantity.toLocaleString()}
+                        </span>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
-                        >
-                          {product.quantity}
+                        <Badge variant="outline" className="capitalize">
+                          {product.unit || 'pcs'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {Number(product.costPrice || 0).toLocaleString()} RWF
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold text-green-600">
+                          {Number(product.sellingPrice || product.costPrice).toLocaleString()} RWF
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-black text-amber-600">
+                          {(product.quantity * (product.sellingPrice || product.costPrice)).toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`font-bold ${getProfitLossColor(calculateProfitLoss(product))}`}>
+                          {calculateProfitLoss(product).toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {new Date(product.restoredDate).toLocaleDateString()}
+                        </span>
                       </TableCell>
                       <TableCell className="max-w-[150px] truncate text-muted-foreground" title={product.restoreComment}>
                         {product.restoreComment || '-'}
@@ -507,13 +521,11 @@ const ProductsRestoredPage: React.FC = () => {
                               setCurrentProduct(product);
                               setSellForm({
                                 quantity: 1,
-                                type: 'cash',
-                                buyerName: '',
-                                buyerPhone: ''
+                                sellingPrice: product.sellingPrice || product.costPrice,
+                                deadline: ''
                               });
                               setSellDialogOpen(true);
                             }}
-                            disabled={!isOnline}
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
@@ -523,10 +535,9 @@ const ProductsRestoredPage: React.FC = () => {
                               size="icon"
                               className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                               onClick={() => {
-                                setProductToDelete(product);
-                                setDeleteDialogOpen(true);
+                                setCurrentProduct(product);
+                                setDeleteConfirmOpen(true);
                               }}
-                              disabled={!isOnline}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -563,36 +574,30 @@ const ProductsRestoredPage: React.FC = () => {
                     <p className="font-medium">{currentProduct.model || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Quantity</p>
-                    <p className="font-medium">{currentProduct.quantity}</p>
+                    <p className="text-sm text-muted-foreground">Restored Qty</p>
+                    <p className="font-medium">{currentProduct.quantity} {currentProduct.unit || 'pcs'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Branch</p>
                     <p className="font-medium">{getBranchName(currentProduct.branch)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Cost Price</p>
+                    <p className="text-sm text-muted-foreground">Cost Price (Base)</p>
                     <p className="font-medium">{currentProduct.costPrice.toLocaleString()} RWF</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Selling Price</p>
+                    <p className="text-sm text-muted-foreground">Selling Price (Base)</p>
                     <p className="font-medium">{(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Value</p>
-                    <p className="font-medium text-lg">
+                    <p className="font-medium text-lg text-amber-600">
                       {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Expected Profit/Loss</p>
-                    <p className={`font-bold text-lg ${getProfitLossColor(calculateProfitLoss(currentProduct))}`}>
-                      {calculateProfitLoss(currentProduct).toLocaleString()} RWF
-                    </p>
-                  </div>
-                  <div>
+                  <div className="col-span-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                     <p className="text-sm text-muted-foreground">Restored Date</p>
-                    <p className="font-medium">{new Date(currentProduct.restoredDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{new Date(currentProduct.restoredDate).toLocaleDateString()} {new Date(currentProduct.restoredDate).toLocaleTimeString()}</p>
                   </div>
                 </div>
 
@@ -610,10 +615,9 @@ const ProductsRestoredPage: React.FC = () => {
               <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
-        {/* Sell Dialog */}
-        < Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen} >
+        <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Sell Restored Product</DialogTitle>
@@ -727,20 +731,20 @@ const ProductsRestoredPage: React.FC = () => {
                 disabled={
                   actionLoading ||
                   sellForm.quantity === '' ||
-                  sellForm.sellingPrice === '' ||
                   Number(sellForm.quantity) <= 0 ||
-                  Number(sellForm.sellingPrice) <= 0 ||
-                  Number(sellForm.quantity) > currentProduct?.quantity
+                  Number(sellForm.quantity) > currentProduct?.quantity ||
+                  sellForm.sellingPrice === '' ||
+                  Number(sellForm.sellingPrice) <= 0
                 }
               >
-                {actionLoading ? 'Processing...' : 'Confirm Sale'}
+                {actionLoading ? 'Selling...' : 'Confirm Sale'}
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
         {/* Delete Confirm Dialog */}
-        < Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} >
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Restored Product?</DialogTitle>
@@ -755,8 +759,8 @@ const ProductsRestoredPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
-      </div >
+        </Dialog>
+      </div>
     </>
   );
 };

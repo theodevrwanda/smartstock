@@ -183,6 +183,8 @@ export const restoreSoldProduct = async (
       status: 'restored',
       restoreComment: comment || null,
       quantity: restoreQty,
+      model: sold.model || '',
+      unit: sold.unit || 'pcs',
       restoredDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

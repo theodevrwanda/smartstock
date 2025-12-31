@@ -75,6 +75,17 @@ export const getBranches = async (businessId: string): Promise<Branch[]> => {
   }
 };
 
+const checkBranchDuplicate = async (businessId: string, branchName: string): Promise<boolean> => {
+  const branchesRef = collection(db, 'branches');
+  const q = query(
+    branchesRef,
+    where('businessId', '==', businessId),
+    where('branchName', '==', branchName.trim())
+  );
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+};
+
 // Add new branch with businessId + log transaction
 export const addBranch = async (
   branchData: Omit<Branch, 'id' | 'createdAt'>
@@ -84,6 +95,13 @@ export const addBranch = async (
       toast.error('Business ID is required');
       return null;
     }
+
+    const isDuplicate = await checkBranchDuplicate(branchData.businessId, branchData.branchName);
+    if (isDuplicate) {
+      toast.error('A branch with this name already exists');
+      return null;
+    }
+
     const branchesRef = collection(db, 'branches');
     const docRef = await addDoc(branchesRef, {
       ...branchData,
@@ -122,6 +140,21 @@ export const updateBranch = async (
 ): Promise<boolean> => {
   try {
     const branchRef = doc(db, 'branches', id);
+    const branchSnap = await getDoc(branchRef);
+    if (!branchSnap.exists()) {
+      toast.error('Branch not found');
+      return false;
+    }
+    const currentData = branchSnap.data() as Branch;
+
+    if (branchData.branchName && branchData.branchName.trim() !== currentData.branchName) {
+      const isDuplicate = await checkBranchDuplicate(currentData.businessId, branchData.branchName);
+      if (isDuplicate) {
+        toast.error('A branch with this name already exists');
+        return false;
+      }
+    }
+
     await updateDoc(branchRef, {
       ...branchData,
       updatedAt: new Date().toISOString(),

@@ -3,7 +3,7 @@ export interface Product {
     id?: string;
     productName: string;
     category: string;
-    model?: string;
+    model: string;
     costPrice: number;
     sellingPrice?: number | null;
     status: 'store' | 'sold' | 'restored' | 'deleted';
@@ -17,6 +17,9 @@ export interface Product {
     deadline?: string;
     confirm: boolean;
     businessId: string;
+    unit: string;
+    quantityPerUnit: number; // e.g., 24 (kg per bag)
+    baseUnit: string; // e.g., "kg"
     updatedAt?: string;
     productNameLower?: string;
     categoryLower?: string;
@@ -27,7 +30,7 @@ export interface SoldProduct {
     id: string;
     productName: string;
     category: string;
-    model?: string;
+    model: string;
     quantity: number;
     branch: string;
     costPrice: number;
@@ -38,13 +41,16 @@ export interface SoldProduct {
     buyerName?: string;
     buyerPhone?: string;
     paymentMethod?: string;
+    unit: string;
+    quantityPerUnit: number;
+    baseUnit: string;
 }
 
 export interface RestoredProduct {
     id: string;
     productName: string;
     category: string;
-    model?: string;
+    model: string;
     quantity: number;
     branch: string;
     costPrice: number;
@@ -52,6 +58,9 @@ export interface RestoredProduct {
     restoredDate: string;
     restoreComment?: string | null;
     businessId: string;
+    unit: string;
+    quantityPerUnit: number;
+    baseUnit: string;
 }
 
 export interface Branch {
@@ -156,7 +165,7 @@ export interface ProductReport {
     id: string;
     productName: string;
     category: string;
-    model?: string;
+    model: string;
     quantity: number;
     branch: string;
     costPrice: number;
@@ -168,6 +177,9 @@ export interface ProductReport {
     deletedDate?: string;
     restoreComment?: string;
     businessId: string;
+    unit: string;
+    quantityPerUnit: number;
+    baseUnit: string;
 }
 
 export interface ReportSummary {

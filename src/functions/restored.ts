@@ -63,7 +63,7 @@ export const subscribeToRestoredProducts = (
         id: d.id,
         productName: data.productName || 'Unknown Product',
         category: data.category || 'uncategorized',
-        model: data.model || undefined,
+        model: data.model || '',
         quantity: data.quantity || 0,
         branch: data.branch || '',
         costPrice: data.costPrice || 0,
@@ -75,6 +75,7 @@ export const subscribeToRestoredProducts = (
           : new Date().toISOString(),
         restoreComment: data.restoreComment || undefined,
         businessId: data.businessId || businessId,
+        unit: data.unit || 'pcs',
       };
     });
     onUpdate(products);
@@ -121,7 +122,7 @@ export const getRestoredProducts = async (
         id: d.id,
         productName: data.productName || 'Unknown Product',
         category: data.category || 'uncategorized',
-        model: data.model || undefined,
+        model: data.model || '',
         quantity: data.quantity || 0,
         branch: data.branch || '',
         costPrice: data.costPrice || 0,
@@ -133,6 +134,7 @@ export const getRestoredProducts = async (
           : new Date().toISOString(),
         restoreComment: data.restoreComment || undefined,
         businessId: data.businessId || businessId,
+        unit: data.unit || 'pcs',
       };
     });
 

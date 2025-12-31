@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info } from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info, Calendar as CalendarIcon, TrendingUp, TrendingDown, DollarSign, Award } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -24,6 +25,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -61,6 +66,7 @@ const ProductsSoldPage: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minQty, setMinQty] = useState<string>('');
   const [maxQty, setMaxQty] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Sorting
   const [sortColumn, setSortColumn] = useState<keyof SoldProduct | 'branchName'>('soldDate');
@@ -179,7 +185,7 @@ const ProductsSoldPage: React.FC = () => {
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
     { header: 'Model', key: 'model', width: 15 },
-    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Quantity', key: 'quantityFormatted', width: 15 },
     { header: 'Branch', key: 'branchName', width: 20 },
     { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
     { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
@@ -194,7 +200,7 @@ const ProductsSoldPage: React.FC = () => {
       productName: p.productName,
       category: p.category,
       model: p.model || '-',
-      quantity: p.quantity,
+      quantityFormatted: `${p.quantity} ${p.unit || 'pcs'}`,
       branchName: getBranchName(p.branch),
       costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
       sellingPriceFormatted: `${p.sellingPrice.toLocaleString()} RWF`,
@@ -241,6 +247,46 @@ const ProductsSoldPage: React.FC = () => {
     if (!deadline) return false;
     return new Date(deadline) >= new Date();
   };
+
+  // Income calculations based on selectedDate
+  const incomeStats = useMemo(() => {
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(selectedDate);
+    const monthEnd = endOfMonth(selectedDate);
+    const yearStart = startOfYear(selectedDate);
+    const yearEnd = endOfYear(selectedDate);
+
+    const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+    let daily = 0;
+    let weekly = 0;
+    let monthly = 0;
+    let yearly = 0;
+
+    const timelineData = weeklyDays.map(day => {
+      const dayIncome = soldProducts
+        .filter(p => isSameDay(new Date(p.soldDate), day))
+        .reduce((sum, p) => sum + (p.quantity * p.sellingPrice), 0);
+      return {
+        dayName: format(day, 'EEE').toUpperCase(),
+        date: day,
+        income: dayIncome
+      };
+    });
+
+    soldProducts.forEach(p => {
+      const soldDateObj = new Date(p.soldDate);
+      const amount = p.quantity * p.sellingPrice;
+
+      if (isSameDay(soldDateObj, selectedDate)) daily += amount;
+      if (isWithinInterval(soldDateObj, { start: weekStart, end: weekEnd })) weekly += amount;
+      if (isWithinInterval(soldDateObj, { start: monthStart, end: monthEnd })) monthly += amount;
+      if (isWithinInterval(soldDateObj, { start: yearStart, end: yearEnd })) yearly += amount;
+    });
+
+    return { daily, weekly, monthly, yearly, timelineData };
+  }, [soldProducts, selectedDate]);
 
   const handleRestore = async () => {
     if (!currentProduct || restoreForm.quantity === '' || Number(restoreForm.quantity) <= 0) {
@@ -358,12 +404,137 @@ const ProductsSoldPage: React.FC = () => {
           </DropdownMenu>
         </div>
 
-        {/* Profit/Loss Summary */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border">
-          <h2 className="text-xl font-semibold mb-3">Total Profit / Loss (Filtered View)</h2>
-          <p className={`text-3xl font-bold ${getProfitLossColor(calculateTotalProfitLoss())}`}>
-            {calculateTotalProfitLoss().toLocaleString()} RWF
-          </p>
+        {/* Date Context and Dashboard Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
+            <CalendarIcon size={14} className="text-gray-500" />
+            <span className="text-gray-600 dark:text-gray-400">Displaying context for:</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+          </Badge>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-white dark:bg-gray-900 shadow-sm">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Income Summary Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Weekly Income Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Income</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">{incomeStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+            <div className="absolute -right-4 -bottom-4 opacity-10">
+              <TrendingUp size={120} />
+            </div>
+          </Card>
+
+          {/* Monthly Income Card */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Income</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">{incomeStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+            <div className="absolute -right-4 -bottom-4 opacity-10">
+              <DollarSign size={120} />
+            </div>
+          </Card>
+
+          {/* Yearly Income Card */}
+          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <Award size={14} className="text-orange-500" />
+                Yearly Income
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
+                {format(selectedDate, 'yyyy')} Yearly
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Total Revenue</p>
+                  <div className="text-3xl font-bold">{incomeStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Weekly Timeline */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+          {incomeStats.timelineData.map((item, idx) => {
+            const isSelected = isSameDay(item.date, selectedDate);
+            return (
+              <motion.div
+                key={idx}
+                whileHover={{ y: -4 }}
+                onClick={() => setSelectedDate(item.date)}
+                className={cn(
+                  "p-4 rounded-xl border cursor-pointer transition-all duration-300",
+                  isSelected
+                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                )}
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <span className={cn(
+                    "text-[10px] font-bold tracking-tighter uppercase",
+                    isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"
+                  )}>
+                    {item.dayName} {isSelected && "•"}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className={cn(
+                      "text-sm font-black",
+                      isSelected ? "text-white" : "text-blue-600 dark:text-blue-400"
+                    )}>
+                      {item.income.toLocaleString()}
+                    </span>
+                    <span className={cn(
+                      "text-[9px] uppercase font-medium opacity-60",
+                      isSelected ? "text-amber-200" : "text-gray-500"
+                    )}>
+                      income
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Filters */}
@@ -412,33 +583,28 @@ const ProductsSoldPage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">#</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
                   <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Model</TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">Sold Qty <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                {isAdmin && (
-                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
-                  </TableHead>
-                )}
+                <TableHead>Unit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">Cost Price (Base) <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('sellingPrice')}>
-                  <div className="flex items-center gap-1">Selling Price <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">Selling Price (Base) <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Total Amount</TableHead>
+                <TableHead>Total Total</TableHead>
                 <TableHead>Profit/Loss</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('soldDate')}>
                   <div className="flex items-center gap-1">Sold Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Return Deadline</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -446,7 +612,7 @@ const ProductsSoldPage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
                       No sold products found.
                     </TableCell>
                   </TableRow>
@@ -461,54 +627,59 @@ const ProductsSoldPage: React.FC = () => {
                       layout
                       className="group hover:bg-muted/30 transition-colors"
                     >
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {sortedProducts.indexOf(product) + 1}
+                      </TableCell>
                       <TableCell className="font-medium">
-                        <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                        <div className="flex flex-col">
+                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{product.model || '-'}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
                           {product.category}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">{product.model || '-'}</span>
-                      </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant="outline"
-                          className="border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
-                        >
-                          {product.quantity}
+                        <span className="font-bold text-lg">
+                          {product.quantity.toLocaleString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {product.unit || 'pcs'}
                         </Badge>
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-center">
-                          <span className="text-sm font-medium">{getBranchName(product.branch)}</span>
-                        </TableCell>
-                      )}
                       <TableCell>
                         <span className="font-semibold text-gray-900 dark:text-gray-100">
-                          {Number(product.costPrice).toLocaleString()} RWF
+                          {Number(product.costPrice || 0).toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-green-600">
-                          {Number(product.sellingPrice).toLocaleString()} RWF
+                          {Number(product.sellingPrice || 0).toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-bold">
-                          {(Number(product.quantity) * Number(product.sellingPrice)).toLocaleString()} RWF
+                        <span className="font-black text-amber-600">
+                          {(product.quantity * product.sellingPrice).toLocaleString()}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className={`font-bold ${getProfitLossColor(calculateProfitLoss(product))}`}>
-                          {calculateProfitLoss(product).toLocaleString()} RWF
-                        </span>
+                        {(() => {
+                          const profit = (product.sellingPrice - product.costPrice) * product.quantity;
+                          return (
+                            <div className={`flex items-center gap-1 font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {profit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                              {profit.toLocaleString()}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col text-sm text-muted-foreground">
                           <span>{new Date(product.soldDate).toLocaleDateString()}</span>
-                          <span className="text-xs">{new Date(product.soldDate).toLocaleTimeString()}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -587,7 +758,7 @@ const ProductsSoldPage: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Quantity</p>
-                    <p className="font-medium">{currentProduct.quantity}</p>
+                    <p className="font-medium">{currentProduct.quantity} {currentProduct.unit || 'pcs'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Branch</p>
@@ -628,10 +799,10 @@ const ProductsSoldPage: React.FC = () => {
               <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
         {/* Restore Dialog */}
-        < Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen} >
+        <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Restore Sold Product</DialogTitle>
@@ -714,10 +885,10 @@ const ProductsSoldPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
         {/* Delete Confirm Dialog */}
-        < Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} >
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Sale Record?</DialogTitle>
@@ -732,8 +903,8 @@ const ProductsSoldPage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
-      </div >
+        </Dialog>
+      </div>
     </>
   );
 };

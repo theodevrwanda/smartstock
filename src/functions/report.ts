@@ -68,7 +68,7 @@ export const getReportData = async (
         id: doc.id,
         productName: data.productName || '',
         category: data.category || '',
-        model: data.model || undefined,
+        model: data.model || '',
         quantity,
         branch: data.branch || '',
         costPrice,
@@ -80,6 +80,9 @@ export const getReportData = async (
         deletedDate: data.deletedDate || undefined,
         restoreComment: data.restoreComment || undefined,
         businessId: data.businessId,
+        unit: data.unit || 'pcs',
+        quantityPerUnit: Number(data.quantityPerUnit) || 1,
+        baseUnit: data.baseUnit || data.unit || 'pcs',
       };
     });
 

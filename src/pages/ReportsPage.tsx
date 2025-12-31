@@ -17,8 +17,9 @@ import {
 import { Search, Download, ArrowUpDown, FileSpreadsheet, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getReportData, ProductReport, ReportSummary } from '@/functions/report';
-import { getBranches, Branch } from '@/functions/branch';
+import { getReportData } from '@/functions/report';
+import { getBranches } from '@/functions/branch';
+import { ProductReport, ReportSummary, Branch } from '@/types/interface';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ReportsPage: React.FC = () => {
@@ -151,7 +152,7 @@ const ReportsPage: React.FC = () => {
     { header: 'Product Name', key: 'productName', width: 30 },
     { header: 'Category', key: 'category', width: 15 },
     { header: 'Model', key: 'model', width: 20 },
-    { header: 'Quantity', key: 'quantity', width: 10 },
+    { header: 'Quantity', key: 'quantityFormatted', width: 15 },
     ...(isAdmin ? [{ header: 'Branch', key: 'branchName', width: 20 }] : []),
     { header: 'Status', key: 'status', width: 12 },
     { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
@@ -167,7 +168,7 @@ const ReportsPage: React.FC = () => {
       productName: p.productName,
       category: p.category,
       model: p.model || '-',
-      quantity: p.quantity,
+      quantityFormatted: `${p.quantity} ${p.unit || 'pcs'}`,
       ...(isAdmin ? { branchName: getBranchName(p.branch) } : {}),
       status: p.status.charAt(0).toUpperCase() + p.status.slice(1),
       costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
@@ -350,18 +351,18 @@ const ReportsPage: React.FC = () => {
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Model</TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">Qty <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                <TableHead>Unit</TableHead>
                 {isAdmin && (
                   <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
                     <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                   </TableHead>
                 )}
                 <TableHead>Status</TableHead>
-                <TableHead>Cost Price</TableHead>
-                <TableHead>Selling Price</TableHead>
+                <TableHead>Cost Price (Base)</TableHead>
+                <TableHead>Selling Price (Base)</TableHead>
                 <TableHead>Profit/Loss</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
                   <div className="flex items-center gap-1">Added Date <ArrowUpDown className="h-4 w-4" /></div>
@@ -387,17 +388,26 @@ const ReportsPage: React.FC = () => {
               ) : (
                 sortedProducts.map(p => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.productName}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{p.productName}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">{p.model || '-'}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{p.category}</TableCell>
-                    <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center">{p.quantity}</TableCell>
+                    <TableCell className="text-center font-bold">{p.quantity.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {p.baseUnit || p.unit || 'pcs'}
+                      </Badge>
+                    </TableCell>
                     {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
                     <TableCell>
                       <Badge variant={
                         p.status === 'store' ? 'default' :
                           p.status === 'sold' ? 'secondary' :
                             p.status === 'restored' ? 'outline' :
-                              'destructive'
+                              p.status === 'deleted' ? 'destructive' : 'secondary'
                       }>
                         {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
                       </Badge>
@@ -415,12 +425,12 @@ const ReportsPage: React.FC = () => {
                         ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF`
                         : '-'}
                     </TableCell>
-                    <TableCell>{new Date(p.addedDate).toLocaleDateString()}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">{new Date(p.addedDate).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs">
                       {p.soldDate ? new Date(p.soldDate).toLocaleDateString() :
                         p.deletedDate ? new Date(p.deletedDate).toLocaleDateString() : '-'}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">{p.restoreComment || '-'}</TableCell>
+                    <TableCell className="max-w-[150px] truncate text-xs">{p.restoreComment || '-'}</TableCell>
                   </TableRow>
                 ))
               )}

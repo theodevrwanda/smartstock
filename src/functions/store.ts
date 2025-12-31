@@ -86,12 +86,16 @@ export const syncOfflineOperations = async (): Promise<void> => {
           });
         } else {
           const newRef = doc(productsRef);
-          const newProduct = {
+          const newProduct: Product = {
             ...op.data,
             id: newRef.id,
             productNameLower: normalizedName,
             categoryLower: normalizedCategory,
-            modelLower: normalizedModel || null,
+            modelLower: normalizedModel || '',
+            model: op.data.model || '',
+            unit: op.data.unit || 'pcs',
+            quantityPerUnit: op.data.quantityPerUnit || 1,
+            baseUnit: op.data.baseUnit || op.data.unit || 'pcs',
             addedDate: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sellingPrice: null,
@@ -101,8 +105,11 @@ export const syncOfflineOperations = async (): Promise<void> => {
         }
       } else if (op.type === 'sell') {
         const originalRef = doc(db, 'products', op.productId);
+        const qtyPerUnit = op.originalProduct.quantityPerUnit || 1;
+        const stockUnitsToDecrement = op.quantity / qtyPerUnit;
+
         batch.update(originalRef, {
-          quantity: increment(-op.quantity),
+          quantity: increment(-stockUnitsToDecrement),
           updatedAt: new Date().toISOString(),
         });
 
@@ -114,6 +121,7 @@ export const syncOfflineOperations = async (): Promise<void> => {
           soldDate: new Date().toISOString(),
           quantity: op.quantity,
           deadline: op.deadline || null,
+          unit: op.originalProduct?.unit || null,
           updatedAt: new Date().toISOString(),
         };
         batch.set(soldRef, soldData);
@@ -232,7 +240,10 @@ export const addOrUpdateProduct = async (
     branch: string;
     businessId: string;
     confirm: boolean;
-    deadline?: string; // Added deadline
+    unit?: string;
+    quantityPerUnit?: number;
+    baseUnit?: string;
+    deadline?: string;
   }
 ): Promise<Product | null> => {
   if (!data.branch) {
@@ -249,16 +260,24 @@ export const addOrUpdateProduct = async (
     toast.success('Saved locally (offline) – will sync when online');
     return {
       id: `local-${Date.now()}`,
-      ...data,
+      productName: data.productName,
+      category: data.category,
+      model: data.model || '',
+      costPrice: data.costPrice,
+      sellingPrice: null,
+      status: 'store',
+      addedDate: new Date().toISOString(),
+      quantity: Number(data.quantity),
+      branch: data.branch,
+      confirm: data.confirm,
+      businessId: data.businessId,
+      unit: data.unit || 'pcs',
+      quantityPerUnit: data.quantityPerUnit || 1,
+      baseUnit: data.baseUnit || data.unit || 'pcs',
       productNameLower: data.productName.toLowerCase(),
       categoryLower: data.category.toLowerCase(),
       modelLower: (data.model || '').toLowerCase(),
-      addedDate: new Date().toISOString(),
-      status: 'store' as const,
-      sellingPrice: null,
-      confirm: data.confirm,
-      deadline: data.deadline, // persist deadline
-    };
+    } as Product;
   }
 
   try {
@@ -320,8 +339,8 @@ export const addOrUpdateProduct = async (
         productNameLower: normalizedName,
         category: data.category.trim(),
         categoryLower: normalizedCategory,
-        model: data.model?.trim() || null,
-        modelLower: normalizedModel || null,
+        model: data.model?.trim() || '',
+        modelLower: normalizedModel || '',
         costPrice: data.costPrice,
         sellingPrice: null,
         status: 'store',
@@ -330,7 +349,10 @@ export const addOrUpdateProduct = async (
         branch: data.branch,
         businessId: data.businessId,
         confirm: data.confirm,
-        deadline: data.deadline, // field added
+        deadline: data.deadline,
+        unit: data.unit || 'pcs',
+        quantityPerUnit: data.quantityPerUnit || 1,
+        baseUnit: data.baseUnit || data.unit || 'pcs',
         updatedAt: new Date().toISOString(),
       };
 
@@ -387,7 +409,9 @@ export const sellProduct = async (
       return false;
     }
 
-    if (quantity > product.quantity) {
+    // Convert stock to base units for verification
+    const totalBaseStock = product.quantity * (product.quantityPerUnit || 1);
+    if (quantity > totalBaseStock) {
       toast.error('Not enough stock');
       return false;
     }
@@ -396,7 +420,7 @@ export const sellProduct = async (
     queue.push({
       type: 'sell',
       productId: id,
-      quantity,
+      quantity, // sold in base units
       sellingPrice,
       deadline: deadline || null,
       originalProduct: product,
@@ -428,19 +452,26 @@ export const sellProduct = async (
       return false;
     }
 
-    if (quantity > original.quantity || sellingPrice <= 0 || quantity <= 0) {
+    const qtyPerUnit = original.quantityPerUnit || 1;
+    const totalBaseStock = original.quantity * qtyPerUnit;
+
+    if (quantity > totalBaseStock || sellingPrice <= 0 || quantity <= 0) {
       toast.error('Invalid quantity or price');
       return false;
     }
 
     const totalAmount = quantity * sellingPrice;
-    const costTotal = quantity * original.costPrice;
+    const costPerBaseUnit = original.costPrice / qtyPerUnit;
+    const costTotal = quantity * costPerBaseUnit;
+
     const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
     const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
 
+    const stockUnitsToDecrement = quantity / qtyPerUnit;
+
     await runTransaction(db, async (transaction) => {
       transaction.update(originalDoc, {
-        quantity: original.quantity - quantity,
+        quantity: original.quantity - stockUnitsToDecrement,
         updatedAt: new Date().toISOString(),
       });
 
@@ -450,9 +481,13 @@ export const sellProduct = async (
         id: soldRef.id,
         status: 'sold',
         sellingPrice,
+        costPrice: costPerBaseUnit,
         soldDate: new Date().toISOString(),
         quantity,
         deadline: deadline || null,
+        unit: original.baseUnit || original.unit || 'pcs',
+        quantityPerUnit: qtyPerUnit,
+        baseUnit: original.baseUnit || original.unit || 'pcs',
         updatedAt: new Date().toISOString(),
       });
     });

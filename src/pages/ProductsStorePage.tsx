@@ -95,16 +95,21 @@ const ProductsStorePage: React.FC = () => {
     productName: '',
     category: '',
     model: '',
-    costPrice: '' as string | number,
     quantity: '' as string | number,
-    branch: '', // New for Admin
-    deadline: ''
+    costPrice: '' as string | number,
+    unit: 'pcs',
+    branch: '',
+    quantityPerUnit: '1' as string | number,
+    baseUnit: 'pcs',
+    deadline: '',
+    confirm: isAdmin ? true : false,
   });
 
   const [sellForm, setSellForm] = useState({
     quantity: '' as string | number,
     sellingPrice: '' as string | number,
     deadline: '',
+    sellInBaseUnit: true,
   });
 
   // Transaction context
@@ -317,10 +322,13 @@ const ProductsStorePage: React.FC = () => {
       model: newProduct.model,
       costPrice: Number(newProduct.costPrice),
       quantity: Number(newProduct.quantity),
+      unit: newProduct.unit,
       branch: targetBranch,
       businessId: businessId!,
       confirm: isAdmin, // Staff always false, Admin true
       deadline: finalDeadline,
+      quantityPerUnit: Number(newProduct.quantityPerUnit),
+      baseUnit: newProduct.baseUnit,
     });
 
     if (result) {
@@ -331,7 +339,7 @@ const ProductsStorePage: React.FC = () => {
       });
       toast.success(isOnline ? 'Product added' : 'Added locally');
       setAddDialogOpen(false);
-      setNewProduct({ productName: '', category: '', model: '', costPrice: '', quantity: '', branch: '', deadline: '' });
+      setNewProduct({ productName: '', category: '', model: '', quantity: '', costPrice: '', branch: '', unit: 'pcs', quantityPerUnit: '1', baseUnit: 'pcs' });
     }
     setActionLoading(false);
   };
@@ -350,6 +358,9 @@ const ProductsStorePage: React.FC = () => {
       model: currentProduct.model?.trim() || null,
       costPrice: currentProduct.costPrice,
       quantity: currentProduct.quantity,
+      unit: currentProduct.unit,
+      quantityPerUnit: currentProduct.quantityPerUnit,
+      baseUnit: currentProduct.baseUnit,
     };
 
     const success = await updateProduct(currentProduct.id!, updates);
@@ -358,6 +369,7 @@ const ProductsStorePage: React.FC = () => {
       toast.success('Updated');
       setEditDialogOpen(false);
       setCurrentProduct(null);
+      setNewProduct({ productName: '', category: '', model: '', quantity: '', costPrice: '', unit: 'pcs', branch: '', quantityPerUnit: '1', baseUnit: 'pcs', deadline: '', confirm: isAdmin });
     }
     setActionLoading(false);
   };
@@ -374,13 +386,18 @@ const ProductsStorePage: React.FC = () => {
     }
 
     setActionLoading(true);
-    const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
+    // Convert to base quantity for the server call
+    const qtyPerUnit = currentProduct.quantityPerUnit || 1;
+    const baseQtyToSell = sellForm.sellInBaseUnit ? qty : (qty * qtyPerUnit);
+    const stockUnitsToDecrement = baseQtyToSell / qtyPerUnit;
+
+    const success = await sellProduct(currentProduct.id!, baseQtyToSell, price, sellForm.deadline, userBranch);
     if (success) {
-      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
-      toast.success(`Sold ${qty} unit(s)`);
+      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - stockUnitsToDecrement } : p));
+      toast.success(`Sold ${qty} ${sellForm.sellInBaseUnit ? (currentProduct.baseUnit || 'units') : (currentProduct.unit || 'units')}`);
       setSellDialogOpen(false);
       setConfirmSaleDialogOpen(false);
-      setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+      setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true });
     }
     setActionLoading(false);
   };
@@ -519,22 +536,23 @@ const ProductsStorePage: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">#</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
                   <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Model</TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">Stock (Units) <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                {isAdmin && <TableHead>Branch</TableHead>}
+                <TableHead>Unit</TableHead>
+                <TableHead>Qty per Unit (Subunit)</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">Cost Price per Unit (RWF) <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Confirmed</TableHead>
+                <TableHead>Stock in Base Unit (Base Unit)</TableHead>
+                <TableHead>Amount (RWF)</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -542,12 +560,12 @@ const ProductsStorePage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 8 : 7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                       No products found matching your filters.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedProducts.map((product) => (
+                  sortedProducts.map((product, idx) => (
                     <motion.tr
                       key={product.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -557,46 +575,55 @@ const ProductsStorePage: React.FC = () => {
                       layout // Smooth layout transitions
                       className="group hover:bg-muted/30 transition-colors border-b last:border-0"
                     >
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {idx + 1}
+                      </TableCell>
                       <TableCell className="font-medium">
-                        <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                        <div className="flex flex-col">
+                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{product.model || '-'}</span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-100 transition-colors">
                           {product.category}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">{product.model || '-'}</span>
-                      </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant={product.quantity <= 5 ? "destructive" : "outline"}
-                          className={`${product.quantity <= 5
-                            ? "animate-pulse"
-                            : "border-green-200 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-900/20"
-                            }`}
-                        >
-                          {product.quantity}
+                        <span className="font-bold text-lg">
+                          {Math.floor(product.quantity)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {product.unit || 'pcs'}
                         </Badge>
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          <div className="flex flex-col text-sm">
-                            <span className="font-medium">{getBranchName(product.branch)}</span>
-                          </div>
-                        </TableCell>
-                      )}
+                      <TableCell>
+                        <div className="text-sm">
+                          <span className="font-semibold">{product.quantityPerUnit || 1}</span>
+                          <span className="ml-1 text-muted-foreground">{product.baseUnit || product.unit || 'pcs'}</span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-semibold text-gray-900 dark:text-gray-100">
-                            {(product.costPrice && Number(product.costPrice) > 0) ? Number(product.costPrice).toLocaleString() : '0'} RWF
+                            {Number(product.costPrice || 0).toLocaleString()} RWF
                           </span>
-                          {(product.sellingPrice !== undefined && product.sellingPrice !== null && Number(product.sellingPrice) > 0) && (
-                            <span className="text-xs text-green-600 font-medium">
-                              Sell: {Number(product.sellingPrice).toLocaleString()} RWF
-                            </span>
-                          )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-blue-600 dark:text-blue-400">
+                            {Number(product.quantity * (product.quantityPerUnit || 1)).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{product.baseUnit || product.unit || 'pcs'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-black text-amber-600 dark:text-amber-400">
+                          {Number(product.quantity * product.costPrice).toLocaleString()}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(product.quantity)}
@@ -619,6 +646,16 @@ const ProductsStorePage: React.FC = () => {
                             </span>
                           )}
                         </Badge>
+                        {(canConfirm && !product.confirm) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="ml-2 h-6 px-2 text-xs bg-green-50 text-green-600 hover:bg-green-100 border border-green-200"
+                            onClick={() => openConfirmProductDialog(product.id!, product.confirm)}
+                          >
+                            Confirm
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -644,13 +681,14 @@ const ProductsStorePage: React.FC = () => {
                                 setNewProduct({
                                   productName: product.productName,
                                   category: product.category,
-                                  model: product.model || undefined,
+                                  model: product.model || '',
                                   quantity: product.quantity,
                                   costPrice: product.costPrice,
-                                  sellingPrice: product.sellingPrice || undefined,
-                                  branch: product.branch, // Hidden/Fixed for staff
-                                  deadline: product.deadline ? new Date(product.deadline).toISOString().split('T')[0] : '', // Format date for input
-                                  supplier: product.supplier,
+                                  unit: product.unit || 'pcs',
+                                  branch: product.branch,
+                                  quantityPerUnit: product.quantityPerUnit || 1,
+                                  baseUnit: product.baseUnit || product.unit || 'pcs',
+                                  deadline: product.deadline || '',
                                   confirm: product.confirm
                                 });
                                 setEditDialogOpen(true);
@@ -666,10 +704,10 @@ const ProductsStorePage: React.FC = () => {
                             onClick={() => {
                               setCurrentProduct(product);
                               setSellForm({
-                                quantity: 1,
-                                type: 'cash', // Default
-                                buyerName: '',
-                                buyerPhone: ''
+                                quantity: '',
+                                sellingPrice: product.sellingPrice || (product.costPrice / (product.quantityPerUnit || 1)),
+                                deadline: product.deadline || '',
+                                sellInBaseUnit: true
                               });
                               // Staff cannot sell unconfirmed products
                               if (user?.role === 'staff' && !product.confirm) {
@@ -732,7 +770,7 @@ const ProductsStorePage: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="font-bold">{p.quantity}</Badge>
+                          <Badge variant="outline" className="font-bold">{p.quantity} {p.unit || 'pcs'}</Badge>
                           {getStatusBadge(p.quantity)}
                         </div>
                       </div>
@@ -801,16 +839,54 @@ const ProductsStorePage: React.FC = () => {
                 <Input value={newProduct.model} onChange={e => setNewProduct(p => ({ ...p, model: e.target.value }))} />
               </div>
               <div className="grid gap-2">
-                <Label>Cost Price (RWF) *</Label>
-                <Input type="number" value={newProduct.costPrice} onChange={e => setNewProduct(p => ({ ...p, costPrice: e.target.value === '' ? '' : Number(e.target.value) }))} />
-              </div>
-              <div className="grid gap-2">
+                <Label>Quantity *</Label>
                 <Input type="number" min="1" value={newProduct.quantity} onChange={e => setNewProduct(p => ({ ...p, quantity: e.target.value === '' ? '' : Number(e.target.value) }))} />
               </div>
-              <div className="grid gap-2">
-                <Label>Deadline (Optional)</Label>
-                <Input type="date" value={newProduct.deadline} onChange={e => setNewProduct(p => ({ ...p, deadline: e.target.value }))} />
-                <p className="text-xs text-muted-foreground">Defaults to 5 days from now if not set.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Unit *</Label>
+                  <Select
+                    value={newProduct.unit}
+                    onValueChange={(val) => setNewProduct(p => ({ ...p, unit: val }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pcs">Pieces (pcs)</SelectItem>
+                      <SelectItem value="bag">Bag</SelectItem>
+                      <SelectItem value="crate">Crate</SelectItem>
+                      <SelectItem value="liter">Liter</SelectItem>
+                      <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                      <SelectItem value="sack">Sack</SelectItem>
+                      <SelectItem value="bottle">Bottle</SelectItem>
+                      <SelectItem value="pack">Pack</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Quantity per Unit *</Label>
+                  <Input
+                    type="number"
+                    value={newProduct.quantityPerUnit}
+                    onChange={e => setNewProduct(p => ({ ...p, quantityPerUnit: e.target.value === '' ? '' : Number(e.target.value) }))}
+                    placeholder="e.g. 24 for Bag"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Base Unit *</Label>
+                  <Input
+                    value={newProduct.baseUnit}
+                    onChange={e => setNewProduct(p => ({ ...p, baseUnit: e.target.value }))}
+                    placeholder="e.g. kg, liters"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Cost Price per Unit *</Label>
+                  <Input type="number" value={newProduct.costPrice} onChange={e => setNewProduct(p => ({ ...p, costPrice: e.target.value === '' ? '' : Number(e.target.value) }))} />
+                </div>
               </div>
               {isAdmin && (
                 <div className="grid gap-2">
@@ -829,16 +905,6 @@ const ProductsStorePage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-              {(typeof newProduct.costPrice === 'number' && newProduct.costPrice > 0 && typeof newProduct.quantity === 'number' && newProduct.quantity > 0) && (
-                <Card className="bg-indigo-50 dark:bg-indigo-950 border-indigo-200">
-                  <CardContent className="pt-6">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total Value:</span>
-                      <span>{(newProduct.costPrice * newProduct.quantity).toLocaleString()} RWF</span>
-                    </div>
-                  </CardContent>
-                </Card>
               )}
             </div>
             <DialogFooter>
@@ -880,23 +946,53 @@ const ProductsStorePage: React.FC = () => {
                     onChange={e => setCurrentProduct(prev => prev ? { ...prev, model: e.target.value || null } : null)}
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label>Cost Price (RWF) *</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={currentProduct.costPrice}
-                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Quantity *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={currentProduct.quantity}
+                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, quantity: Number(e.target.value) || 0 } : null)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Unit *</Label>
+                    <Select
+                      value={currentProduct.unit}
+                      onValueChange={(val) => setCurrentProduct(prev => prev ? { ...prev, unit: val } : null)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pcs">Pieces (pcs)</SelectItem>
+                        <SelectItem value="bag">Bag</SelectItem>
+                        <SelectItem value="crate">Crate</SelectItem>
+                        <SelectItem value="liter">Liter</SelectItem>
+                        <SelectItem value="kg">Kilograms (kg)</SelectItem>
+                        <SelectItem value="sack">Sack</SelectItem>
+                        <SelectItem value="bottle">Bottle</SelectItem>
+                        <SelectItem value="pack">Pack</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label>Quantity *</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={currentProduct.quantity}
-                    onChange={e => setCurrentProduct(prev => prev ? { ...prev, quantity: Number(e.target.value) || 0 } : null)}
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Qty per Unit *</Label>
+                    <Input
+                      type="number"
+                      value={currentProduct.quantityPerUnit}
+                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, quantityPerUnit: Number(e.target.value) || 1 } : null)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Base Unit *</Label>
+                    <Input
+                      value={currentProduct.baseUnit}
+                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, baseUnit: e.target.value } : null)}
+                    />
+                  </div>
                 </div>
 
                 {/* Safe total value card */}
@@ -942,17 +1038,34 @@ const ProductsStorePage: React.FC = () => {
               <div className="space-y-6 py-4">
                 <div className="grid gap-4">
                   <div className="grid gap-2">
-                    <Label>Quantity to Sell</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max={currentProduct.quantity}
-                      value={sellForm.quantity}
-                      onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
-                    />
+                    <Label>Selling Unit</Label>
+                    <Select
+                      value={sellForm.sellInBaseUnit ? 'base' : 'stock'}
+                      onValueChange={(val) => setSellForm(s => ({ ...s, sellInBaseUnit: val === 'base' }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Selling Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="stock">{currentProduct.unit || 'Stock Unit'}</SelectItem>
+                        <SelectItem value="base">{currentProduct.baseUnit || 'Base Unit'}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Selling Price per Unit (RWF)</Label>
+                    <Label>Quantity to Sell *</Label>
+                    <Input
+                      type="number"
+                      value={sellForm.quantity}
+                      onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
+                      placeholder={sellForm.sellInBaseUnit ? `Amount in ${currentProduct.baseUnit || 'base units'}` : `Number of ${currentProduct.unit || 'stock units'}`}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Selling Price (per {sellForm.sellInBaseUnit ? (currentProduct.baseUnit || 'unit') : (currentProduct.unit || 'unit')}) *</Label>
                     <Input
                       type="number"
                       value={sellForm.sellingPrice}
@@ -969,39 +1082,69 @@ const ProductsStorePage: React.FC = () => {
                   </div>
                 </div>
 
-                {Number(sellForm.quantity) > currentProduct.quantity && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>Quantity exceeds available stock.</AlertDescription>
-                  </Alert>
-                )}
+                {(() => {
+                  const qtyPerUnit = currentProduct.quantityPerUnit || 1;
+                  const totalBaseStock = currentProduct.quantity * qtyPerUnit;
+                  const baseQtyToSell = sellForm.sellInBaseUnit ? Number(sellForm.quantity) : (Number(sellForm.quantity) * qtyPerUnit);
+
+                  if (baseQtyToSell > totalBaseStock) {
+                    return (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>Quantity exceeds available stock.</AlertDescription>
+                      </Alert>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
                   <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
                     <CardContent className="pt-6 space-y-3">
-                      <div className="flex justify-between text-lg">
-                        <span>Total Received:</span>
-                        <span className="font-bold">
-                          {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-lg">
-                        <span>Cost of Goods:</span>
-                        <span>{(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF</span>
-                      </div>
-                      <div className="flex justify-between text-xl font-bold pt-2 border-t">
-                        <span>Profit:</span>
-                        <span className={Number(sellForm.sellingPrice) >= currentProduct.costPrice ? 'text-green-600' : 'text-red-600'}>
-                          {((Number(sellForm.sellingPrice) - currentProduct.costPrice) * Number(sellForm.quantity)).toLocaleString()} RWF
-                        </span>
-                      </div>
+                      {(() => {
+                        const qtyPerUnit = currentProduct.quantityPerUnit || 1;
+                        const baseQtyToSell = sellForm.sellInBaseUnit ? Number(sellForm.quantity) : (Number(sellForm.quantity) * qtyPerUnit);
+                        const costPerBaseUnit = currentProduct.costPrice / qtyPerUnit;
+                        const totalCost = baseQtyToSell * costPerBaseUnit;
+                        const totalReceived = Number(sellForm.quantity) * Number(sellForm.sellingPrice);
+                        const profit = totalReceived - totalCost;
+
+                        return (
+                          <>
+                            <div className="flex justify-between text-lg">
+                              <span>Total Received:</span>
+                              <span className="font-bold">
+                                {totalReceived.toLocaleString()} RWF
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm text-muted-foreground italic">
+                              <span>Units to Sell:</span>
+                              <span>
+                                {sellForm.sellInBaseUnit
+                                  ? `${Number(sellForm.quantity).toLocaleString()} ${currentProduct.baseUnit || 'units'}`
+                                  : `${Number(sellForm.quantity).toLocaleString()} ${currentProduct.unit || 'units'}`}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-lg">
+                              <span>Cost of Goods:</span>
+                              <span>{totalCost.toLocaleString()} RWF</span>
+                            </div>
+                            <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                              <span>Profit:</span>
+                              <span className={profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                {profit.toLocaleString()} RWF
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 )}
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setSellDialogOpen(false); setSellForm({ quantity: '', sellingPrice: '', deadline: '' }); }}>
+              <Button variant="outline" onClick={() => { setSellDialogOpen(false); setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true }); }}>
                 Cancel
               </Button>
               <Button
@@ -1011,7 +1154,9 @@ const ProductsStorePage: React.FC = () => {
                   !currentProduct ||
                   Number(sellForm.quantity) <= 0 ||
                   Number(sellForm.sellingPrice) <= 0 ||
-                  Number(sellForm.quantity) > currentProduct.quantity
+                  (sellForm.sellInBaseUnit
+                    ? Number(sellForm.quantity) > (currentProduct.quantity * (currentProduct.quantityPerUnit || 1))
+                    : Number(sellForm.quantity) > currentProduct.quantity)
                 }
               >
                 Proceed to Confirm
@@ -1028,9 +1173,9 @@ const ProductsStorePage: React.FC = () => {
               <p>Are you sure you want to confirm this sale?</p>
               <div className="font-medium">
                 <p>Product: <strong>{currentProduct?.productName}</strong></p>
-                <p>Quantity: <strong>{sellForm.quantity}</strong></p>
-                <p>Selling Price: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
-                <p className="text-lg pt-2">Total: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
+                <p>Quantity: <strong>{sellForm.quantity} {sellForm.sellInBaseUnit ? currentProduct?.baseUnit : currentProduct?.unit}</strong></p>
+                <p>Price: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF / {sellForm.sellInBaseUnit ? currentProduct?.baseUnit : currentProduct?.unit}</strong></p>
+                <p className="text-lg pt-2">Total Total: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
               </div>
             </DialogDescription>
             <DialogFooter>
@@ -1063,7 +1208,7 @@ const ProductsStorePage: React.FC = () => {
                 <p><strong>Name:</strong> {currentProduct.productName}</p>
                 <p><strong>Category:</strong> {currentProduct.category}</p>
                 <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
-                <p><strong>Quantity:</strong> {currentProduct.quantity}</p>
+                <p><strong>Quantity:</strong> {currentProduct.quantity} {currentProduct.unit || 'pcs'}</p>
                 <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
                 <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
                 <p><strong>Status:</strong> {getStatusBadge(currentProduct.quantity)}</p>
@@ -1089,7 +1234,7 @@ const ProductsStorePage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-      </div>
+      </div >
     </>
   );
 };
