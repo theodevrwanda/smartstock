@@ -36,7 +36,9 @@ export interface TransactionLog {
   productName?: string;
   category?: string;
   quantity?: number;
+  unitCost?: number;
   costPrice?: number;
+  costPricePerUnit?: number; // Added for unit cost tracking
   sellingPrice?: number;
   profit?: number;
   loss?: number;

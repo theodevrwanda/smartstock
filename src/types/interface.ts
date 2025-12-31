@@ -18,8 +18,8 @@ export interface Product {
     confirm: boolean;
     businessId: string;
     unit: string;
-    quantityPerUnit: number; // e.g., 24 (kg per bag)
-    baseUnit: string; // e.g., "kg"
+    costType?: 'per' | 'all';
+    costPricePerUnit?: number; // Added to store unit cost specifically
     updatedAt?: string;
     productNameLower?: string;
     categoryLower?: string;
@@ -42,8 +42,9 @@ export interface SoldProduct {
     buyerPhone?: string;
     paymentMethod?: string;
     unit: string;
-    quantityPerUnit: number;
-    baseUnit: string;
+    costType?: 'per' | 'all';
+    costPricePerUnit?: number; // Added for consistency
+    unitCost?: number; // Kept for backward compatibility/clarity
 }
 
 export interface RestoredProduct {
@@ -59,8 +60,8 @@ export interface RestoredProduct {
     restoreComment?: string | null;
     businessId: string;
     unit: string;
-    quantityPerUnit: number;
-    baseUnit: string;
+    costType?: 'per' | 'all';
+    costPricePerUnit?: number;
 }
 
 export interface Branch {
@@ -178,8 +179,6 @@ export interface ProductReport {
     restoreComment?: string;
     businessId: string;
     unit: string;
-    quantityPerUnit: number;
-    baseUnit: string;
 }
 
 export interface ReportSummary {

@@ -126,7 +126,7 @@ const ProductsRestoredPage: React.FC = () => {
     return () => unsubscribe();
   }, [businessId, user?.role, userBranch, isAdmin]); // removed branchFilter from deps
 
-  const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
+  const getBranchName = useCallback((id: string | undefined | null) => branchMap.get(id || '') || 'Unknown', [branchMap]);
 
   const categories = ['All', ...Array.from(new Set(restoredProducts.map(p => p.category)))];
 
@@ -150,8 +150,8 @@ const ProductsRestoredPage: React.FC = () => {
   // Sorting
   const sortedProducts = useMemo(() => {
     return [...filteredProducts].sort((a, b) => {
-      let aVal: any = a[sortColumn as keyof RestoredProduct];
-      let bVal: any = b[sortColumn as keyof RestoredProduct];
+      let aVal = a[sortColumn as keyof RestoredProduct] as string | number;
+      let bVal = b[sortColumn as keyof RestoredProduct] as string | number;
 
       if (sortColumn === 'branchName') {
         aVal = getBranchName(a.branch);
@@ -165,7 +165,7 @@ const ProductsRestoredPage: React.FC = () => {
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredProducts, sortColumn, sortDirection]);
+  }, [filteredProducts, sortColumn, sortDirection, getBranchName]);
 
   const handleSort = (column: keyof RestoredProduct | 'branchName') => {
     if (sortColumn === column) {
@@ -233,7 +233,10 @@ const ProductsRestoredPage: React.FC = () => {
 
   const calculateProfitLoss = (p: RestoredProduct) => {
     const sellPrice = p.sellingPrice || p.costPrice;
-    return (sellPrice - p.costPrice) * p.quantity;
+    const baseCost = p.costType === 'total' && !p.costPricePerUnit
+      ? 0 // Fallback for old inconsistent data
+      : (p.costPricePerUnit || p.costPrice);
+    return (sellPrice - baseCost) * p.quantity;
   };
 
   const calculateTotalProfitLoss = () => {
@@ -407,16 +410,18 @@ const ProductsRestoredPage: React.FC = () => {
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('branch')}>
+                  <div className="flex items-center gap-1">Branch <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Qty <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">Restored Qty <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Unit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">Cost Price (Base) <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Selling Price (Base)</TableHead>
-                <TableHead>Total Amount</TableHead>
-                <TableHead>Profit/Loss</TableHead>
+                <TableHead>Selling Price</TableHead>
+                <TableHead>Total Value</TableHead>
+                <TableHead>Profit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('restoredDate')}>
                   <div className="flex items-center gap-1">Restored Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -460,15 +465,15 @@ const ProductsRestoredPage: React.FC = () => {
                           {product.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="font-bold text-lg">
-                          {product.quantity.toLocaleString()}
-                        </span>
-                      </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {product.unit || 'pcs'}
+                        <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                          {getBranchName(product.branch)}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="font-bold">
+                          {product.quantity.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{product.unit || 'pcs'}</span>
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-gray-900 dark:text-gray-100">
@@ -498,11 +503,7 @@ const ProductsRestoredPage: React.FC = () => {
                       <TableCell className="max-w-[150px] truncate text-muted-foreground" title={product.restoreComment}>
                         {product.restoreComment || '-'}
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          <span className="text-sm font-medium">{getBranchName(product.branch) || 'Unknown'}</span>
-                        </TableCell>
-                      )}
+
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button

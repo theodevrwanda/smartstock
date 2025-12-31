@@ -131,7 +131,7 @@ const ProductsSoldPage: React.FC = () => {
     return () => unsubscribe();
   }, [businessId, user?.role, userBranch, isAdmin]); // removed branchFilter from deps
 
-  const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
+  const getBranchName = useCallback((id: string | undefined | null) => branchMap.get(id || '') || 'Unknown', [branchMap]);
 
   const categories = ['All', ...Array.from(new Set(soldProducts.map(p => p.category)))];
 
@@ -154,8 +154,8 @@ const ProductsSoldPage: React.FC = () => {
   // Sorting
   const sortedProducts = useMemo(() => {
     return [...filteredProducts].sort((a, b) => {
-      let aVal: any = a[sortColumn as keyof SoldProduct];
-      let bVal: any = b[sortColumn as keyof SoldProduct];
+      let aVal = a[sortColumn as keyof SoldProduct] as string | number;
+      let bVal = b[sortColumn as keyof SoldProduct] as string | number;
 
       if (sortColumn === 'branchName') {
         aVal = getBranchName(a.branch);
@@ -169,7 +169,7 @@ const ProductsSoldPage: React.FC = () => {
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredProducts, sortColumn, sortDirection]);
+  }, [filteredProducts, sortColumn, sortDirection, getBranchName]);
 
   const handleSort = (column: keyof SoldProduct | 'branchName') => {
     if (sortColumn === column) {
@@ -236,7 +236,10 @@ const ProductsSoldPage: React.FC = () => {
   };
 
   const calculateProfitLoss = (p: SoldProduct) => {
-    return (p.sellingPrice - p.costPrice) * p.quantity;
+    const baseCost = p.costType === 'total' && !p.costPricePerUnit && !p.unitCost
+      ? 0 // Fallback for very old inconsistent data if any
+      : (p.costPricePerUnit || p.unitCost || p.costPrice);
+    return (p.sellingPrice - baseCost) * p.quantity;
   };
 
   const calculateTotalProfitLoss = () => {
@@ -248,14 +251,13 @@ const ProductsSoldPage: React.FC = () => {
     return new Date(deadline) >= new Date();
   };
 
-  // Income calculations based on selectedDate
+  // Income calculations based on selectedDate and filters
   const incomeStats = useMemo(() => {
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
     const monthStart = startOfMonth(selectedDate);
     const monthEnd = endOfMonth(selectedDate);
     const yearStart = startOfYear(selectedDate);
-    const yearEnd = endOfYear(selectedDate);
 
     const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
@@ -265,7 +267,7 @@ const ProductsSoldPage: React.FC = () => {
     let yearly = 0;
 
     const timelineData = weeklyDays.map(day => {
-      const dayIncome = soldProducts
+      const dayIncome = filteredProducts
         .filter(p => isSameDay(new Date(p.soldDate), day))
         .reduce((sum, p) => sum + (p.quantity * p.sellingPrice), 0);
       return {
@@ -275,18 +277,18 @@ const ProductsSoldPage: React.FC = () => {
       };
     });
 
-    soldProducts.forEach(p => {
+    filteredProducts.forEach(p => {
       const soldDateObj = new Date(p.soldDate);
       const amount = p.quantity * p.sellingPrice;
 
       if (isSameDay(soldDateObj, selectedDate)) daily += amount;
       if (isWithinInterval(soldDateObj, { start: weekStart, end: weekEnd })) weekly += amount;
       if (isWithinInterval(soldDateObj, { start: monthStart, end: monthEnd })) monthly += amount;
-      if (isWithinInterval(soldDateObj, { start: yearStart, end: yearEnd })) yearly += amount;
+      if (isWithinInterval(soldDateObj, { start: yearStart, end: endOfYear(selectedDate) })) yearly += amount;
     });
 
     return { daily, weekly, monthly, yearly, timelineData };
-  }, [soldProducts, selectedDate]);
+  }, [filteredProducts, selectedDate]);
 
   const handleRestore = async () => {
     if (!currentProduct || restoreForm.quantity === '' || Number(restoreForm.quantity) <= 0) {
@@ -504,12 +506,19 @@ const ProductsSoldPage: React.FC = () => {
                 whileHover={{ y: -4 }}
                 onClick={() => setSelectedDate(item.date)}
                 className={cn(
-                  "p-4 rounded-xl border cursor-pointer transition-all duration-300",
+                  "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
                   isSelected
                     ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
-                    : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                    : isSameDay(item.date, new Date())
+                      ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                 )}
               >
+                {isSameDay(item.date, new Date()) && !isSelected && (
+                  <div className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                    Today
+                  </div>
+                )}
                 <div className="flex flex-col items-center text-center gap-2">
                   <span className={cn(
                     "text-[10px] font-bold tracking-tighter uppercase",
@@ -590,18 +599,20 @@ const ProductsSoldPage: React.FC = () => {
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('branchName')}>
+                  <div className="flex items-center gap-1">Branch <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
                   <div className="flex items-center gap-1 justify-center">Sold Qty <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Unit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">Cost Price (Base) <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('sellingPrice')}>
-                  <div className="flex items-center gap-1">Selling Price (Base) <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">Selling Price <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Total Total</TableHead>
-                <TableHead>Profit/Loss</TableHead>
+                <TableHead>Total Received</TableHead>
+                <TableHead>Profit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('soldDate')}>
                   <div className="flex items-center gap-1">Sold Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -644,15 +655,15 @@ const ProductsSoldPage: React.FC = () => {
                           {product.category}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <span className="font-bold text-lg">
-                          {product.quantity.toLocaleString()}
-                        </span>
-                      </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {product.unit || 'pcs'}
+                        <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                          {branchMap.get(product.branch) || 'Unknown'}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="font-bold">
+                          {product.quantity.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{product.unit || 'pcs'}</span>
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-gray-900 dark:text-gray-100">

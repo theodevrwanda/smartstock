@@ -387,14 +387,12 @@ const ProductsDeletedPage: React.FC = () => {
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                {isAdmin && (
-                  <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">
-                      Branch
-                      <ArrowUpDown className="h-4 w-4" />
-                    </div>
-                  </TableHead>
-                )}
+                <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
+                  <div className="flex items-center gap-1 justify-center">
+                    Branch
+                    <ArrowUpDown className="h-4 w-4" />
+                  </div>
+                </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
                   <div className="flex items-center gap-1">
                     Cost Price
@@ -433,8 +431,14 @@ const ProductsDeletedPage: React.FC = () => {
                     <TableCell className="font-medium">{p.productName}</TableCell>
                     <TableCell>{p.category}</TableCell>
                     <TableCell>{p.model || '-'}</TableCell>
-                    <TableCell className="text-center">{p.quantity}</TableCell>
-                    {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
+                    <TableCell className="text-center font-bold">
+                      {p.quantity} <span className="text-[10px] text-muted-foreground uppercase">{p.unit || 'pcs'}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                        {getBranchName(p.branch)}
+                      </Badge>
+                    </TableCell>
                     <TableCell className={getPriceColor(p.costPrice)}>
                       {p.costPrice.toLocaleString()} RWF
                     </TableCell>

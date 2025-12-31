@@ -352,18 +352,15 @@ const ReportsPage: React.FC = () => {
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Qty <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">Stock <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Unit</TableHead>
-                {isAdmin && (
-                  <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
-                    <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
-                  </TableHead>
-                )}
+                <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
+                  <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Cost Price (Base)</TableHead>
-                <TableHead>Selling Price (Base)</TableHead>
-                <TableHead>Profit/Loss</TableHead>
+                <TableHead>Cost Price</TableHead>
+                <TableHead>Selling Price</TableHead>
+                <TableHead>Profit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
                   <div className="flex items-center gap-1">Added Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -398,13 +395,14 @@ const ReportsPage: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>{p.category}</TableCell>
-                    <TableCell className="text-center font-bold">{p.quantity.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {p.baseUnit || p.unit || 'pcs'}
+                    <TableCell className="text-center font-bold">
+                      {p.quantity.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{p.unit || 'pcs'}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                        {getBranchName(p.branch)}
                       </Badge>
                     </TableCell>
-                    {isAdmin && <TableCell className="text-center">{getBranchName(p.branch)}</TableCell>}
                     <TableCell>
                       <Badge variant={
                         p.status === 'store' ? 'default' :
