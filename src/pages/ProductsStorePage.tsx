@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle, AlertCircle, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -339,7 +339,19 @@ const ProductsStorePage: React.FC = () => {
       });
       toast.success(isOnline ? 'Product added' : 'Added locally');
       setAddDialogOpen(false);
-      setNewProduct({ productName: '', category: '', model: '', quantity: '', costPrice: '', branch: '', unit: 'pcs', quantityPerUnit: '1', baseUnit: 'pcs' });
+      setNewProduct({
+        productName: '',
+        category: '',
+        model: '',
+        quantity: '',
+        costPrice: '',
+        branch: '',
+        unit: 'pcs',
+        quantityPerUnit: '1',
+        baseUnit: 'pcs',
+        deadline: '',
+        confirm: false
+      });
     }
     setActionLoading(false);
   };
@@ -560,8 +572,11 @@ const ProductsStorePage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                      No products found matching your filters.
+                    <TableCell colSpan={10} className="h-64 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <Package className="h-12 w-12 opacity-20" />
+                        <p className="text-lg font-medium">No products found matching your filters.</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -726,7 +741,7 @@ const ProductsStorePage: React.FC = () => {
                               size="icon"
                               className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                               onClick={() => {
-                                setProductToDelete(product);
+                                setProductToDelete(product.id!);
                                 setDeleteConfirmOpen(true);
                               }}
                               disabled={!isOnline}

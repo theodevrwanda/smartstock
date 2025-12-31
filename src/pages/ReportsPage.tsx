@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Download, ArrowUpDown, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, Download, ArrowUpDown, FileSpreadsheet, FileText, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getReportData } from '@/functions/report';
@@ -374,15 +374,18 @@ const ReportsPage: React.FC = () => {
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 12 : 11} className="text-center py-12 text-muted-foreground">
-                    {!isAdmin && !userBranch ? (
-                      <div>
-                        <p className="font-semibold">You are not assigned to any branch.</p>
-                        <p className="text-sm mt-2">Contact your admin to get access.</p>
-                      </div>
-                    ) : (
-                      'No products found matching your filters.'
-                    )}
+                  <TableCell colSpan={isAdmin ? 12 : 11} className="h-64 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <Package className="h-12 w-12 opacity-20" />
+                      {!isAdmin && !userBranch ? (
+                        <div>
+                          <p className="font-semibold">You are not assigned to any branch.</p>
+                          <p className="text-sm mt-2">Contact your admin to get access.</p>
+                        </div>
+                      ) : (
+                        <p className="text-lg font-medium">No products found matching your filters.</p>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

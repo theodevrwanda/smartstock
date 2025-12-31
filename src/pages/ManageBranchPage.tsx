@@ -16,7 +16,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff } from 'lucide-react';
+import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -363,8 +363,11 @@ const ManageBranchPage: React.FC = () => {
             <TableBody>
               {filteredBranches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    No branches found. Click "Add Branch" to create one.
+                  <TableCell colSpan={8} className="h-64 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <Package className="h-12 w-12 opacity-20" />
+                      <p className="text-lg font-medium">No branches found. Click "Add Branch" to create one.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

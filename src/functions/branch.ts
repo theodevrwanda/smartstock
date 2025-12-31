@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { logTransaction } from '@/lib/transactionLogger';
 
 import { Branch } from '@/types/interface';
+export type { Branch };
 
 // Transaction context (set before calling functions that log)
 let txContext: {

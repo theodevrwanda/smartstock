@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, PlusCircle, Eye, Edit, Trash2, UserPlus, CloudOff, User } from 'lucide-react';
+import { Search, PlusCircle, Eye, Edit, Trash2, UserPlus, CloudOff, User, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -389,8 +389,11 @@ const ManageEmployeesPage: React.FC = () => {
             <TableBody>
               {filteredEmployees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center py-12 text-muted-foreground">
-                    No employees found. Click "Add Employee" to create one.
+                  <TableCell colSpan={11} className="h-64 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <Package className="h-12 w-12 opacity-20" />
+                      <p className="text-lg font-medium">No employees found. Click "Add Employee" to create one.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

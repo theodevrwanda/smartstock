@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info, Calendar as CalendarIcon, TrendingUp, TrendingDown, DollarSign, Award } from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info, Calendar as CalendarIcon, TrendingUp, TrendingDown, DollarSign, Award, Package } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -612,8 +612,11 @@ const ProductsSoldPage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
-                      No sold products found.
+                    <TableCell colSpan={11} className="h-64 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <Package className="h-12 w-12 opacity-20" />
+                        <p className="text-lg font-medium">No sold products found.</p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (

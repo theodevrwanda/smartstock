@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText } from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, Package } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -414,8 +414,11 @@ const ProductsDeletedPage: React.FC = () => {
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 10 : 9} className="text-center py-12 text-muted-foreground">
-                    No deleted products found.
+                  <TableCell colSpan={isAdmin ? 10 : 9} className="h-64 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <Package className="h-12 w-12 opacity-20" />
+                      <p className="text-lg font-medium">No deleted products found.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
