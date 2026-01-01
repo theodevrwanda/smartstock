@@ -12,7 +12,7 @@ import {
   getDoc,
   writeBatch,
   runTransaction,
-  onSnapshot
+  onSnapshot,
 } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { toast } from 'sonner';
@@ -94,12 +94,12 @@ export const syncOfflineOperations = async (): Promise<void> => {
             modelLower: normalizedModel || '',
             model: op.data.model || '',
             unit: op.data.unit || 'pcs',
-            costType: op.data.costType || 'costPerUnit',           // ← NOW SAVED
-            costPricePerUnit: op.data.costPricePerUnit || 0,       // ← NOW SAVED
+            costType: op.data.costType || 'costPerUnit',
+            costPricePerUnit: op.data.costPricePerUnit || 0,
             addedDate: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sellingPrice: null,
-            restoreComment: null, // Explicitly null
+            restoreComment: null,
             status: 'store',
           };
           batch.set(newRef, newProduct);
@@ -146,8 +146,6 @@ export const syncOfflineOperations = async (): Promise<void> => {
   }
 };
 
-// UPDATED: Admin can see all (or filter). Staff restricted to their branch.
-// Real-time subscription
 export const subscribeToProducts = (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -222,7 +220,6 @@ export const getProducts = async (
   }
 };
 
-// FIXED: Now properly saves costType and costPricePerUnit
 export const addOrUpdateProduct = async (
   data: {
     productName: string;
@@ -235,8 +232,8 @@ export const addOrUpdateProduct = async (
     confirm: boolean;
     unit?: string;
     deadline?: string;
-    costType: 'costPerUnit' | 'bulkCost';     // ← Required
-    costPricePerUnit: number;                 // ← Required
+    costType: 'costPerUnit' | 'bulkCost';
+    costPricePerUnit: number;
   }
 ): Promise<Product | null> => {
   if (!data.branch) {
@@ -335,11 +332,11 @@ export const addOrUpdateProduct = async (
         model: data.model?.trim() || '',
         modelLower: normalizedModel || '',
         costPrice: data.costPrice,
-        costPricePerUnit: data.costPricePerUnit,   // ← SAVED
-        costType: data.costType,                   // ← SAVED
+        costPricePerUnit: data.costPricePerUnit,
+        costType: data.costType,
         unit: data.unit || 'pcs',
         sellingPrice: null,
-        restoreComment: null, // Explicitly null
+        restoreComment: null,
         status: 'store',
         addedDate: new Date().toISOString(),
         quantity: data.quantity,
@@ -427,44 +424,42 @@ export const sellProduct = async (
 
   try {
     const originalDoc = doc(db, 'products', id);
-    const originalSnap = await getDoc(originalDoc);
-
-    if (!originalSnap.exists()) {
-      toast.error('Product not found');
-      return false;
-    }
-
-    const original = originalSnap.data() as Product;
-
-    if (!original.confirm) {
-      toast.error('This product is not confirmed.');
-      return false;
-    }
-
-    if (userBranch && original.branch !== userBranch) {
-      toast.error('You can only sell from your branch');
-      return false;
-    }
-
-    if (quantity > original.quantity || sellingPrice <= 0 || quantity <= 0) {
-      toast.error('Invalid quantity or price');
-      return false;
-    }
 
     const totalAmount = quantity * sellingPrice;
 
-    const effectiveUnitCost = original.costPricePerUnit ?? ((original.costType === 'bulkCost')
-      ? (original.costPrice / original.quantity)
-      : original.costPrice);
-
-    const costTotal = quantity * effectiveUnitCost;
-
-    const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
-    const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
-
     await runTransaction(db, async (transaction) => {
+      const originalSnap = await transaction.get(originalDoc);
+
+      if (!originalSnap.exists()) {
+        throw new Error('Product not found');
+      }
+
+      const original = originalSnap.data() as Product;
+
+      if (!original.confirm) {
+        throw new Error('This product is not confirmed.');
+      }
+
+      if (userBranch && original.branch !== userBranch) {
+        throw new Error('You can only sell from your branch');
+      }
+
+      if (quantity > original.quantity || sellingPrice <= 0 || quantity <= 0) {
+        throw new Error('Invalid quantity or price');
+      }
+
+      const effectiveUnitCost = original.costPricePerUnit ?? ((original.costType === 'bulkCost')
+        ? (original.costPrice / original.quantity)
+        : original.costPrice);
+
+      const costTotal = quantity * effectiveUnitCost;
+
+      const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
+      const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
+
+      // FIXED: Use atomic increment instead of read-then-write
       transaction.update(originalDoc, {
-        quantity: original.quantity - quantity,
+        quantity: increment(-quantity),
         updatedAt: new Date().toISOString(),
       });
 
@@ -483,37 +478,38 @@ export const sellProduct = async (
         unit: original.unit || 'pcs',
         updatedAt: new Date().toISOString(),
       });
-    });
 
-    if (txContext) {
-      await logTransaction({
-        transactionType: 'product_sold',
-        actionDetails: `Sold ${quantity} unit(s) of ${original.productName}`,
-        userId: txContext.userId,
-        userName: txContext.userName,
-        userRole: txContext.userRole,
-        businessId: original.businessId,
-        businessName: txContext.businessName,
-        branchId: original.branch,
-        branchName: txContext.branchName,
-        productId: id,
-        productName: original.productName,
-        category: original.category,
-        quantity,
-        costPrice: original.costPrice,
-        costPricePerUnit: effectiveUnitCost,
-        unitCost: effectiveUnitCost,
-        sellingPrice,
-        profit,
-        loss,
-      });
-    }
+      // Log transaction after successful commit (outside transaction)
+      if (txContext) {
+        await logTransaction({
+          transactionType: 'product_sold',
+          actionDetails: `Sold ${quantity} unit(s) of ${original.productName}`,
+          userId: txContext.userId,
+          userName: txContext.userName,
+          userRole: txContext.userRole,
+          businessId: original.businessId,
+          businessName: txContext.businessName,
+          branchId: original.branch,
+          branchName: txContext.branchName,
+          productId: id,
+          productName: original.productName,
+          category: original.category,
+          quantity,
+          costPrice: original.costPrice,
+          costPricePerUnit: effectiveUnitCost,
+          unitCost: effectiveUnitCost,
+          sellingPrice,
+          profit,
+          loss,
+        });
+      }
+    });
 
     toast.success(`Sold ${quantity} unit(s)`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Sale failed:', error);
-    toast.error('Sale failed. Please try again.');
+    toast.error(error.message || 'Sale failed. Please try again.');
     return false;
   }
 };
