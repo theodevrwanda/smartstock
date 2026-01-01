@@ -8,7 +8,34 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, ArrowUpDown, ShoppingCart, FileSpreadsheet, FileText, AlertCircle, Package } from 'lucide-react';
+import { 
+  Search, 
+  Download, 
+  Eye, 
+  Trash2, 
+  ArrowUpDown, 
+  ShoppingCart, 
+  FileSpreadsheet, 
+  FileText, 
+  AlertCircle, 
+  Package,
+  Calendar as CalendarIcon,
+  TrendingUp,
+  DollarSign,
+  Award
+} from 'lucide-react';
+import { 
+  format, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  isSameDay, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear, 
+  isWithinInterval 
+} from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -24,8 +51,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -55,12 +85,13 @@ const ProductsRestoredPage: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Filters
-  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'All' : (userBranch || 'All')); // Admin defaults to All
+  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'All' : (userBranch || 'All'));
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minQty, setMinQty] = useState<string>('');
   const [maxQty, setMaxQty] = useState<string>('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Sorting
   const [sortColumn, setSortColumn] = useState<keyof RestoredProduct | 'branchName'>('restoredDate');
@@ -104,7 +135,6 @@ const ProductsRestoredPage: React.FC = () => {
 
     setLoading(true);
 
-    // Initial branch load
     getBranches(businessId).then(branchList => {
       setBranches(branchList);
       const map = new Map<string, string>();
@@ -112,11 +142,10 @@ const ProductsRestoredPage: React.FC = () => {
       setBranchMap(map);
     });
 
-    // Real-time subscription
     const unsubscribe = subscribeToRestoredProducts(
       businessId,
       user?.role || 'staff',
-      isAdmin ? null : userBranch, // Admin loads ALL
+      isAdmin ? null : userBranch,
       (products) => {
         setRestoredProducts(products);
         setLoading(false);
@@ -124,15 +153,58 @@ const ProductsRestoredPage: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [businessId, user?.role, userBranch, isAdmin]); // removed branchFilter from deps
+  }, [businessId, user?.role, userBranch, isAdmin]);
 
   const getBranchName = useCallback((id: string | undefined | null) => branchMap.get(id || '') || 'Unknown', [branchMap]);
 
   const categories = ['All', ...Array.from(new Set(restoredProducts.map(p => p.category)))];
 
-  // Filtering
+  // CRITICAL FIX: Define getActualUnitCost BEFORE any useMemo that uses it
+  const getActualUnitCost = (p: RestoredProduct): number => {
+    return p.costPricePerUnit ?? p.costPrice ?? 0;
+  };
+
+  // Restored stats (week, month, year) using actual unit cost
+  const restoredStats = useMemo(() => {
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(selectedDate);
+    const monthEnd = endOfMonth(selectedDate);
+    const yearStart = startOfYear(selectedDate);
+
+    const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+    let weekly = 0;
+    let monthly = 0;
+    let yearly = 0;
+
+    const timelineData = weeklyDays.map(day => {
+      const dayValue = restoredProducts
+        .filter(p => isSameDay(new Date(p.restoredDate), day))
+        .reduce((sum, p) => sum + (p.quantity * getActualUnitCost(p)), 0);
+      return {
+        dayName: format(day, 'EEE').toUpperCase(),
+        date: day,
+        value: dayValue
+      };
+    });
+
+    restoredProducts.forEach(p => {
+      const restoredDateObj = new Date(p.restoredDate);
+      const value = p.quantity * getActualUnitCost(p);
+
+      if (isWithinInterval(restoredDateObj, { start: weekStart, end: weekEnd })) weekly += value;
+      if (isWithinInterval(restoredDateObj, { start: monthStart, end: monthEnd })) monthly += value;
+      if (isWithinInterval(restoredDateObj, { start: yearStart, end: endOfYear(selectedDate) })) yearly += value;
+    });
+
+    return { weekly, monthly, yearly, timelineData };
+  }, [restoredProducts, selectedDate]);
+
+  // Filtered products - only those restored on selectedDate
   const filteredProducts = useMemo(() => {
     return restoredProducts
+      .filter(p => isSameDay(new Date(p.restoredDate), selectedDate))
       .filter(p =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,11 +213,11 @@ const ProductsRestoredPage: React.FC = () => {
       )
       .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
       .filter(p => branchFilter === 'All' || p.branch === branchFilter)
-      .filter(p => minPrice === '' || (p.sellingPrice || p.costPrice) >= Number(minPrice))
-      .filter(p => maxPrice === '' || (p.sellingPrice || p.costPrice) <= Number(maxPrice))
+      .filter(p => minPrice === '' || getActualUnitCost(p) >= Number(minPrice))
+      .filter(p => maxPrice === '' || getActualUnitCost(p) <= Number(maxPrice))
       .filter(p => minQty === '' || p.quantity >= Number(minQty))
       .filter(p => maxQty === '' || p.quantity <= Number(maxQty));
-  }, [restoredProducts, searchTerm, categoryFilter, branchFilter, minPrice, maxPrice, minQty, maxQty]);
+  }, [restoredProducts, selectedDate, searchTerm, categoryFilter, branchFilter, minPrice, maxPrice, minQty, maxQty]);
 
   // Sorting
   const sortedProducts = useMemo(() => {
@@ -183,10 +255,8 @@ const ProductsRestoredPage: React.FC = () => {
     { header: 'Model', key: 'model', width: 15 },
     { header: 'Quantity', key: 'quantityFormatted', width: 15 },
     { header: 'Branch', key: 'branchName', width: 20 },
-    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
-    { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
-    { header: 'Total Amount', key: 'totalAmount', width: 15 },
-    { header: 'Profit/Loss', key: 'profitLoss', width: 15 },
+    { header: 'Actual Unit Cost', key: 'unitCostActual', width: 18 },
+    { header: 'Total Cost Value', key: 'totalCostValue', width: 18 },
     { header: 'Restored Date', key: 'restoredDateFormatted', width: 15 },
     { header: 'Comment', key: 'restoreComment', width: 25 },
   ];
@@ -198,10 +268,8 @@ const ProductsRestoredPage: React.FC = () => {
       model: p.model || '-',
       quantityFormatted: `${p.quantity} ${p.unit || 'pcs'}`,
       branchName: getBranchName(p.branch),
-      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
-      sellingPriceFormatted: `${(p.sellingPrice || p.costPrice).toLocaleString()} RWF`,
-      totalAmount: `${(p.quantity * (p.sellingPrice || p.costPrice)).toLocaleString()} RWF`,
-      profitLoss: `${calculateProfitLoss(p).toLocaleString()} RWF`,
+      unitCostActual: `${getActualUnitCost(p).toLocaleString()} RWF`,
+      totalCostValue: `${(p.quantity * getActualUnitCost(p)).toLocaleString()} RWF`,
       restoredDateFormatted: new Date(p.restoredDate).toLocaleDateString(),
       restoreComment: p.restoreComment || '-',
     }));
@@ -215,32 +283,6 @@ const ProductsRestoredPage: React.FC = () => {
   const handleExportPDF = () => {
     exportToPDF(getRestoredExportData(), restoredExportColumns, 'restored-products', 'Restored Products Report');
     toast.success('Exported to PDF');
-  };
-
-  const getPriceColor = (price: number) => {
-    if (price < 100000) return 'text-blue-600 font-bold';
-    if (price < 500000) return 'text-green-600 font-bold';
-    if (price < 1000000) return 'text-yellow-600 font-bold';
-    if (price < 2000000) return 'text-orange-600 font-bold';
-    return 'text-red-600 font-bold';
-  };
-
-  const getProfitLossColor = (profit: number) => {
-    if (profit > 0) return 'text-green-600 font-bold';
-    if (profit < 0) return 'text-red-600 font-bold';
-    return 'text-gray-600 font-bold';
-  };
-
-  const calculateProfitLoss = (p: RestoredProduct) => {
-    const sellPrice = p.sellingPrice || p.costPrice;
-    const baseCost = p.costType === 'total' && !p.costPricePerUnit
-      ? 0 // Fallback for old inconsistent data
-      : (p.costPricePerUnit || p.costPrice);
-    return (sellPrice - baseCost) * p.quantity;
-  };
-
-  const calculateTotalProfitLoss = () => {
-    return filteredProducts.reduce((sum, p) => sum + calculateProfitLoss(p), 0);
   };
 
   const handleSell = async () => {
@@ -299,7 +341,12 @@ const ProductsRestoredPage: React.FC = () => {
 
   const openSell = (product: RestoredProduct) => {
     setCurrentProduct(product);
-    setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+    const defaultPrice = product.sellingPrice || Math.round(getActualUnitCost(product) * 1.3);
+    setSellForm({ 
+      quantity: '', 
+      sellingPrice: defaultPrice, 
+      deadline: '' 
+    });
     setSellDialogOpen(true);
   };
 
@@ -308,7 +355,6 @@ const ProductsRestoredPage: React.FC = () => {
     setDeleteConfirmOpen(true);
   };
 
-  // Consistent clean loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
@@ -349,12 +395,137 @@ const ProductsRestoredPage: React.FC = () => {
           </DropdownMenu>
         </div>
 
-        {/* Expected Profit/Loss Summary */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border">
-          <h2 className="text-xl font-semibold mb-3">Expected Profit / Loss (if sold at current price)</h2>
-          <p className={`text-3xl font-bold ${getProfitLossColor(calculateTotalProfitLoss())}`}>
-            {calculateTotalProfitLoss().toLocaleString()} RWF
-          </p>
+        {/* Date Context */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
+            <CalendarIcon size={14} className="text-gray-500" />
+            <span className="text-gray-600 dark:text-gray-400">Showing restored products for:</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+          </Badge>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-white dark:bg-gray-900 shadow-sm">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Restored Value Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Restored Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">{restoredStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Restored Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">{restoredStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <Award size={14} className="text-orange-500" />
+                Yearly Restored Value
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
+                {format(selectedDate, 'yyyy')} Yearly
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Total Cost Value</p>
+                  <div className="text-3xl font-bold">{restoredStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Weekly Day Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+          {restoredStats.timelineData.map((item, idx) => {
+            const isSelected = isSameDay(item.date, selectedDate);
+            const isToday = isSameDay(item.date, new Date());
+
+            return (
+              <motion.div
+                key={idx}
+                whileHover={{ y: -4 }}
+                onClick={() => setSelectedDate(item.date)}
+                className={cn(
+                  "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
+                  isSelected
+                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                    : isToday
+                      ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                )}
+              >
+                {isToday && !isSelected && (
+                  <div className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                    Today
+                  </div>
+                )}
+                <div className="flex flex-col items-center text-center gap-2">
+                  <span className={cn(
+                    "text-[10px] font-bold tracking-tighter uppercase",
+                    isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"
+                  )}>
+                    {item.dayName} {isSelected && "•"}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className={cn(
+                      "text-sm font-black",
+                      isSelected ? "text-white" : "text-blue-600 dark:text-blue-400"
+                    )}>
+                      {item.value.toLocaleString()}
+                    </span>
+                    <span className={cn(
+                      "text-[9px] uppercase font-medium opacity-60",
+                      isSelected ? "text-amber-200" : "text-gray-500"
+                    )}>
+                      value
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Filters */}
@@ -388,8 +559,8 @@ const ProductsRestoredPage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-            <Input type="number" placeholder="Max Price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+            <Input type="number" placeholder="Min Unit Cost" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+            <Input type="number" placeholder="Max Unit Cost" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -410,18 +581,14 @@ const ProductsRestoredPage: React.FC = () => {
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('branch')}>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('branchName')}>
                   <div className="flex items-center gap-1">Branch <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
                   <div className="flex items-center gap-1 justify-center">Restored Qty <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
-                </TableHead>
-                <TableHead>Selling Price</TableHead>
-                <TableHead>Total Value</TableHead>
-                <TableHead>Profit</TableHead>
+                <TableHead>Actual Unit Cost</TableHead>
+                <TableHead>Total Cost Value</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('restoredDate')}>
                   <div className="flex items-center gap-1">Restored Date <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
@@ -433,15 +600,15 @@ const ProductsRestoredPage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="h-64 text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="h-64 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="h-12 w-12 opacity-20" />
-                        <p className="text-lg font-medium">No restored products found.</p>
+                        <p className="text-lg font-medium">No restored products found for this date.</p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedProducts.map((product) => (
+                  sortedProducts.map((product, index) => (
                     <motion.tr
                       key={product.id}
                       initial={{ opacity: 0, y: 10 }}
@@ -452,7 +619,7 @@ const ProductsRestoredPage: React.FC = () => {
                       className="group hover:bg-muted/30 transition-colors"
                     >
                       <TableCell className="text-xs text-muted-foreground font-mono">
-                        {sortedProducts.indexOf(product) + 1}
+                        {index + 1}
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
@@ -476,44 +643,28 @@ const ProductsRestoredPage: React.FC = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">
-                          {Number(product.costPrice || 0).toLocaleString()} RWF
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold text-green-600">
-                          {Number(product.sellingPrice || product.costPrice).toLocaleString()} RWF
+                        <span className="font-semibold text-purple-600">
+                          {getActualUnitCost(product).toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className="font-black text-amber-600">
-                          {(product.quantity * (product.sellingPrice || product.costPrice)).toLocaleString()}
+                          {(product.quantity * getActualUnitCost(product)).toLocaleString()} RWF
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <span className={`font-bold ${getProfitLossColor(calculateProfitLoss(product))}`}>
-                          {calculateProfitLoss(product).toLocaleString()}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {new Date(product.restoredDate).toLocaleDateString()}
-                        </span>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(product.restoredDate), 'dd MMM yyyy')}
                       </TableCell>
                       <TableCell className="max-w-[150px] truncate text-muted-foreground" title={product.restoreComment}>
                         {product.restoreComment || '-'}
                       </TableCell>
-
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                            onClick={() => {
-                              setCurrentProduct(product);
-                              setDetailsDialogOpen(true);
-                            }}
+                            onClick={() => openDetails(product)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -521,15 +672,7 @@ const ProductsRestoredPage: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            onClick={() => {
-                              setCurrentProduct(product);
-                              setSellForm({
-                                quantity: 1,
-                                sellingPrice: product.sellingPrice || product.costPrice,
-                                deadline: ''
-                              });
-                              setSellDialogOpen(true);
-                            }}
+                            onClick={() => openSell(product)}
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
@@ -538,10 +681,7 @@ const ProductsRestoredPage: React.FC = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => {
-                                setCurrentProduct(product);
-                                setDeleteConfirmOpen(true);
-                              }}
+                              onClick={() => openDelete(product)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -555,7 +695,6 @@ const ProductsRestoredPage: React.FC = () => {
             </TableBody>
           </Table>
         </div>
-
         {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent className="max-w-lg">

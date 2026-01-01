@@ -18,7 +18,7 @@ import { logTransaction } from '@/lib/transactionLogger';
 
 import { RestoredProduct } from '@/types/interface';
 
-// Transaction context (set before calling sellRestoredProduct)
+// Transaction context
 let txContext: {
   userId: string;
   userName: string;
@@ -33,8 +33,7 @@ export const setRestoredTransactionContext = (ctx: typeof txContext) => {
   txContext = ctx;
 };
 
-// Get restored products - Admin sees all (filterable), Staff sees theirs
-// Real-time subscription
+// Real-time subscription for restored products
 export const subscribeToRestoredProducts = (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -67,6 +66,8 @@ export const subscribeToRestoredProducts = (
         quantity: data.quantity || 0,
         branch: data.branch || '',
         costPrice: data.costPrice || 0,
+        costPricePerUnit: data.costPricePerUnit || 0,
+        costType: data.costType || 'costPerUnit',
         sellingPrice: data.sellingPrice ?? null,
         restoredDate: data.restoredDate
           ? typeof data.restoredDate === 'string'
@@ -85,6 +86,8 @@ export const subscribeToRestoredProducts = (
 
   return unsubscribe;
 };
+
+// Get restored products
 export const getRestoredProducts = async (
   businessId: string,
   userRole: 'admin' | 'staff',
@@ -125,6 +128,8 @@ export const getRestoredProducts = async (
         quantity: data.quantity || 0,
         branch: data.branch || '',
         costPrice: data.costPrice || 0,
+        costPricePerUnit: data.costPricePerUnit || 0,
+        costType: data.costType || 'costPerUnit',
         sellingPrice: data.sellingPrice ?? null,
         restoredDate: data.restoredDate
           ? typeof data.restoredDate === 'string'
@@ -166,7 +171,7 @@ export const deleteRestoredProduct = async (id: string): Promise<boolean> => {
   }
 };
 
-// Sell restored product + log transaction (resold_restored)
+// Sell restored product - NOW USES costPricePerUnit for profit calculation
 export const sellRestoredProduct = async (
   id: string,
   sellQty: number,
@@ -204,10 +209,12 @@ export const sellRestoredProduct = async (
     const now = new Date().toISOString();
     const remainingQty = restoredData.quantity - sellQty;
 
-    const totalAmount = sellQty * sellingPrice;
-    const costTotal = sellQty * restoredData.costPrice;
-    const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
-    const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
+    // Use costPricePerUnit (true unit cost) for profit calculation
+    const unitCost = restoredData.costPricePerUnit ?? restoredData.costPrice ?? 0;
+    const totalCost = sellQty * unitCost;
+    const totalRevenue = sellQty * sellingPrice;
+    const profit = totalRevenue - totalCost;
+    const loss = profit < 0 ? -profit : 0;
 
     // Create new sold record
     const soldRef = doc(collection(db, 'products'));
@@ -219,6 +226,7 @@ export const sellRestoredProduct = async (
       sellingPrice,
       soldDate: now,
       deadline: deadline || null,
+      costPricePerUnit: unitCost,  // Preserve accurate unit cost
       updatedAt: now,
     });
 
@@ -232,7 +240,7 @@ export const sellRestoredProduct = async (
       });
     }
 
-    // Log re-sold transaction with distinct type
+    // Log re-sold transaction
     if (txContext) {
       await logTransaction({
         transactionType: 'resold_restored',
@@ -250,9 +258,10 @@ export const sellRestoredProduct = async (
         model: restoredData.model,
         quantity: sellQty,
         costPrice: restoredData.costPrice,
+        costPricePerUnit: unitCost,
         sellingPrice,
         profit,
-        loss,
+        loss: loss,
         metadata: {
           restoreComment: restoredData.restoreComment || null,
           originalRestoredDate: restoredData.restoredDate,
