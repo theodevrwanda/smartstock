@@ -760,131 +760,135 @@ const ProductsRestoredPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Sell Restored Product</DialogTitle>
-              <DialogDescription>
-                {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
-                <br />
-                Available in restored stock: {currentProduct?.quantity} units
-              </DialogDescription>
-            </DialogHeader>
+  <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+  <DialogContent className="max-w-lg">
+    <DialogHeader>
+      <DialogTitle>Sell Restored Product</DialogTitle>
+      <DialogDescription>
+        {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
+        <br />
+        Available in restored stock: {currentProduct?.quantity} {currentProduct?.unit || 'pcs'}
+      </DialogDescription>
+    </DialogHeader>
 
-            {currentProduct && (
-              <div className="space-y-6 py-4">
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label>Quantity to Sell *</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      max={currentProduct.quantity}
-                      placeholder="How many units?"
-                      value={sellForm.quantity}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const num = val === '' ? '' : Number(val);
-                        if (num !== '' && (num < 1 || num > currentProduct.quantity)) return;
-                        setSellForm(s => ({ ...s, quantity: num }));
-                      }}
-                    />
-                  </div>
+    {currentProduct && (
+      <div className="space-y-6 py-4">
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <Label>Quantity to Sell *</Label>
+            <Input
+              type="number"
+              min="1"
+              max={currentProduct.quantity}
+              placeholder="How many units?"
+              value={sellForm.quantity}
+              onChange={(e) => {
+                const val = e.target.value;
+                const num = val === '' ? '' : Number(val);
+                if (num !== '' && (num < 1 || num > currentProduct.quantity)) return;
+                setSellForm(s => ({ ...s, quantity: num }));
+              }}
+            />
+          </div>
 
-                  <div className="grid gap-2">
-                    <Label>Selling Price per Unit (RWF) *</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      placeholder="Enter selling price"
-                      value={sellForm.sellingPrice}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
-                      }}
-                    />
-                  </div>
+          <div className="grid gap-2">
+            <Label>Selling Price per Unit (RWF) *</Label>
+            <Input
+              type="number"
+              min="1"
+              placeholder="Enter selling price"
+              value={sellForm.sellingPrice}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
+              }}
+            />
+          </div>
 
-                  <div className="grid gap-2">
-                    <Label>Return Deadline (optional)</Label>
-                    <Input
-                      type="date"
-                      value={sellForm.deadline}
-                      onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
-                    />
-                  </div>
-                </div>
+          <div className="grid gap-2">
+            <Label>Return Deadline (optional)</Label>
+            <Input
+              type="date"
+              value={sellForm.deadline}
+              onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+            />
+          </div>
+        </div>
 
-                {/* Warning for invalid quantity */}
-                {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Quantity exceeds available restored stock ({currentProduct.quantity} units).
-                    </AlertDescription>
-                  </Alert>
-                )}
+        {/* Warning for invalid quantity */}
+        {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Quantity exceeds available restored stock ({currentProduct.quantity} units).
+            </AlertDescription>
+          </Alert>
+        )}
 
-                {/* Sale Summary */}
-                {sellForm.quantity !== '' && sellForm.sellingPrice !== '' && Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && Number(sellForm.quantity) <= currentProduct.quantity && (
-                  <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="flex justify-between text-lg">
-                        <span>Total Revenue:</span>
-                        <span className="font-bold">
-                          {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-lg">
-                        <span>Cost of Goods:</span>
-                        <span>
-                          {(Number(sellForm.quantity) * currentProduct.costPrice).toLocaleString()} RWF
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xl font-bold pt-3 border-t">
-                        <span>Profit / Loss:</span>
-                        <span className={
-                          Number(sellForm.sellingPrice) >= currentProduct.costPrice
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                        }>
-                          {(
-                            (Number(sellForm.sellingPrice) - currentProduct.costPrice) * Number(sellForm.quantity)
-                          ).toLocaleString()} RWF
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+        {/* Sale Summary - NOW USES getActualUnitCost (costPricePerUnit) */}
+        {sellForm.quantity !== '' && 
+         sellForm.sellingPrice !== '' && 
+         Number(sellForm.quantity) > 0 && 
+         Number(sellForm.sellingPrice) > 0 && 
+         Number(sellForm.quantity) <= currentProduct.quantity && (
+          <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex justify-between text-lg">
+                <span>Total Revenue:</span>
+                <span className="font-bold text-green-600">
+                  {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
+                </span>
               </div>
-            )}
+              <div className="flex justify-between text-lg">
+                <span>Cost of Goods (Actual):</span>
+                <span className="font-medium text-purple-600">
+                  {(Number(sellForm.quantity) * getActualUnitCost(currentProduct)).toLocaleString()} RWF
+                </span>
+              </div>
+              <div className="flex justify-between text-xl font-bold pt-3 border-t">
+                <span>Profit / Loss:</span>
+                <span className={cn(
+                  Number(sellForm.sellingPrice) >= getActualUnitCost(currentProduct)
+                    ? 'text-green-600'
+                    : 'text-red-600'
+                )}>
+                  {(
+                    (Number(sellForm.sellingPrice) - getActualUnitCost(currentProduct)) * Number(sellForm.quantity)
+                  ).toLocaleString()} RWF
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    )}
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSellDialogOpen(false);
-                  setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSell}
-                disabled={
-                  actionLoading ||
-                  sellForm.quantity === '' ||
-                  Number(sellForm.quantity) <= 0 ||
-                  Number(sellForm.quantity) > currentProduct?.quantity ||
-                  sellForm.sellingPrice === '' ||
-                  Number(sellForm.sellingPrice) <= 0
-                }
-              >
-                {actionLoading ? 'Selling...' : 'Confirm Sale'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+    <DialogFooter>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setSellDialogOpen(false);
+          setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+        }}
+      >
+        Cancel
+      </Button>
+      <Button
+        onClick={handleSell}
+        disabled={
+          actionLoading ||
+          sellForm.quantity === '' ||
+          Number(sellForm.quantity) <= 0 ||
+          Number(sellForm.quantity) > currentProduct?.quantity ||
+          sellForm.sellingPrice === '' ||
+          Number(sellForm.sellingPrice) <= 0
+        }
+      >
+        {actionLoading ? 'Selling...' : 'Confirm Sale'}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>>
 
         {/* Delete Confirm Dialog */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
