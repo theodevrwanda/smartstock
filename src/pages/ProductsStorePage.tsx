@@ -8,7 +8,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, PlusCircle, Eye, Edit, Trash2, ShoppingCart, Download, FileSpreadsheet, FileText, ArrowUpDown, CheckCircle, XCircle, AlertCircle, Info, Package, DollarSign, TrendingUp, LayoutDashboard, Calendar as CalendarIcon, CalendarDays } from 'lucide-react';
+import { 
+  Search, 
+  PlusCircle, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  ShoppingCart, 
+  Download, 
+  FileSpreadsheet, 
+  FileText, 
+  ArrowUpDown, 
+  CheckCircle, 
+  AlertCircle, 
+  Package, 
+  DollarSign, 
+  TrendingUp, 
+  CalendarDays,
+  Info 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Dialog,
@@ -95,14 +113,14 @@ const ProductsStorePage: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Filters
-  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'All' : (userBranch || 'All')); // Admin defaults to All
+  const [branchFilter, setBranchFilter] = useState<string>(isAdmin ? 'All' : (userBranch || 'All'));
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [minPrice, setMinPrice] = useState<string>('');
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minQty, setMinQty] = useState<string>('');
   const [maxQty, setMaxQty] = useState<string>('');
   const [confirmFilter, setConfirmFilter] = useState<string>('All');
-  const [selectedDay, setSelectedDay] = useState<number | null>(null); // 0 (Sun) to 6 (Sat)
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   // Sorting
@@ -131,10 +149,9 @@ const ProductsStorePage: React.FC = () => {
     quantity: '' as string | number,
     costPrice: '' as string | number,
     unit: 'pcs',
-    costType: 'per' as 'per' | 'all',
+    costType: 'costPerUnit' as 'costPerUnit' | 'bulkCost',
     branch: '',
     deadline: '',
-    confirm: isAdmin ? true : false,
   });
 
   const [sellForm, setSellForm] = useState({
@@ -196,7 +213,6 @@ const ProductsStorePage: React.FC = () => {
 
     setLoading(true);
 
-    // Fetch branches once
     getBranches(businessId)
       .then(branchList => {
         setBranches(branchList);
@@ -204,16 +220,15 @@ const ProductsStorePage: React.FC = () => {
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
       })
-      .catch(err => {
+      .catch(() => {
         toast.warning(isOnline ? 'Failed to load branches' : 'Using cached branch data');
       });
 
-    // Real-time subscription for products
     const unsubscribe = subscribeToProducts(
       businessId,
       user?.role || 'staff',
-      isAdmin ? null : userBranch, // Admin gets ALL data (branchId=null), Staff gets their branch's data
-      null, // category filter handled in UI
+      isAdmin ? null : userBranch,
+      null,
       (updatedProducts) => {
         setProducts(updatedProducts);
         setLoading(false);
@@ -233,7 +248,27 @@ const ProductsStorePage: React.FC = () => {
     return ['All', ...Array.from(new Set(products.map(p => p.category)))];
   }, [products]);
 
-  // Base Filtering (No day filter)
+  // Safe cost helpers
+  const getUnitCost = (p: Product | null): number => {
+    if (!p) return 0;
+    return p.costPricePerUnit ?? 0;
+  };
+
+  const getTotalValue = (p: Product | null): number => {
+    if (!p) return 0;
+    if (p.costType === 'bulkCost') {
+      return p.costPrice ?? 0;
+    }
+    return getUnitCost(p) * p.quantity;
+  };
+
+  // Display quantity + unit (e.g., 10kg)
+  const formatQuantityWithUnit = (p: Product | null): string => {
+    if (!p) return '0';
+    return `${p.quantity}${p.unit || ''}`;
+  };
+
+  // Base Filtering
   const baseFilteredProducts = useMemo(() => {
     return products
       .filter(p =>
@@ -243,17 +278,15 @@ const ProductsStorePage: React.FC = () => {
       )
       .filter(p => branchFilter === 'All' || p.branch === branchFilter)
       .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
-      .filter(p => minPrice === '' || p.costPrice >= Number(minPrice))
-      .filter(p => maxPrice === '' || p.costPrice <= Number(maxPrice))
+      .filter(p => minPrice === '' || getTotalValue(p) >= Number(minPrice))
+      .filter(p => maxPrice === '' || getTotalValue(p) <= Number(maxPrice))
       .filter(p => minQty === '' || p.quantity >= Number(minQty))
       .filter(p => maxQty === '' || p.quantity <= Number(maxQty))
       .filter(p => confirmFilter === 'All' || (confirmFilter === 'Confirmed' ? p.confirm : !p.confirm))
       .filter(p => {
         if (!selectedDate) return true;
         const pDate = new Date(p.addedDate);
-        return pDate.getFullYear() === selectedDate.getFullYear() &&
-          pDate.getMonth() === selectedDate.getMonth() &&
-          pDate.getDate() === selectedDate.getDate();
+        return isSameDay(pDate, selectedDate);
       })
       .filter(p => {
         if (selectedDay === null) return true;
@@ -264,17 +297,16 @@ const ProductsStorePage: React.FC = () => {
       });
   }, [products, searchTerm, branchFilter, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter, selectedDate, selectedDay]);
 
-  // Store Summary Stats
+  // Store stats
   const storeStats = useMemo(() => {
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const selDate = selectedDate || now;
 
-    const selDate = selectedDate || new Date();
-    const startOfSelectedYear = startOfYear(selDate);
-    const startOfSelectedMonth = startOfMonth(selDate);
     const startOfSelectedWeek = startOfWeek(selDate, { weekStartsOn: 1 });
     const endOfSelectedWeek = endOfWeek(selDate, { weekStartsOn: 1 });
+    const startOfSelectedMonth = startOfMonth(selDate);
+    const startOfSelectedYear = startOfYear(selDate);
+
     const weeklyDays = eachDayOfInterval({ start: startOfSelectedWeek, end: endOfSelectedWeek });
 
     const stats = {
@@ -283,18 +315,12 @@ const ProductsStorePage: React.FC = () => {
       month: { value: 0, count: 0 },
       year: { value: 0, count: 0 },
       daily: Array(7).fill(0).map(() => ({ value: 0, count: 0 })),
-      currentDayIdx: selDate.getDay() === 0 ? 6 : selDate.getDay() - 1,
       timelineDays: weeklyDays.map(day => format(day, 'EEE').toUpperCase()),
-      timelineDates: weeklyDays
     };
 
     baseFilteredProducts.forEach(p => {
-      const addedDateObj = p.addedDate ? new Date(p.addedDate) : null;
-      if (!addedDateObj) return;
-
-      const value = p.costType === 'all'
-        ? (p.costPrice || 0)
-        : (p.quantity * (p.costPrice || 0));
+      const addedDateObj = new Date(p.addedDate);
+      const value = getTotalValue(p);
 
       if (isSameDay(addedDateObj, selDate)) {
         stats.today.value += value;
@@ -303,13 +329,10 @@ const ProductsStorePage: React.FC = () => {
       if (isWithinInterval(addedDateObj, { start: startOfSelectedWeek, end: endOfSelectedWeek })) {
         stats.week.value += value;
         stats.week.count++;
-
         const dayIdx = addedDateObj.getDay();
         const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
-        if (monSunIdx >= 0 && monSunIdx < 7) {
-          stats.daily[monSunIdx].value += value;
-          stats.daily[monSunIdx].count++;
-        }
+        stats.daily[monSunIdx].value += value;
+        stats.daily[monSunIdx].count++;
       }
       if (isWithinInterval(addedDateObj, { start: startOfSelectedMonth, end: endOfMonth(selDate) })) {
         stats.month.value += value;
@@ -324,20 +347,22 @@ const ProductsStorePage: React.FC = () => {
     return stats;
   }, [baseFilteredProducts, selectedDate]);
 
-  // Table Filtering (Now identical to baseFilteredProducts)
-  const tableFilteredProducts = baseFilteredProducts;
-
   const sortedProducts = useMemo(() => {
-    return [...tableFilteredProducts].sort((a, b) => {
-      let aVal = a[sortColumn as keyof Product];
-      let bVal = b[sortColumn as keyof Product];
+    return [...baseFilteredProducts].sort((a, b) => {
+      let aVal: any = a[sortColumn];
+      let bVal: any = b[sortColumn];
+
+      if (sortColumn === 'costPrice') {
+        aVal = getTotalValue(a);
+        bVal = getTotalValue(b);
+      }
 
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
 
       return (aVal < bVal ? -1 : 1) * (sortDirection === 'asc' ? 1 : -1);
     });
-  }, [tableFilteredProducts, sortColumn, sortDirection]);
+  }, [baseFilteredProducts, sortColumn, sortDirection]);
 
   const getStatusBadge = (quantity: number) => {
     if (quantity <= 0) return <Badge variant="destructive" className="rounded-full px-3 py-1 bg-red-100 text-red-700 border-none font-semibold">Out of Stock</Badge>;
@@ -359,9 +384,10 @@ const ProductsStorePage: React.FC = () => {
     { header: 'Product Name', key: 'productName', width: 25 },
     { header: 'Category', key: 'category', width: 15 },
     { header: 'Model', key: 'model', width: 15 },
-    { header: 'Quantity', key: 'quantity', width: 10 },
-    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
-    { header: 'Status', key: 'status', width: 12 },
+    { header: 'Quantity', key: 'quantityWithUnit', width: 12 },
+    { header: 'Unit Cost (RWF)', key: 'unitCost', width: 15 },
+    { header: 'Total Value (RWF)', key: 'totalValue', width: 15 },
+    { header: 'Cost Type', key: 'costType', width: 12 },
     { header: 'Confirmed', key: 'confirmed', width: 10 },
     { header: 'Added Date', key: 'addedDateFormatted', width: 15 },
   ];
@@ -371,9 +397,10 @@ const ProductsStorePage: React.FC = () => {
       productName: p.productName,
       category: p.category,
       model: p.model || '-',
-      quantity: p.quantity,
-      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
-      status: p.quantity === 0 ? 'Out of Stock' : p.quantity <= 5 ? 'Low Stock' : 'In Stock',
+      quantityWithUnit: formatQuantityWithUnit(p),
+      unitCost: getUnitCost(p).toLocaleString(),
+      totalValue: getTotalValue(p).toLocaleString(),
+      costType: p.costType === 'bulkCost' ? 'Bulk Cost' : 'Cost Per Unit',
       confirmed: p.confirm ? 'Yes' : 'No',
       addedDateFormatted: p.addedDate ? new Date(p.addedDate).toLocaleDateString() : '-',
     }));
@@ -389,16 +416,7 @@ const ProductsStorePage: React.FC = () => {
     toast.success('Exported to PDF');
   };
 
-
-  const getPriceColor = (price: number) => {
-    if (price < 100000) return 'text-blue-600 font-bold';
-    if (price < 500000) return 'text-green-600 font-bold';
-    if (price < 1000000) return 'text-yellow-600 font-bold';
-    if (price < 2000000) return 'text-orange-600 font-bold';
-    return 'text-red-600 font-bold';
-  };
-
-  // Handlers
+  // ADD PRODUCT
   const handleAddProduct = async () => {
     const targetBranch = isAdmin ? (newProduct.branch || userBranch) : userBranch;
 
@@ -411,14 +429,12 @@ const ProductsStorePage: React.FC = () => {
       return;
     }
 
-    // Date Logic
     let finalDeadline = newProduct.deadline;
     if (!finalDeadline) {
       const d = new Date();
       d.setDate(d.getDate() + 5);
       finalDeadline = d.toISOString().split('T')[0];
     } else {
-      // Validate past date
       const selectedDate = new Date(finalDeadline);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -431,41 +447,36 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(true);
     const qty = Number(newProduct.quantity);
     const enteredCost = Number(newProduct.costPrice);
-    const unitPrice = newProduct.costType === 'all' ? enteredCost / qty : enteredCost;
 
-    const productData: {
-      productName: string;
-      category: string;
-      model?: string;
-      quantity: number;
-      costPrice: number;
-      costPricePerUnit: number;
-      unit?: string;
-      branch: string;
-      confirm: boolean;
-      businessId: string;
-      deadline?: string;
-      costType?: 'unit' | 'total';
-      status: 'store';
-      addedDate: string;
-    } = {
-      productName: newProduct.productName,
+    let costPricePerUnit = 0;
+    if (newProduct.costType === 'bulkCost') {
+      costPricePerUnit = qty > 0 ? enteredCost / qty : 0;
+    } else {
+      costPricePerUnit = enteredCost;
+    }
+
+    const productData: Product = {
+      productName: newProduct.productName.trim(),
+      productNameLower: newProduct.productName.trim().toLowerCase(),
       category: newProduct.category,
-      model: newProduct.model || undefined,
-      quantity: qty,
+      categoryLower: newProduct.category.toLowerCase(),
+      model: newProduct.model || null,
+      modelLower: newProduct.model?.toLowerCase() || null,
+      quantity: qty,                          // number
+      unit: newProduct.unit,                  // string (kg, pcs, etc.)
       costPrice: enteredCost,
-      costPricePerUnit: unitPrice,
-      unit: newProduct.unit,
+      costPricePerUnit: costPricePerUnit,
+      costType: newProduct.costType,
       branch: targetBranch,
-      status: 'store',
-      addedDate: new Date().toISOString(),
       confirm: isAdmin ? true : false,
       businessId: businessId || '',
       deadline: finalDeadline,
-      costType: newProduct.costType,
+      status: 'store',
+      addedDate: new Date().toISOString(),
+      sellingPrice: null,
     };
 
-    const result = await addOrUpdateProduct(productData as unknown as Product);
+    const result = await addOrUpdateProduct(productData);
 
     if (result) {
       setProducts(prev => {
@@ -473,7 +484,7 @@ const ProductsStorePage: React.FC = () => {
         if (existing) return prev.map(p => p.id === result.id ? result : p);
         return [...prev, result];
       });
-      toast.success(isOnline ? 'Product added' : 'Added locally');
+      toast.success(isOnline ? 'Product added successfully' : 'Added locally');
       setAddDialogOpen(false);
       setNewProduct({
         productName: '',
@@ -483,45 +494,51 @@ const ProductsStorePage: React.FC = () => {
         costPrice: '',
         branch: '',
         unit: 'pcs',
-        costType: 'unit' as 'unit' | 'total',
+        costType: 'costPerUnit',
         deadline: '',
-        confirm: isAdmin ? true : false
       });
+    } else {
+      toast.error('Failed to add product');
     }
     setActionLoading(false);
   };
 
+  // UPDATE PRODUCT
   const handleUpdateProduct = async () => {
     if (!currentProduct) return;
-    if (!currentProduct.productName.trim() || !currentProduct.category.trim() || currentProduct.costPrice < 0 || currentProduct.quantity < 0) {
-      toast.error('Invalid data');
-      return;
-    }
 
     setActionLoading(true);
-    const qty = Number(currentProduct.quantity);
-    const enteredCost = Number(currentProduct.costPrice);
-    const unitPrice = currentProduct.costType === 'all' ? enteredCost / qty : enteredCost;
+    const qty = currentProduct.quantity;
+    const enteredCost = currentProduct.costPrice;
+
+    let costPricePerUnit = 0;
+    if (currentProduct.costType === 'bulkCost') {
+      costPricePerUnit = qty > 0 ? enteredCost / qty : 0;
+    } else {
+      costPricePerUnit = enteredCost;
+    }
 
     const updates: Partial<Product> = {
       productName: currentProduct.productName.trim(),
-      category: currentProduct.category.trim(),
+      productNameLower: currentProduct.productName.trim().toLowerCase(),
+      category: currentProduct.category,
+      categoryLower: currentProduct.category.toLowerCase(),
       model: currentProduct.model?.trim() || null,
-      costPrice: enteredCost,
-      costPricePerUnit: unitPrice,
+      modelLower: currentProduct.model?.trim()?.toLowerCase() || null,
       quantity: qty,
       unit: currentProduct.unit,
+      costPrice: enteredCost,
+      costPricePerUnit: costPricePerUnit,
       costType: currentProduct.costType,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
 
     const success = await updateProduct(currentProduct.id!, updates);
     if (success) {
       setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, ...updates } : p));
-      toast.success('Updated');
+      toast.success('Product updated');
       setEditDialogOpen(false);
       setCurrentProduct(null);
-      setNewProduct({ productName: '', category: '', model: '', quantity: '', costPrice: '', unit: 'pcs', costType: 'unit', branch: '', deadline: '', confirm: isAdmin });
     }
     setActionLoading(false);
   };
@@ -538,14 +555,10 @@ const ProductsStorePage: React.FC = () => {
     }
 
     setActionLoading(true);
-    // Calculate unit cost for profit later if needed
-    const unitCost = currentProduct.costType === 'all' ? (currentProduct.costPrice / currentProduct.quantity) : currentProduct.costPrice;
-
-    // We pass the price per unit to sellProduct
     const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
     if (success) {
       setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
-      toast.success(`Sold ${qty} units`);
+      toast.success(`Sold ${qty} ${currentProduct.unit}`);
       setSellDialogOpen(false);
       setConfirmSaleDialogOpen(false);
       setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true });
@@ -583,7 +596,6 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
-  // Consistent clean loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
@@ -613,12 +625,7 @@ const ProductsStorePage: React.FC = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                />
+                <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
                 {selectedDate && (
                   <div className="p-2 border-t">
                     <Button variant="ghost" className="w-full text-xs" onClick={() => setSelectedDate(undefined)}>Clear Date</Button>
@@ -643,6 +650,7 @@ const ProductsStorePage: React.FC = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
             {(isAdmin || canAddProduct) && (
               <Button onClick={() => setAddDialogOpen(true)} className="bg-primary hover:bg-primary/90">
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -652,9 +660,8 @@ const ProductsStorePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Analytics Cards - Redesigned like Sold Page */}
+        {/* Analytics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Weekly Added Card */}
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Investment</CardTitle>
@@ -670,12 +677,8 @@ const ProductsStorePage: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-            <div className="absolute -right-4 -bottom-4 opacity-10">
-              <TrendingUp size={120} />
-            </div>
           </Card>
 
-          {/* Monthly Added Card */}
           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Investment</CardTitle>
@@ -691,12 +694,8 @@ const ProductsStorePage: React.FC = () => {
                 </div>
               </div>
             </CardContent>
-            <div className="absolute -right-4 -bottom-4 opacity-10">
-              <Package size={120} />
-            </div>
           </Card>
 
-          {/* Yearly Added Card */}
           <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
@@ -722,14 +721,12 @@ const ProductsStorePage: React.FC = () => {
           </Card>
         </div>
 
-        {/* Monday to Sunday Grid - Matching Sold Page Style */}
+        {/* Weekday Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
             const isSelected = selectedDay === idx;
             const now = new Date();
-            const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });
-            const endOfCurrentWeek = endOfWeek(now, { weekStartsOn: 1 });
-            const isTodayInGrid = isSameDay(storeStats.timelineDates[idx], now);
+            const isTodayInGrid = isSameDay(storeStats.timelineDays[idx], now);
 
             return (
               <motion.div
@@ -777,7 +774,7 @@ const ProductsStorePage: React.FC = () => {
           })}
         </div>
 
-        {/* Filters - No Branch Filter */}
+        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-none border-b">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
@@ -808,8 +805,8 @@ const ProductsStorePage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-            <Input type="number" placeholder="Max Price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+            <Input type="number" placeholder="Min Value" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+            <Input type="number" placeholder="Max Value" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -829,7 +826,7 @@ const ProductsStorePage: React.FC = () => {
           )}
         </div>
 
-        {/* Desktop Table - No Branch Column */}
+        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
@@ -841,24 +838,14 @@ const ProductsStorePage: React.FC = () => {
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('model')}>
-                  <div className="flex items-center gap-1">Model <ArrowUpDown className="h-4 w-4" /></div>
+                <TableHead>Model</TableHead>
+                <TableHead className="text-center">Quantity</TableHead>
+                {isAdmin && <TableHead>Branch</TableHead>}
+                <TableHead>Unit Cost</TableHead>
+                <TableHead className="text-right cursor-pointer" onClick={() => handleSort('costPrice')}>
+                  <div className="flex items-center gap-1 justify-end">Total Value <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Quantity <ArrowUpDown className="h-4 w-4" /></div>
-                </TableHead>
-                {isAdmin && (
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('branch')}>
-                    <div className="flex items-center gap-1">Branch Name <ArrowUpDown className="h-4 w-4" /></div>
-                  </TableHead>
-                )}
-                <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1">Cost Price <ArrowUpDown className="h-4 w-4" /></div>
-                </TableHead>
-                <TableHead className="text-right">Total Amount</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
-                  <div className="flex items-center gap-1">Added Date <ArrowUpDown className="h-4 w-4" /></div>
-                </TableHead>
+                <TableHead>Added Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -867,7 +854,7 @@ const ProductsStorePage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 13 : 12} className="h-64 text-center text-muted-foreground">
+                    <TableCell colSpan={isAdmin ? 11 : 10} className="h-64 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="h-12 w-12 opacity-20" />
                         <p className="text-lg font-medium">No products found matching your filters.</p>
@@ -882,7 +869,7 @@ const ProductsStorePage: React.FC = () => {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      layout // Smooth layout transitions
+                      layout
                       className="group hover:bg-muted/30 transition-colors border-b last:border-0"
                     >
                       <TableCell className="text-xs text-muted-foreground font-mono">
@@ -900,7 +887,7 @@ const ProductsStorePage: React.FC = () => {
                         {product.model || '-'}
                       </TableCell>
                       <TableCell className="text-center font-bold">
-                        {product.quantity}{product.unit || 'pcs'}
+                        {formatQuantityWithUnit(product)}
                       </TableCell>
                       {isAdmin && (
                         <TableCell>
@@ -910,17 +897,10 @@ const ProductsStorePage: React.FC = () => {
                         </TableCell>
                       )}
                       <TableCell className="font-medium whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span>{Number(product.costType === 'all' ? (product.costPricePerUnit || (product.costPrice / product.quantity)) : product.costPrice || 0).toLocaleString()} RWF</span>
-                          {product.costType === 'all' && (
-                            <span className="text-[10px] text-muted-foreground">Budget: {Number(product.costPrice).toLocaleString()} RWF</span>
-                          )}
-                        </div>
+                        {getUnitCost(product).toLocaleString()} RWF
                       </TableCell>
                       <TableCell className="text-right font-black text-amber-600 dark:text-amber-400">
-                        {product.costType === 'all'
-                          ? Number(product.costPrice || 0).toLocaleString()
-                          : Number(product.quantity * (product.costPrice || 0)).toLocaleString()} RWF
+                        {getTotalValue(product).toLocaleString()} RWF
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {product.addedDate ? format(new Date(product.addedDate), 'dd MMM yyyy') : '-'}
@@ -930,7 +910,6 @@ const ProductsStorePage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end items-center gap-2">
-                          {/* Confirmation Icon Toggle */}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -964,10 +943,7 @@ const ProductsStorePage: React.FC = () => {
                               size="icon"
                               className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
                               onClick={() => {
-                                setCurrentProduct({
-                                  ...product,
-                                  costPrice: product.quantity * (product.costPrice || 0)
-                                });
+                                setCurrentProduct(product);
                                 setEditDialogOpen(true);
                               }}
                             >
@@ -982,11 +958,10 @@ const ProductsStorePage: React.FC = () => {
                               setCurrentProduct(product);
                               setSellForm({
                                 quantity: '',
-                                sellingPrice: product.sellingPrice || (product.costPrice / 1),
+                                sellingPrice: getUnitCost(product) * 1.5,
                                 deadline: product.deadline || '',
                                 sellInBaseUnit: true
                               });
-                              // Staff cannot sell unconfirmed products
                               if (user?.role === 'staff' && !product.confirm) {
                                 toast.error("You cannot sell an unconfirmed product.");
                                 return;
@@ -1019,7 +994,7 @@ const ProductsStorePage: React.FC = () => {
               </AnimatePresence>
             </TableBody>
           </Table>
-        </div >
+        </div>
 
         {/* Mobile Cards */}
         <div className="md:hidden space-y-3">
@@ -1028,14 +1003,7 @@ const ProductsStorePage: React.FC = () => {
           ) : (
             <AnimatePresence mode='popLayout'>
               {sortedProducts.map(p => (
-                <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  layout // Smooth layout transitions
-                >
+                <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }} layout>
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start gap-3">
@@ -1047,7 +1015,7 @@ const ProductsStorePage: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <Badge variant="outline" className="font-bold">{p.quantity} {p.unit || 'pcs'}</Badge>
+                          <Badge variant="outline" className="font-bold">{formatQuantityWithUnit(p)}</Badge>
                           {getStatusBadge(p.quantity)}
                         </div>
                       </div>
@@ -1055,16 +1023,14 @@ const ProductsStorePage: React.FC = () => {
                       <div className="flex items-center justify-between mt-3 pt-3 border-t">
                         <div className="flex flex-col">
                           <span className="text-[10px] text-muted-foreground uppercase">Unit Cost</span>
-                          <span className={`text-sm font-medium ${getPriceColor(Number(p.costPricePerUnit || (p.costType === 'all' ? p.costPrice / p.quantity : p.costPrice) || 0))}`}>
-                            {Number(p.costPricePerUnit || (p.costType === 'all' ? p.costPrice / p.quantity : p.costPrice) || 0).toLocaleString()} RWF
+                          <span className="text-sm font-medium">
+                            {getUnitCost(p).toLocaleString()} RWF
                           </span>
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-[10px] text-muted-foreground uppercase">Total Value</span>
                           <span className="text-lg font-black text-amber-600">
-                            {p.costType === 'all'
-                              ? Number(p.costPrice || 0).toLocaleString()
-                              : Number(p.quantity * (p.costPrice || 0)).toLocaleString()} RWF
+                            {getTotalValue(p).toLocaleString()} RWF
                           </span>
                         </div>
                       </div>
@@ -1087,7 +1053,7 @@ const ProductsStorePage: React.FC = () => {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
-                              disabled={!p.confirm}
+                              disabled={user?.role === 'staff' && !p.confirm}
                             >
                               <ShoppingCart className="mr-2 h-4 w-4" /> Sell Product
                             </DropdownMenuItem>
@@ -1123,8 +1089,8 @@ const ProductsStorePage: React.FC = () => {
           )}
         </div>
 
-        {/* All Dialogs - Add, Edit, Sell, Confirm, Details, Delete */}
-        < Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen} >
+        {/* ADD DIALOG */}
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Product</DialogTitle>
@@ -1134,14 +1100,13 @@ const ProductsStorePage: React.FC = () => {
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-              {/* Form Section */}
               <div className="space-y-4">
                 <div className="grid gap-2">
                   <Label>Product Name *</Label>
                   <Input
                     value={newProduct.productName}
                     onChange={e => setNewProduct(p => ({ ...p, productName: e.target.value }))}
-                    placeholder="e.g. Milk"
+                    placeholder="e.g. Rice"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1156,7 +1121,7 @@ const ProductsStorePage: React.FC = () => {
                   </div>
                   <div className="grid gap-2">
                     <Label>Model (optional)</Label>
-                    <Input value={newProduct.model} onChange={e => setNewProduct(p => ({ ...p, model: e.target.value }))} placeholder="e.g. 500ml" />
+                    <Input value={newProduct.model} onChange={e => setNewProduct(p => ({ ...p, model: e.target.value }))} placeholder="e.g. kigori" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1191,34 +1156,34 @@ const ProductsStorePage: React.FC = () => {
                   <div className="flex bg-muted p-1 rounded-lg">
                     <Button
                       type="button"
-                      variant={newProduct.costType === 'per' ? 'default' : 'ghost'}
-                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'per' ? 'bg-blue-600 shadow-md text-white' : 'border border-blue-200 hover:bg-blue-50'}`}
-                      onClick={() => setNewProduct(p => ({ ...p, costType: 'per' }))}
+                      variant={newProduct.costType === 'costPerUnit' ? 'default' : 'ghost'}
+                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'costPerUnit' ? 'bg-blue-600 shadow-md text-white' : ''}`}
+                      onClick={() => setNewProduct(p => ({ ...p, costType: 'costPerUnit' }))}
                     >
                       Cost Per Unit
                     </Button>
                     <Button
                       type="button"
-                      variant={newProduct.costType === 'all' ? 'default' : 'ghost'}
-                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'all' ? 'bg-blue-600 shadow-md text-white' : 'border border-blue-200 hover:bg-blue-50'}`}
-                      onClick={() => setNewProduct(p => ({ ...p, costType: 'all' }))}
+                      variant={newProduct.costType === 'bulkCost' ? 'default' : 'ghost'}
+                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'bulkCost' ? 'bg-blue-600 shadow-md text-white' : ''}`}
+                      onClick={() => setNewProduct(p => ({ ...p, costType: 'bulkCost' }))}
                     >
                       Total Bulk Cost
                     </Button>
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label>{newProduct.costType === 'per' ? 'Cost Price per Unit *' : 'Total Cost Amount *'}</Label>
+                  <Label>{newProduct.costType === 'costPerUnit' ? 'Cost Price per Unit *' : 'Total Cost Amount *'}</Label>
                   <Input
                     type="number"
                     value={newProduct.costPrice}
                     onChange={e => setNewProduct(p => ({ ...p, costPrice: e.target.value === '' ? '' : Number(e.target.value) }))}
-                    placeholder={newProduct.costType === 'per' ? "e.g. 500" : "e.g. 50000"}
+                    placeholder={newProduct.costType === 'costPerUnit' ? "e.g. 3000" : "e.g. 30000"}
                   />
                 </div>
                 {isAdmin && (
                   <div className="grid gap-2">
-                    <Label>Branch Name *</Label>
+                    <Label>Branch *</Label>
                     <Select value={newProduct.branch || userBranch || ''} onValueChange={(val) => setNewProduct(p => ({ ...p, branch: val }))}>
                       <SelectTrigger><SelectValue placeholder="Select Branch" /></SelectTrigger>
                       <SelectContent>
@@ -1229,7 +1194,6 @@ const ProductsStorePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Live Preview Section */}
               <div className="space-y-4">
                 <div className="bg-muted/30 p-6 rounded-xl border h-full space-y-4">
                   <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mb-2">
@@ -1251,36 +1215,28 @@ const ProductsStorePage: React.FC = () => {
                         <p className="font-bold text-lg text-primary">{newProduct.quantity || 0} <span className="text-sm font-medium">{newProduct.unit}</span></p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase font-semibold">
-                          {newProduct.costType === 'per' ? 'Unit Cost' : 'Budget (Total)'}
-                        </p>
+                        <p className="text-xs text-muted-foreground uppercase font-semibold">Entered Amount</p>
                         <p className="font-bold text-lg">{Number(newProduct.costPrice || 0).toLocaleString()} RWF</p>
                       </div>
                     </div>
 
                     <div className="pt-4 border-t space-y-2">
-                      {newProduct.costType === 'all' && Number(newProduct.quantity) > 0 && (
-                        <div className="flex justify-between items-center text-sm mb-2 p-2 bg-primary/5 rounded border border-primary/10">
+                      {newProduct.costType === 'bulkCost' && Number(newProduct.quantity) > 0 && (
+                        <div className="flex justify-between items-center text-sm p-2 bg-primary/5 rounded border border-primary/10">
                           <span className="text-muted-foreground font-medium">Calculated Unit Cost:</span>
                           <span className="font-bold text-primary">
-                            {(Number(newProduct.costPrice || 0) / Number(newProduct.quantity)).toLocaleString(undefined, { maximumFractionDigits: 1 })} RWF
+                            {(Number(newProduct.costPrice || 0) / Number(newProduct.quantity || 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })} RWF
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground font-medium">Total Investment</span>
+                        <span className="text-muted-foreground font-medium">Total Investment Value</span>
                         <span className="font-black text-xl text-amber-600">
-                          {newProduct.costType === 'per'
-                            ? (Number(newProduct.costPrice || 0) * Number(newProduct.quantity || 0)).toLocaleString()
-                            : Number(newProduct.costPrice || 0).toLocaleString()} RWF
+                          {newProduct.costType === 'bulkCost'
+                            ? Number(newProduct.costPrice || 0).toLocaleString()
+                            : (Number(newProduct.costPrice || 0) * Number(newProduct.quantity || 0)).toLocaleString()} RWF
                         </span>
                       </div>
-                      {isAdmin && (
-                        <div className="flex justify-between items-center text-xs mt-2 pt-2 border-t border-dashed">
-                          <span className="text-muted-foreground">Target Branch</span>
-                          <span className="font-semibold">{getBranchName(newProduct.branch || userBranch || '')}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -1314,9 +1270,10 @@ const ProductsStorePage: React.FC = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
-        {/* Edit Product Dialog – Fixed null error */}
-        <Dialog open={editDialogOpen} onOpenChange={(val) => { setEditDialogOpen(val); if (!val) { setCurrentProduct(null); } }}>
+        </Dialog>
+
+        {/* EDIT DIALOG */}
+        <Dialog open={editDialogOpen} onOpenChange={(val) => { setEditDialogOpen(val); if (!val) setCurrentProduct(null); }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Product</DialogTitle>
@@ -1325,7 +1282,6 @@ const ProductsStorePage: React.FC = () => {
 
             {currentProduct ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-                {/* Form Section */}
                 <div className="space-y-4">
                   <div className="grid gap-2">
                     <Label>Product Name *</Label>
@@ -1388,38 +1344,34 @@ const ProductsStorePage: React.FC = () => {
                   <div className="grid gap-2">
                     <Label>Cost Configuration *</Label>
                     <div className="flex bg-muted p-1 rounded-lg">
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        <Button
-                          type="button"
-                          variant={currentProduct.costType === 'per' ? 'default' : 'ghost'}
-                          className={`text-xs h-8 ${currentProduct.costType === 'per' ? 'bg-blue-600 shadow-md' : 'border border-blue-200 hover:bg-blue-50'}`}
-                          onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'per' } : null)}
-                        >
-                          Price per Unit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={currentProduct.costType === 'all' ? 'default' : 'ghost'}
-                          className={`text-xs h-8 ${currentProduct.costType === 'all' ? 'bg-blue-600 shadow-md' : 'border border-blue-200 hover:bg-blue-50'}`}
-                          onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'all' } : null)}
-                        >
-                          Total Bulk Cost
-                        </Button>
-                      </div>
+                      <Button
+                        type="button"
+                        variant={currentProduct.costType === 'costPerUnit' ? 'default' : 'ghost'}
+                        className={`flex-1 text-xs h-8 ${currentProduct.costType === 'costPerUnit' ? 'bg-blue-600 shadow-md text-white' : ''}`}
+                        onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'costPerUnit' } : null)}
+                      >
+                        Cost Per Unit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={currentProduct.costType === 'bulkCost' ? 'default' : 'ghost'}
+                        className={`flex-1 text-xs h-8 ${currentProduct.costType === 'bulkCost' ? 'bg-blue-600 shadow-md text-white' : ''}`}
+                        onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'bulkCost' } : null)}
+                      >
+                        Total Bulk Cost
+                      </Button>
                     </div>
-                    <div className="grid gap-2">
-                      <Label>{currentProduct.costType === 'per' ? 'Cost Price per Unit *' : 'Total Cost Amount *'}</Label>
-                      <Input
-                        type="number"
-                        value={currentProduct.costPrice}
-                        onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)}
-                        placeholder={currentProduct.costType === 'per' ? "e.g. 500" : "e.g. 50000"}
-                      />
-                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{currentProduct.costType === 'costPerUnit' ? 'Cost Price per Unit *' : 'Total Cost Amount *'}</Label>
+                    <Input
+                      type="number"
+                      value={currentProduct.costPrice}
+                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, costPrice: Number(e.target.value) || 0 } : null)}
+                    />
                   </div>
                 </div>
 
-                {/* Live Preview Section */}
                 <div className="space-y-4">
                   <div className="bg-muted/30 p-6 rounded-xl border h-full space-y-4">
                     <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mb-2">
@@ -1441,37 +1393,30 @@ const ProductsStorePage: React.FC = () => {
                           <p className="font-bold text-lg text-primary">{currentProduct.quantity || 0} <span className="text-sm font-medium">{currentProduct.unit}</span></p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase font-semibold">
-                            {currentProduct.costType === 'per' ? 'Unit Cost' : 'Budget (Total)'}
-                          </p>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Entered Amount</p>
                           <p className="font-bold text-lg">{Number(currentProduct.costPrice || 0).toLocaleString()} RWF</p>
                         </div>
                       </div>
 
-                      {currentProduct.quantity > 0 && (
-                        <div className="flex justify-between items-center text-sm mb-2 p-2 bg-primary/5 rounded border border-primary/10">
-                          <span className="text-muted-foreground font-medium">Effective Unit Cost:</span>
+                      {currentProduct.costType === 'bulkCost' && currentProduct.quantity > 0 && (
+                        <div className="flex justify-between items-center text-sm p-2 bg-primary/5 rounded border border-primary/10">
+                          <span className="text-muted-foreground font-medium">Calculated Unit Cost:</span>
                           <span className="font-bold text-primary">
-                            {(currentProduct.costPricePerUnit || (currentProduct.costType === 'all' ? (Number(currentProduct.costPrice || 0) / Number(currentProduct.quantity)) : Number(currentProduct.costPrice || 0))).toLocaleString(undefined, { maximumFractionDigits: 1 })} RWF
+                            {(Number(currentProduct.costPrice || 0) / currentProduct.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })} RWF
                           </span>
                         </div>
                       )}
-                      <div className="flex justify-between items-center text-sm">
+
+                      <div className="pt-4 border-t flex justify-between items-center text-sm">
                         <span className="text-muted-foreground font-medium">Total Value</span>
                         <span className="font-black text-xl text-amber-600">
-                          {currentProduct.costType === 'per'
-                            ? (Number(currentProduct.costPrice || 0) * Number(currentProduct.quantity || 0)).toLocaleString()
-                            : Number(currentProduct.costPrice || 0).toLocaleString()} RWF
+                          {currentProduct.costType === 'bulkCost'
+                            ? Number(currentProduct.costPrice || 0).toLocaleString()
+                            : (getUnitCost(currentProduct) * currentProduct.quantity).toLocaleString()} RWF
                         </span>
                       </div>
                     </div>
                   </div>
-                  <Alert className="bg-blue-50 border-blue-200 mt-4">
-                    <Info className="h-3 w-3 text-blue-600" />
-                    <AlertDescription className="text-blue-700 text-[10px]">
-                      Review changes and click save to apply updates.
-                    </AlertDescription>
-                  </Alert>
                 </div>
               </div>
             ) : (
@@ -1482,22 +1427,22 @@ const ProductsStorePage: React.FC = () => {
               <Button variant="outline" onClick={() => { setEditDialogOpen(false); setCurrentProduct(null); }}>Cancel</Button>
               <Button
                 onClick={handleUpdateProduct}
-                disabled={actionLoading || !currentProduct || !currentProduct.productName || !currentProduct.category}
+                disabled={actionLoading || !currentProduct}
                 className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px]"
               >
                 {actionLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
-        {/* Sell Dialog */}
-        < Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen} >
+        {/* SELL DIALOG */}
+        <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Sell Product</DialogTitle>
               <DialogDescription>
-                {currentProduct?.productName} (Available: {currentProduct?.quantity ?? 0})
+                {currentProduct?.productName} (Available: {currentProduct ? formatQuantityWithUnit(currentProduct) : '0'})
               </DialogDescription>
             </DialogHeader>
             {currentProduct && (
@@ -1509,7 +1454,9 @@ const ProductsStorePage: React.FC = () => {
                       type="number"
                       value={sellForm.quantity}
                       onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
-                      placeholder={`Amount in ${currentProduct.unit || 'units'}`}
+                      placeholder={`Max ${currentProduct.quantity}`}
+                      min="1"
+                      max={currentProduct.quantity}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -1523,52 +1470,6 @@ const ProductsStorePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Profit Preview */}
-                {(Number(sellForm.sellingPrice) > 0 || Number(sellForm.quantity) > 0) && (
-                  <div className="bg-muted/50 p-4 rounded-xl border space-y-3">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-muted-foreground font-medium uppercase tracking-wider">Unit Economics</span>
-                      <Badge variant="outline" className="text-[10px] bg-white/50">
-                        Cost Type: {currentProduct.costType === 'all' ? 'Bulk' : 'Per Unit'}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4 pt-1">
-                      <div className="space-y-1">
-                        <p className="text-[10px] text-muted-foreground uppercase">Effective Unit Cost</p>
-                        <p className="text-sm font-bold">
-                          {(currentProduct.costPricePerUnit || (currentProduct.costType === 'all'
-                            ? (currentProduct.costPrice / currentProduct.quantity)
-                            : currentProduct.costPrice)).toLocaleString(undefined, { maximumFractionDigits: 1 })} RWF
-                        </p>
-                      </div>
-                      <div className="space-y-1 text-right">
-                        <p className="text-[10px] text-muted-foreground uppercase">Profit Margin</p>
-                        <p className={`text-sm font-bold ${(Number(sellForm.sellingPrice) - (currentProduct.costPricePerUnit || (currentProduct.costType === 'all' ? (currentProduct.costPrice / currentProduct.quantity) : currentProduct.costPrice))) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {(Number(sellForm.sellingPrice) - (currentProduct.costPricePerUnit || (currentProduct.costType === 'all' ? (currentProduct.costPrice / currentProduct.quantity) : currentProduct.costPrice))).toLocaleString(undefined, { maximumFractionDigits: 1 })} RWF
-                        </p>
-                      </div>
-                    </div>
-
-                    {Number(sellForm.quantity) > 0 && (
-                      <div className="pt-3 border-t flex justify-between items-end">
-                        <div className="space-y-1">
-                          <p className="text-[10px] text-muted-foreground uppercase">Total Sale</p>
-                          <p className="text-base font-bold">
-                            {(Number(sellForm.sellingPrice) * Number(sellForm.quantity)).toLocaleString()} RWF
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] text-muted-foreground uppercase">Total Profit</p>
-                          <p className={`text-xl font-black ${(Number(sellForm.sellingPrice) - (currentProduct.costPricePerUnit || (currentProduct.costType === 'all' ? (currentProduct.costPrice / currentProduct.quantity) : currentProduct.costPrice))) * Number(sellForm.quantity) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {((Number(sellForm.sellingPrice) - (currentProduct.costPricePerUnit || (currentProduct.costType === 'all' ? (currentProduct.costPrice / currentProduct.quantity) : currentProduct.costPrice))) * Number(sellForm.quantity)).toLocaleString()} RWF
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className="grid gap-2">
                   <Label>Return Deadline (optional)</Label>
                   <Input
@@ -1578,44 +1479,40 @@ const ProductsStorePage: React.FC = () => {
                   />
                 </div>
 
-                {Number(sellForm.quantity) > currentProduct.quantity && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>Quantity exceeds available stock.</AlertDescription>
-                  </Alert>
-                )}
+                {(Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0) && (
+                  <div className="bg-muted/50 p-4 rounded-xl border space-y-4">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                      Profit & Loss Preview
+                    </div>
 
-                {Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0 && (
-                  <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
-                    <CardContent className="pt-6 space-y-3">
-                      {(() => {
-                        const costOfSoldQty = Number(sellForm.quantity) * (currentProduct.costPrice || 0);
-                        const totalReceived = Number(sellForm.quantity) * Number(sellForm.sellingPrice);
-                        const profit = totalReceived - costOfSoldQty;
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Unit Cost</p>
+                        <p className="text-lg font-bold">{getUnitCost(currentProduct).toLocaleString()} RWF</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Profit per Unit</p>
+                        <p className={`text-lg font-bold ${Number(sellForm.sellingPrice) >= getUnitCost(currentProduct) ? 'text-green-600' : 'text-red-600'}`}>
+                          {(Number(sellForm.sellingPrice) - getUnitCost(currentProduct)).toLocaleString()} RWF
+                        </p>
+                      </div>
+                    </div>
 
-                        return (
-                          <>
-                            <div className="flex justify-between text-lg">
-                              <span>Total Received:</span>
-                              <span className="font-bold">
-                                {totalReceived.toLocaleString()} RWF
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-lg">
-                              <span>Cost of Goods (Sold):</span>
-                              <span>{costOfSoldQty.toLocaleString()} RWF</span>
-                            </div>
-                            <div className="flex justify-between text-xl font-bold pt-2 border-t">
-                              <span>Total Profit:</span>
-                              <span className={profit >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                {profit.toLocaleString()} RWF
-                              </span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </CardContent>
-                  </Card>
+                    <div className="pt-3 border-t">
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase">Total Revenue</p>
+                          <p className="text-xl font-bold">{(Number(sellForm.sellingPrice) * Number(sellForm.quantity)).toLocaleString()} RWF</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground uppercase">Total Profit/Loss</p>
+                          <p className={`text-2xl font-black ${(Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {((Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity)).toLocaleString()} RWF
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
@@ -1627,29 +1524,33 @@ const ProductsStorePage: React.FC = () => {
                 onClick={openConfirmSale}
                 disabled={
                   actionLoading ||
-                  !currentProduct ||
                   Number(sellForm.quantity) <= 0 ||
                   Number(sellForm.sellingPrice) <= 0 ||
-                  Number(sellForm.quantity) > currentProduct.quantity
+                  Number(sellForm.quantity) > currentProduct?.quantity
                 }
               >
                 Proceed to Confirm
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
-        {/* Confirm Sale Dialog */}
-        < Dialog open={confirmSaleDialogOpen} onOpenChange={setConfirmSaleDialogOpen} >
+        {/* CONFIRM SALE DIALOG */}
+        <Dialog open={confirmSaleDialogOpen} onOpenChange={setConfirmSaleDialogOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Confirm Sale</DialogTitle></DialogHeader>
             <DialogDescription className="space-y-3">
               <p>Are you sure you want to confirm this sale?</p>
-              <div className="font-medium">
+              <div className="font-medium space-y-1">
                 <p>Product: <strong>{currentProduct?.productName}</strong></p>
                 <p>Quantity: <strong>{sellForm.quantity} {currentProduct?.unit}</strong></p>
-                <p>Price: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF / {currentProduct?.unit}</strong></p>
-                <p className="text-lg pt-2">Total Total: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
+                <p>Unit Price: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
+                <p className="text-lg pt-2">Total Amount: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
+                {currentProduct && (
+                  <p className={`text-lg font-bold ${(Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    Expected Profit: {((Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity)).toLocaleString()} RWF
+                  </p>
+                )}
               </div>
             </DialogDescription>
             <DialogFooter>
@@ -1657,10 +1558,10 @@ const ProductsStorePage: React.FC = () => {
               <Button onClick={handleSellConfirm} disabled={actionLoading}>Yes, Confirm Sale</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
-        {/* Confirm Product Status */}
-        < Dialog open={confirmProductDialogOpen} onOpenChange={setConfirmProductDialogOpen} >
+        {/* CONFIRM PRODUCT DIALOG */}
+        <Dialog open={confirmProductDialogOpen} onOpenChange={setConfirmProductDialogOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Change Confirmation Status</DialogTitle></DialogHeader>
             <DialogDescription>
@@ -1671,33 +1572,34 @@ const ProductsStorePage: React.FC = () => {
               <Button onClick={handleConfirmProduct} disabled={actionLoading}>Confirm Change</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
-        {/* Details Dialog */}
-        < Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen} >
+        {/* DETAILS DIALOG */}
+        <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Product Details</DialogTitle></DialogHeader>
             {currentProduct && (
-              <div className="space-y-2 py-4">
+              <div className="space-y-3 py-4">
                 <p><strong>Name:</strong> {currentProduct.productName}</p>
                 <p><strong>Category:</strong> {currentProduct.category}</p>
                 <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
-                <p><strong>Quantity:</strong> {currentProduct.quantity} {currentProduct.unit || 'pcs'}</p>
+                <p><strong>Quantity:</strong> {formatQuantityWithUnit(currentProduct)}</p>
+                <p><strong>Unit Cost:</strong> {getUnitCost(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>Total Value:</strong> {getTotalValue(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>Cost Type:</strong> {currentProduct.costType === 'bulkCost' ? 'Bulk Cost' : 'Cost Per Unit'}</p>
                 <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
-                <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
-                <p><strong>Status:</strong> {getStatusBadge(currentProduct.quantity)}</p>
                 <p><strong>Confirmed:</strong> {currentProduct.confirm ? 'Yes' : 'No'}</p>
-                <p><strong>Added:</strong> {currentProduct.addedDate ? new Date(currentProduct.addedDate).toLocaleDateString() : '-'}</p>
+                <p><strong>Added:</strong> {currentProduct.addedDate ? format(new Date(currentProduct.addedDate), 'dd MMM yyyy') : '-'}</p>
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
+        </Dialog>
 
-        {/* Delete Confirmation */}
-        < Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen} >
+        {/* DELETE CONFIRM DIALOG */}
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>Delete Product?</DialogTitle></DialogHeader>
             <DialogDescription>This action cannot be undone.</DialogDescription>
@@ -1706,9 +1608,8 @@ const ProductsStorePage: React.FC = () => {
               <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>Delete</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog >
-
-      </div >
+        </Dialog>
+      </div>
     </>
   );
 };

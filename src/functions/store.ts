@@ -94,6 +94,8 @@ export const syncOfflineOperations = async (): Promise<void> => {
             modelLower: normalizedModel || '',
             model: op.data.model || '',
             unit: op.data.unit || 'pcs',
+            costType: op.data.costType || 'costPerUnit',           // ← NOW SAVED
+            costPricePerUnit: op.data.costPricePerUnit || 0,       // ← NOW SAVED
             addedDate: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sellingPrice: null,
@@ -168,10 +170,6 @@ export const subscribeToProducts = (
     q = query(q, where('branch', '==', branchId));
   }
 
-  // Optional category filter if we wanted to push it to DB level (currently UI handles it)
-  // For now, follow existing pattern of fetching all (or branch filtered) and letting UI filter categories
-  // unless performance dictates otherwise.
-
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const products = snapshot.docs.map((d) => ({
       id: d.id,
@@ -200,7 +198,6 @@ export const getProducts = async (
       where('status', '==', 'store')
     );
 
-    // If Staff, STRICTLY filter by their assigned branch
     if (userRole === 'staff') {
       if (!branchId) {
         toast.error('No branch assigned to user');
@@ -208,7 +205,6 @@ export const getProducts = async (
       }
       q = query(q, where('branch', '==', branchId));
     }
-    // If Admin, ONLY filter if a specific branchId is provided (and not 'All' which the UI might handle by passing null)
     else if (userRole === 'admin' && branchId && branchId !== 'All') {
       q = query(q, where('branch', '==', branchId));
     }
@@ -225,7 +221,7 @@ export const getProducts = async (
   }
 };
 
-
+// FIXED: Now properly saves costType and costPricePerUnit
 export const addOrUpdateProduct = async (
   data: {
     productName: string;
@@ -238,6 +234,8 @@ export const addOrUpdateProduct = async (
     confirm: boolean;
     unit?: string;
     deadline?: string;
+    costType: 'costPerUnit' | 'bulkCost';     // ← Required
+    costPricePerUnit: number;                 // ← Required
   }
 ): Promise<Product | null> => {
   if (!data.branch) {
@@ -258,6 +256,8 @@ export const addOrUpdateProduct = async (
       category: data.category,
       model: data.model || '',
       costPrice: data.costPrice,
+      costPricePerUnit: data.costPricePerUnit,
+      costType: data.costType,
       sellingPrice: null,
       status: 'store',
       addedDate: new Date().toISOString(),
@@ -334,6 +334,9 @@ export const addOrUpdateProduct = async (
         model: data.model?.trim() || '',
         modelLower: normalizedModel || '',
         costPrice: data.costPrice,
+        costPricePerUnit: data.costPricePerUnit,   // ← SAVED
+        costType: data.costType,                   // ← SAVED
+        unit: data.unit || 'pcs',
         sellingPrice: null,
         status: 'store',
         addedDate: new Date().toISOString(),
@@ -342,7 +345,6 @@ export const addOrUpdateProduct = async (
         businessId: data.businessId,
         confirm: data.confirm,
         deadline: data.deadline,
-        unit: data.unit || 'pcs',
         updatedAt: new Date().toISOString(),
       };
 
@@ -364,6 +366,8 @@ export const addOrUpdateProduct = async (
           category: data.category,
           quantity: data.quantity,
           costPrice: data.costPrice,
+          costType: data.costType,
+          costPricePerUnit: data.costPricePerUnit,
         });
       }
 
@@ -408,7 +412,7 @@ export const sellProduct = async (
     queue.push({
       type: 'sell',
       productId: id,
-      quantity, // sold in base units
+      quantity,
       sellingPrice,
       deadline: deadline || null,
       originalProduct: product,
@@ -447,8 +451,7 @@ export const sellProduct = async (
 
     const totalAmount = quantity * sellingPrice;
 
-    // Use costPricePerUnit if available, otherwise calculate effectiveUnitCost
-    const effectiveUnitCost = original.costPricePerUnit ?? (original.costType === 'all'
+    const effectiveUnitCost = original.costPricePerUnit ?? ((original.costType === 'bulkCost')
       ? (original.costPrice / original.quantity)
       : original.costPrice);
 
@@ -470,8 +473,8 @@ export const sellProduct = async (
         status: 'sold',
         sellingPrice,
         costPrice: original.costPrice,
-        costPricePerUnit: effectiveUnitCost, // Store unit cost
-        unitCost: effectiveUnitCost, // Keep legacy field
+        costPricePerUnit: effectiveUnitCost,
+        unitCost: effectiveUnitCost,
         soldDate: new Date().toISOString(),
         quantity,
         deadline: deadline || null,

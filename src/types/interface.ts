@@ -18,7 +18,7 @@ export interface Product {
     confirm: boolean;
     businessId: string;
     unit: string;
-    costType?: 'per' | 'all';
+    costType?: 'costPerUnit' | 'bulkCost'| 'costPricePerUnit';
     costPricePerUnit?: number; // Added to store unit cost specifically
     updatedAt?: string;
     productNameLower?: string;
@@ -42,7 +42,7 @@ export interface SoldProduct {
     buyerPhone?: string;
     paymentMethod?: string;
     unit: string;
-    costType?: 'per' | 'all';
+    costType?: 'costPerUnit' | 'bulkCost';
     costPricePerUnit?: number; // Added for consistency
     unitCost?: number; // Kept for backward compatibility/clarity
 }
@@ -60,7 +60,7 @@ export interface RestoredProduct {
     restoreComment?: string | null;
     businessId: string;
     unit: string;
-    costType?: 'per' | 'all';
+    costType?: 'costPerUnit' | 'bulkCost';
     costPricePerUnit?: number;
 }
 
