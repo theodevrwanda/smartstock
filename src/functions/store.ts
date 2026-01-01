@@ -99,6 +99,7 @@ export const syncOfflineOperations = async (): Promise<void> => {
             addedDate: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sellingPrice: null,
+            restoreComment: null, // Explicitly null
             status: 'store',
           };
           batch.set(newRef, newProduct);
@@ -338,6 +339,7 @@ export const addOrUpdateProduct = async (
         costType: data.costType,                   // ← SAVED
         unit: data.unit || 'pcs',
         sellingPrice: null,
+        restoreComment: null, // Explicitly null
         status: 'store',
         addedDate: new Date().toISOString(),
         quantity: data.quantity,

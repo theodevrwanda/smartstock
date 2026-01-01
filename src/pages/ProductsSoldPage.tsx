@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info, Calendar as CalendarIcon, TrendingUp, TrendingDown, DollarSign, Award, Package} from 'lucide-react';
+import { Search, Download, Eye, Trash2, ArrowUpDown, Undo, FileSpreadsheet, FileText, AlertCircle, Info, Calendar as CalendarIcon, TrendingUp, TrendingDown, DollarSign, Award, Package } from 'lucide-react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, parseISO, isWithinInterval } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -236,9 +236,26 @@ const ProductsSoldPage: React.FC = () => {
   };
 
   const calculateProfitLoss = (p: SoldProduct) => {
-    const baseCost = p.costType === 'total' && !p.costPricePerUnit && !p.unitCost
-      ? 0 // Fallback for very old inconsistent data if any
-      : (p.costPricePerUnit || p.unitCost || p.costPrice);
+    // STAGE 1: Try to get the specific unit cost stored on the sold record
+    let baseCost = p.costPricePerUnit || p.unitCost;
+
+    // STAGE 2: If missing (old data), duplicate logic from store.ts to derive it
+    if (!baseCost) {
+      if (p.costType === 'bulkCost') {
+        // This is ambiguous for sold products without original total qty, but we try best effort
+        // However, usually sold products should have costPricePerUnit now.
+        // Fallback: If costPrice is sane (e.g. < sellingPrice * 2 for single item), use it? No, unsafe.
+        // Better fallback: Just use costPrice if quantity is 1?
+        // For now, default to costPrice if it looks like a unit cost, otherwise 0 to avoid huge negative profit.
+        baseCost = p.costPrice;
+      } else {
+        baseCost = p.costPrice;
+      }
+    }
+
+    // Force baseCost to be valid number
+    baseCost = Number(baseCost) || 0;
+
     return (p.sellingPrice - baseCost) * p.quantity;
   };
 

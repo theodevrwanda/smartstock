@@ -8,24 +8,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Search, 
-  PlusCircle, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  ShoppingCart, 
-  Download, 
-  FileSpreadsheet, 
-  FileText, 
-  ArrowUpDown, 
-  CheckCircle, 
-  AlertCircle, 
-  Package, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Search,
+  PlusCircle,
+  Eye,
+  Edit,
+  Trash2,
+  ShoppingCart,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  ArrowUpDown,
+  CheckCircle,
+  AlertCircle,
+  Package,
+  DollarSign,
+  TrendingUp,
   CalendarDays,
-  Info 
+  Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -268,8 +268,8 @@ const ProductsStorePage: React.FC = () => {
     return `${p.quantity}${p.unit || ''}`;
   };
 
-  // Base Filtering
-  const baseFilteredProducts = useMemo(() => {
+  // 1. STATS FILTERING (Ignores selectedDay, but respects other filters)
+  const statsProducts = useMemo(() => {
     return products
       .filter(p =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -287,17 +287,21 @@ const ProductsStorePage: React.FC = () => {
         if (!selectedDate) return true;
         const pDate = new Date(p.addedDate);
         return isSameDay(pDate, selectedDate);
-      })
-      .filter(p => {
-        if (selectedDay === null) return true;
-        const pDate = new Date(p.addedDate);
-        const dayIdx = pDate.getDay();
-        const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
-        return monSunIdx === selectedDay;
       });
-  }, [products, searchTerm, branchFilter, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter, selectedDate, selectedDay]);
+  }, [products, searchTerm, branchFilter, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter, selectedDate]);
 
-  // Store stats
+  // 2. DISPLAY FILTERING (Respects selectedDay + stats filters)
+  const displayProducts = useMemo(() => {
+    return statsProducts.filter(p => {
+      if (selectedDay === null) return true;
+      const pDate = new Date(p.addedDate);
+      const dayIdx = pDate.getDay();
+      const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
+      return monSunIdx === selectedDay;
+    });
+  }, [statsProducts, selectedDay]);
+
+  // Store stats context (Always uses statsProducts to keep cards stable)
   const storeStats = useMemo(() => {
     const now = new Date();
     const selDate = selectedDate || now;
@@ -314,11 +318,11 @@ const ProductsStorePage: React.FC = () => {
       week: { value: 0, count: 0 },
       month: { value: 0, count: 0 },
       year: { value: 0, count: 0 },
-      daily: Array(7).fill(0).map(() => ({ value: 0, count: 0 })),
+      daily: Array(7).fill(0).map(() => ({ value: 0, count: 0, products: 0 })),
       timelineDays: weeklyDays.map(day => format(day, 'EEE').toUpperCase()),
     };
 
-    baseFilteredProducts.forEach(p => {
+    statsProducts.forEach(p => {
       const addedDateObj = new Date(p.addedDate);
       const value = getTotalValue(p);
 
@@ -332,7 +336,7 @@ const ProductsStorePage: React.FC = () => {
         const dayIdx = addedDateObj.getDay();
         const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
         stats.daily[monSunIdx].value += value;
-        stats.daily[monSunIdx].count++;
+        stats.daily[monSunIdx].count++; // This is effectively products count for that day
       }
       if (isWithinInterval(addedDateObj, { start: startOfSelectedMonth, end: endOfMonth(selDate) })) {
         stats.month.value += value;
@@ -345,10 +349,10 @@ const ProductsStorePage: React.FC = () => {
     });
 
     return stats;
-  }, [baseFilteredProducts, selectedDate]);
+  }, [statsProducts, selectedDate]);
 
   const sortedProducts = useMemo(() => {
-    return [...baseFilteredProducts].sort((a, b) => {
+    return [...displayProducts].sort((a, b) => {
       let aVal: any = a[sortColumn];
       let bVal: any = b[sortColumn];
 
@@ -362,7 +366,7 @@ const ProductsStorePage: React.FC = () => {
 
       return (aVal < bVal ? -1 : 1) * (sortDirection === 'asc' ? 1 : -1);
     });
-  }, [baseFilteredProducts, sortColumn, sortDirection]);
+  }, [displayProducts, sortColumn, sortDirection]);
 
   const getStatusBadge = (quantity: number) => {
     if (quantity <= 0) return <Badge variant="destructive" className="rounded-full px-3 py-1 bg-red-100 text-red-700 border-none font-semibold">Out of Stock</Badge>;
@@ -474,6 +478,7 @@ const ProductsStorePage: React.FC = () => {
       status: 'store',
       addedDate: new Date().toISOString(),
       sellingPrice: null,
+      restoreComment: null,
     };
 
     const result = await addOrUpdateProduct(productData);
@@ -545,8 +550,13 @@ const ProductsStorePage: React.FC = () => {
 
   const openConfirmSale = () => setConfirmSaleDialogOpen(true);
 
+  // Sale Lock
+  const isSellingRef = React.useRef(false);
+
   const handleSellConfirm = async () => {
+    if (isSellingRef.current) return;
     if (!currentProduct || sellForm.quantity === '' || sellForm.sellingPrice === '') return;
+
     const qty = Number(sellForm.quantity);
     const price = Number(sellForm.sellingPrice);
     if (qty > currentProduct.quantity || price <= 0 || qty <= 0) {
@@ -554,16 +564,23 @@ const ProductsStorePage: React.FC = () => {
       return;
     }
 
+    isSellingRef.current = true;
     setActionLoading(true);
-    const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
-    if (success) {
-      setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
-      toast.success(`Sold ${qty} ${currentProduct.unit}`);
-      setSellDialogOpen(false);
-      setConfirmSaleDialogOpen(false);
-      setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true });
+
+    try {
+      const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
+      if (success) {
+        setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
+        toast.success(`Sold ${qty} ${currentProduct.unit}`);
+        setSellDialogOpen(false);
+        setConfirmSaleDialogOpen(false);
+        setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true });
+      }
+    } finally {
+      setActionLoading(false);
+      // Small delay to prevent accidental double-clicks during dialog close animation
+      setTimeout(() => { isSellingRef.current = false; }, 500);
     }
-    setActionLoading(false);
   };
 
   const handleDeleteProduct = async () => {
@@ -765,7 +782,7 @@ const ProductsStorePage: React.FC = () => {
                       "text-[9px] uppercase font-medium opacity-60",
                       isSelected ? "text-amber-200" : "text-gray-500"
                     )}>
-                      value
+                      {storeStats.daily[idx].count} products
                     </span>
                   </div>
                 </div>
