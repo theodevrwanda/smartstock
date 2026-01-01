@@ -56,7 +56,8 @@ import {
   endOfYear,
   isSameDay,
   isWithinInterval,
-  eachDayOfInterval
+  eachDayOfInterval,
+  getDay,
 } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -188,16 +189,13 @@ const ProductsStorePage: React.FC = () => {
         }
       });
     };
-
     const handleOffline = () => {
       setIsOnline(false);
       toast.warning('Offline – Changes will sync later');
     };
-
     if (!navigator.onLine) handleOffline();
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -210,9 +208,7 @@ const ProductsStorePage: React.FC = () => {
       setLoading(false);
       return;
     }
-
     setLoading(true);
-
     getBranches(businessId)
       .then(branchList => {
         setBranches(branchList);
@@ -239,10 +235,7 @@ const ProductsStorePage: React.FC = () => {
   }, [businessId, userBranch, isOnline, isAdmin, branchFilter, user?.role]);
 
   const currentBranchName = userBranch ? branchMap.get(userBranch) || 'Your Branch' : 'No Branch';
-
-  const getBranchName = (branchId: string) => {
-    return branchMap.get(branchId) || 'Unknown Branch';
-  };
+  const getBranchName = (branchId: string) => branchMap.get(branchId) || 'Unknown Branch';
 
   const categories = useMemo(() => {
     return ['All', ...Array.from(new Set(products.map(p => p.category)))];
@@ -262,14 +255,97 @@ const ProductsStorePage: React.FC = () => {
     return getUnitCost(p) * p.quantity;
   };
 
-  // Display quantity + unit (e.g., 10kg)
   const formatQuantityWithUnit = (p: Product | null): string => {
     if (!p) return '0';
     return `${p.quantity}${p.unit || ''}`;
   };
 
-  // 1. STATS FILTERING (Ignores selectedDay, but respects other filters)
-  const statsProducts = useMemo(() => {
+  // Reference date
+  const referenceDate = selectedDate || new Date();
+
+  // Week boundaries
+  const weekStart = startOfWeek(referenceDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(referenceDate, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  // Current day index (Mon = 0, Sun = 6)
+  const currentDayIndex = getDay(new Date()) === 0 ? 6 : getDay(new Date()) - 1;
+
+  // Auto-highlight today
+  useEffect(() => {
+    if (selectedDay === null && !selectedDate) {
+      setSelectedDay(currentDayIndex);
+    }
+  }, []);
+
+  // Products for stats: only confirmed + apply all filters except confirmFilter
+  const confirmedProductsForStats = useMemo(() => {
+    return products
+      .filter(p => p.confirm === true)
+      .filter(p =>
+        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.model || '').toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .filter(p => branchFilter === 'All' || p.branch === branchFilter)
+      .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
+      .filter(p => minPrice === '' || getTotalValue(p) >= Number(minPrice))
+      .filter(p => maxPrice === '' || getTotalValue(p) <= Number(maxPrice))
+      .filter(p => minQty === '' || p.quantity >= Number(minQty))
+      .filter(p => maxQty === '' || p.quantity <= Number(maxQty))
+      .filter(p => {
+        if (!selectedDate) return true;
+        const pDate = new Date(p.addedDate);
+        return isSameDay(pDate, selectedDate);
+      });
+  }, [products, searchTerm, branchFilter, categoryFilter, minPrice, maxPrice, minQty, maxQty, selectedDate]);
+
+  // Store stats (only confirmed products)
+  const storeStats = useMemo(() => {
+    const selDate = referenceDate;
+
+    const weekRange = { start: weekStart, end: weekEnd };
+    const monthStart = startOfMonth(selDate);
+    const monthEnd = endOfMonth(selDate);
+    const yearStart = startOfYear(selDate);
+    const yearEnd = endOfYear(selDate);
+
+    const stats = {
+      week: { value: 0, count: 0 },
+      month: { value: 0, count: 0 },
+      year: { value: 0, count: 0 },
+      daily: Array(7).fill(0).map(() => ({ value: 0, count: 0 })),
+    };
+
+    confirmedProductsForStats.forEach(p => {
+      const addedDateObj = new Date(p.addedDate);
+      const value = getTotalValue(p);
+
+      if (isWithinInterval(addedDateObj, weekRange)) {
+        stats.week.value += value;
+        stats.week.count++;
+        const dayIdx = getDay(addedDateObj);
+        const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
+        stats.daily[monSunIdx].value += value;
+        stats.daily[monSunIdx].count++;
+      }
+
+      if (isWithinInterval(addedDateObj, { start: monthStart, end: monthEnd })) {
+        stats.month.value += value;
+        stats.month.count++;
+      }
+
+      if (isWithinInterval(addedDateObj, { start: yearStart, end: yearEnd })) {
+        stats.year.value += value;
+        stats.year.count++;
+      }
+    });
+
+    return stats;
+  }, [confirmedProductsForStats, referenceDate, weekStart, weekEnd]);
+
+  // Products for display/table: includes unconfirmed if filter allows
+  const baseFilteredProductsForDisplay = useMemo(() => {
     return products
       .filter(p =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -290,66 +366,24 @@ const ProductsStorePage: React.FC = () => {
       });
   }, [products, searchTerm, branchFilter, categoryFilter, minPrice, maxPrice, minQty, maxQty, confirmFilter, selectedDate]);
 
-  // 2. DISPLAY FILTERING (Respects selectedDay + stats filters)
+  // Final display with day-of-week filter + week/month/year boundary check
   const displayProducts = useMemo(() => {
-    return statsProducts.filter(p => {
+    return baseFilteredProductsForDisplay.filter(p => {
       if (selectedDay === null) return true;
+
       const pDate = new Date(p.addedDate);
-      const dayIdx = pDate.getDay();
+      const dayIdx = getDay(pDate);
       const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
-      return monSunIdx === selectedDay;
+
+      // Only show if day matches AND is within current week/month/year context
+      return (
+        monSunIdx === selectedDay &&
+        isWithinInterval(pDate, { start: weekStart, end: weekEnd }) &&
+        isWithinInterval(pDate, { start: startOfMonth(referenceDate), end: endOfMonth(referenceDate) }) &&
+        isWithinInterval(pDate, { start: startOfYear(referenceDate), end: endOfYear(referenceDate) })
+      );
     });
-  }, [statsProducts, selectedDay]);
-
-  // Store stats context (Always uses statsProducts to keep cards stable)
-  const storeStats = useMemo(() => {
-    const now = new Date();
-    const selDate = selectedDate || now;
-
-    const startOfSelectedWeek = startOfWeek(selDate, { weekStartsOn: 1 });
-    const endOfSelectedWeek = endOfWeek(selDate, { weekStartsOn: 1 });
-    const startOfSelectedMonth = startOfMonth(selDate);
-    const startOfSelectedYear = startOfYear(selDate);
-
-    const weeklyDays = eachDayOfInterval({ start: startOfSelectedWeek, end: endOfSelectedWeek });
-
-    const stats = {
-      today: { value: 0, count: 0 },
-      week: { value: 0, count: 0 },
-      month: { value: 0, count: 0 },
-      year: { value: 0, count: 0 },
-      daily: Array(7).fill(0).map(() => ({ value: 0, count: 0, products: 0 })),
-      timelineDays: weeklyDays.map(day => format(day, 'EEE').toUpperCase()),
-    };
-
-    statsProducts.forEach(p => {
-      const addedDateObj = new Date(p.addedDate);
-      const value = getTotalValue(p);
-
-      if (isSameDay(addedDateObj, selDate)) {
-        stats.today.value += value;
-        stats.today.count++;
-      }
-      if (isWithinInterval(addedDateObj, { start: startOfSelectedWeek, end: endOfSelectedWeek })) {
-        stats.week.value += value;
-        stats.week.count++;
-        const dayIdx = addedDateObj.getDay();
-        const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
-        stats.daily[monSunIdx].value += value;
-        stats.daily[monSunIdx].count++; // This is effectively products count for that day
-      }
-      if (isWithinInterval(addedDateObj, { start: startOfSelectedMonth, end: endOfMonth(selDate) })) {
-        stats.month.value += value;
-        stats.month.count++;
-      }
-      if (isWithinInterval(addedDateObj, { start: startOfSelectedYear, end: endOfYear(selDate) })) {
-        stats.year.value += value;
-        stats.year.count++;
-      }
-    });
-
-    return stats;
-  }, [statsProducts, selectedDate]);
+  }, [baseFilteredProductsForDisplay, selectedDay, weekStart, weekEnd, referenceDate]);
 
   const sortedProducts = useMemo(() => {
     return [...displayProducts].sort((a, b) => {
@@ -423,7 +457,6 @@ const ProductsStorePage: React.FC = () => {
   // ADD PRODUCT
   const handleAddProduct = async () => {
     const targetBranch = isAdmin ? (newProduct.branch || userBranch) : userBranch;
-
     if (!targetBranch) {
       toast.error('Please select a branch');
       return;
@@ -466,8 +499,8 @@ const ProductsStorePage: React.FC = () => {
       categoryLower: newProduct.category.toLowerCase(),
       model: newProduct.model || null,
       modelLower: newProduct.model?.toLowerCase() || null,
-      quantity: qty,                          // number
-      unit: newProduct.unit,                  // string (kg, pcs, etc.)
+      quantity: qty,
+      unit: newProduct.unit,
       costPrice: enteredCost,
       costPricePerUnit: costPricePerUnit,
       costType: newProduct.costType,
@@ -550,7 +583,6 @@ const ProductsStorePage: React.FC = () => {
 
   const openConfirmSale = () => setConfirmSaleDialogOpen(true);
 
-  // Sale Lock
   const isSellingRef = React.useRef(false);
 
   const handleSellConfirm = async () => {
@@ -578,7 +610,6 @@ const ProductsStorePage: React.FC = () => {
       }
     } finally {
       setActionLoading(false);
-      // Small delay to prevent accidental double-clicks during dialog close animation
       setTimeout(() => { isSellingRef.current = false; }, 500);
     }
   };
@@ -687,7 +718,7 @@ const ProductsStorePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold">{storeStats.week.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-blue-100 mt-1 opacity-80">{storeStats.week.count} products added this week</p>
+                  <p className="text-xs text-blue-100 mt-1 opacity-80">{storeStats.week.count} confirmed products</p>
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-white" />
@@ -704,7 +735,7 @@ const ProductsStorePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold">{storeStats.month.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-emerald-100 mt-1 opacity-80">{storeStats.month.count} products added this month</p>
+                  <p className="text-xs text-emerald-100 mt-1 opacity-80">{storeStats.month.count} confirmed products</p>
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <Package className="h-6 w-6 text-white" />
@@ -720,15 +751,15 @@ const ProductsStorePage: React.FC = () => {
                 Yearly Investment
               </CardTitle>
               <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {selectedDate ? format(selectedDate, 'yyyy') : format(new Date(), 'yyyy')} Yearly
+                {format(referenceDate, 'yyyy')}
               </Badge>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Period Investment</p>
+                  <p className="text-xs text-gray-400 mb-1">Total Confirmed Investment</p>
                   <div className="text-3xl font-bold">{storeStats.year.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-orange-500 mt-1 font-semibold">{storeStats.year.count} products added</p>
+                  <p className="text-xs text-orange-500 mt-1 font-semibold">{storeStats.year.count} products</p>
                 </div>
                 <div className="bg-white/5 p-2 rounded-lg">
                   <DollarSign className="h-6 w-6 text-orange-500" />
@@ -742,8 +773,7 @@ const ProductsStorePage: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
             const isSelected = selectedDay === idx;
-            const now = new Date();
-            const isTodayInGrid = isSameDay(storeStats.timelineDays[idx], now);
+            const isToday = idx === currentDayIndex && !selectedDate;
 
             return (
               <motion.div
@@ -754,12 +784,12 @@ const ProductsStorePage: React.FC = () => {
                   "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
                   isSelected
                     ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
-                    : isTodayInGrid
+                    : isToday
                       ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
                       : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                 )}
               >
-                {isTodayInGrid && !isSelected && (
+                {isToday && !isSelected && (
                   <div className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
                     Today
                   </div>
@@ -842,8 +872,6 @@ const ProductsStorePage: React.FC = () => {
             </Select>
           )}
         </div>
-
-        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
@@ -1252,7 +1280,7 @@ const ProductsStorePage: React.FC = () => {
                           {newProduct.costType === 'bulkCost'
                             ? Number(newProduct.costPrice || 0).toLocaleString()
                             : (Number(newProduct.costPrice || 0) * Number(newProduct.quantity || 0)).toLocaleString()} RWF
-                        </span>
+                          </span>
                       </div>
                     </div>
                   </div>
