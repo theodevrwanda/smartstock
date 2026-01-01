@@ -2,32 +2,32 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  TransactionLog, 
+import {
+  TransactionLog,
   transactionTypeLabels,
   getTransactionColor,
-  subscribeToTransactions 
+  subscribeToTransactions
 } from '@/lib/transactionLogger';
 import { getBranches, Branch } from '@/functions/branch';
 import { getEmployees, Employee } from '@/functions/employees';
-import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Search, 
-  Link2, 
-  Clock, 
-  User, 
-  Building2, 
+import {
+  Search,
+  Link2,
+  Clock,
+  User,
+  Building2,
   Package,
   TrendingUp,
   TrendingDown,
@@ -48,7 +48,7 @@ const BlockchainLedger: React.FC<BlockchainLedgerProps> = ({ isOpen, onClose }) 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Filters
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
@@ -97,13 +97,13 @@ const BlockchainLedger: React.FC<BlockchainLedgerProps> = ({ isOpen, onClose }) 
 
   const formatDateTime = (iso: string): string => {
     const date = new Date(iso);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    }) + ', ' + date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit' 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }) + ', ' + date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit'
     });
   };
 
@@ -155,7 +155,7 @@ const BlockchainLedger: React.FC<BlockchainLedgerProps> = ({ isOpen, onClose }) 
     filtered = filtered.filter(tx => {
       if (searchTerm) {
         const search = searchTerm.toLowerCase();
-        const matches = 
+        const matches =
           tx.productName?.toLowerCase().includes(search) ||
           tx.userName?.toLowerCase().includes(search) ||
           tx.branchName?.toLowerCase().includes(search) ||
@@ -404,12 +404,22 @@ const BlockchainLedger: React.FC<BlockchainLedgerProps> = ({ isOpen, onClose }) 
                         {tx.quantity && (
                           <div>Qty: <strong>{tx.quantity}</strong></div>
                         )}
-                        {tx.costPrice && (
-                          <div>Cost: <strong>{formatCurrency(tx.costPrice * (tx.quantity || 1))}</strong></div>
+
+                        {/* Cost Display: Prefer costPricePerUnit */}
+                        {(tx.costPricePerUnit || tx.costPrice) && (
+                          <div title={tx.costPricePerUnit ? 'Using Unit Cost' : 'Using Recorded Cost'}>
+                            Cost: <strong>
+                              {formatCurrency(
+                                (tx.costPricePerUnit ?? tx.costPrice ?? 0) * (tx.quantity || 1)
+                              )}
+                            </strong>
+                          </div>
                         )}
+
                         {tx.sellingPrice && (
                           <div>Sold: <strong>{formatCurrency(tx.sellingPrice * (tx.quantity || 1))}</strong></div>
                         )}
+
                         {tx.profit != null && tx.profit > 0 && (
                           <div className="text-green-600">
                             Profit: <strong>+{formatCurrency(tx.profit)}</strong>

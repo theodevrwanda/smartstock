@@ -210,7 +210,10 @@ export const sellRestoredProduct = async (
     const remainingQty = restoredData.quantity - sellQty;
 
     // Use costPricePerUnit (true unit cost) for profit calculation
-    const unitCost = restoredData.costPricePerUnit ?? restoredData.costPrice ?? 0;
+    const unitCost = restoredData.costPricePerUnit ??
+      ((restoredData.costType === 'bulkCost' && restoredData.quantity > 0)
+        ? (restoredData.costPrice / restoredData.quantity)
+        : (restoredData.costPrice ?? 0));
     const totalCost = sellQty * unitCost;
     const totalRevenue = sellQty * sellingPrice;
     const profit = totalRevenue - totalCost;
@@ -259,6 +262,7 @@ export const sellRestoredProduct = async (
         quantity: sellQty,
         costPrice: restoredData.costPrice,
         costPricePerUnit: unitCost,
+        costType: restoredData.costType, // Added
         sellingPrice,
         profit,
         loss: loss,

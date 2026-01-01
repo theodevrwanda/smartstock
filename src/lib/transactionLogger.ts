@@ -28,6 +28,7 @@ export interface TransactionLog {
   userId: string;
   userName: string;
   userRole: 'admin' | 'staff';
+  costType?: 'costPerUnit' | 'bulkCost' | 'costPricePerUnit'; // Matched with Product interface
   businessId: string;
   businessName: string;
   branchId?: string;

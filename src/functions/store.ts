@@ -315,6 +315,7 @@ export const addOrUpdateProduct = async (
           category: data.category,
           quantity: data.quantity,
           costPrice: data.costPrice,
+          costPricePerUnit: data.costPricePerUnit, // Added
         });
       }
 
@@ -571,6 +572,7 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
         productName: productData.productName,
         quantity: productData.quantity,
         costPrice: productData.costPrice,
+        costPricePerUnit: productData.costPricePerUnit, // Added
       });
     }
 
