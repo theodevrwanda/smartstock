@@ -888,8 +888,7 @@ const ProductsRestoredPage: React.FC = () => {
       </Button>
     </DialogFooter>
   </DialogContent>
-</Dialog>>
-
+</Dialog>
         {/* Delete Confirm Dialog */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
