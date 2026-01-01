@@ -26,10 +26,15 @@ const emptySummary: ReportSummary = {
   outOfStockCount: 0,
 };
 
+// Helper: Get true unit cost (costPricePerUnit first)
+const getActualUnitCost = (data: any): number => {
+  return data.costPricePerUnit ?? data.costPrice ?? 0;
+};
+
 export const getReportData = async (
   businessId: string,
   userRole: 'admin' | 'staff',
-  userBranch: string | null   // Important: can be null
+  userBranch: string | null
 ): Promise<{ products: ProductReport[]; summary: ReportSummary }> => {
   try {
     // BLOCK: Staff with no branch assigned sees NOTHING
@@ -51,17 +56,20 @@ export const getReportData = async (
     const products: ProductReport[] = snapshot.docs.map(doc => {
       const data = doc.data();
 
-      const costPrice = Number(data.costPrice) || 0;
+      const quantity = Number(data.quantity) || 0;
+      const unitCost = getActualUnitCost(data); // ← TRUE unit cost
+      const totalCost = unitCost * quantity;
+
       const sellingPrice =
         data.sellingPrice !== undefined && data.sellingPrice !== null
           ? Number(data.sellingPrice)
           : null;
-      const quantity = Number(data.quantity) || 0;
 
       let profitLoss: number | null = null;
 
+      // Only calculate profit/loss for SOLD items
       if (data.status === 'sold' && sellingPrice !== null) {
-        profitLoss = (sellingPrice - costPrice) * quantity;
+        profitLoss = (sellingPrice - unitCost) * quantity;
       }
 
       return {
@@ -71,27 +79,27 @@ export const getReportData = async (
         model: data.model || '',
         quantity,
         branch: data.branch || '',
-        costPrice,
+        costPrice: Number(data.costPrice) || 0,
         sellingPrice,
         profitLoss,
         status: data.status || 'store',
-        addedDate: data.addedDate || data.createdAt || '',
+        addedDate: data.addedDate || '',
         soldDate: data.soldDate || undefined,
         deletedDate: data.deletedDate || undefined,
+        restoredDate: data.restoredDate || undefined,
         restoreComment: data.restoreComment || undefined,
         businessId: data.businessId,
         unit: data.unit || 'pcs',
-        quantityPerUnit: Number(data.quantityPerUnit) || 1,
-        baseUnit: data.baseUnit || data.unit || 'pcs',
       };
     });
 
-    // Summary calculations
+    // Categorize products
     const storeProducts = products.filter(p => p.status === 'store');
     const restoredProducts = products.filter(p => p.status === 'restored');
     const soldProducts = products.filter(p => p.status === 'sold');
     const deletedProducts = products.filter(p => p.status === 'deleted');
 
+    // Profit & Loss from SOLD items only (using actual unit cost)
     const grossProfit = soldProducts.reduce((sum, p) => {
       return p.profitLoss && p.profitLoss > 0 ? sum + p.profitLoss : sum;
     }, 0);
@@ -102,14 +110,16 @@ export const getReportData = async (
 
     const netProfit = grossProfit - totalLoss;
 
+    // Total value of current stock (store + restored) using actual unit cost
     const totalStoreValue = [...storeProducts, ...restoredProducts].reduce(
-      (sum, p) => sum + p.costPrice * p.quantity,
+      (sum, p) => sum + (getActualUnitCost(p) * p.quantity),
       0
     );
 
-    const stockProducts = [...storeProducts, ...restoredProducts];
-    const lowStockCount = stockProducts.filter(p => p.quantity > 0 && p.quantity <= 5).length;
-    const outOfStockCount = stockProducts.filter(p => p.quantity === 0).length;
+    // Stock status
+    const activeStock = [...storeProducts, ...restoredProducts];
+    const lowStockCount = activeStock.filter(p => p.quantity > 0 && p.quantity <= 10).length; // Adjustable threshold
+    const outOfStockCount = activeStock.filter(p => p.quantity === 0).length;
 
     const summary: ReportSummary = {
       totalProducts: products.length,

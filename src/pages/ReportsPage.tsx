@@ -14,13 +14,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Download, ArrowUpDown, FileSpreadsheet, FileText, Package } from 'lucide-react';
+import { Search, Download, ArrowUpDown, FileSpreadsheet, FileText, Package, Calendar as CalendarIcon, TrendingUp, DollarSign, Award } from 'lucide-react';
+import { 
+  format, 
+  startOfWeek, 
+  endOfWeek, 
+  eachDayOfInterval, 
+  isSameDay, 
+  startOfMonth, 
+  endOfMonth, 
+  startOfYear, 
+  endOfYear,
+  isWithinInterval 
+} from 'date-fns';
+import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getReportData } from '@/functions/report';
 import { getBranches } from '@/functions/branch';
 import { ProductReport, ReportSummary, Branch } from '@/types/interface';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const ReportsPage: React.FC = () => {
   const { toast } = useToast();
@@ -41,6 +55,7 @@ const ReportsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'store' | 'sold' | 'restored' | 'deleted'>('all');
   const [branchFilter, setBranchFilter] = useState<string>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Sorting
   const [sortColumn, setSortColumn] = useState<keyof ProductReport | 'branchName'>('addedDate');
@@ -91,6 +106,55 @@ const ReportsPage: React.FC = () => {
 
   const categories = useMemo(() => ['All', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
+  // NEW: Daily/Weekly/Monthly/Yearly activity stats (added, sold, restored value)
+  const activityStats = useMemo(() => {
+    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(selectedDate);
+    const monthEnd = endOfMonth(selectedDate);
+    const yearStart = startOfYear(selectedDate);
+
+    const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+    let weekly = 0;
+    let monthly = 0;
+    let yearly = 0;
+
+    const timelineData = weeklyDays.map(day => {
+      let dayValue = 0;
+
+      products.forEach(p => {
+        const dateStr = p.addedDate || p.soldDate || p.restoredDate || p.deletedDate || '';
+        if (!dateStr) return;
+        const date = new Date(dateStr);
+        if (!isSameDay(date, day)) return;
+
+        if (p.status === 'store' || p.status === 'restored') {
+          dayValue += p.costPrice * p.quantity;
+        }
+      });
+
+      return {
+        dayName: format(day, 'EEE').toUpperCase(),
+        date: day,
+        value: dayValue
+      };
+    });
+
+    products.forEach(p => {
+      const dateStr = p.addedDate || p.soldDate || p.restoredDate || p.deletedDate || '';
+      if (!dateStr) return;
+      const date = new Date(dateStr);
+      const value = p.costPrice * p.quantity;
+
+      if (isWithinInterval(date, { start: weekStart, end: weekEnd })) weekly += value;
+      if (isWithinInterval(date, { start: monthStart, end: monthEnd })) monthly += value;
+      if (isWithinInterval(date, { start: yearStart, end: endOfYear(selectedDate) })) yearly += value;
+    });
+
+    return { weekly, monthly, yearly, timelineData };
+  }, [products, selectedDate]);
+
   // Filtering
   const filteredProducts = useMemo(() => {
     let filtered = products
@@ -134,20 +198,12 @@ const ReportsPage: React.FC = () => {
     }
   };
 
-  const getPriceColor = (price: number) => {
-    if (price < 100000) return 'text-blue-600 font-bold';
-    if (price < 500000) return 'text-green-600 font-bold';
-    if (price < 1000000) return 'text-yellow-600 font-bold';
-    if (price < 2000000) return 'text-orange-600 font-bold';
-    return 'text-red-600 font-bold';
-  };
-
   const getProfitColor = (profit: number | null) => {
     if (!profit || profit === 0) return 'text-gray-600';
     return profit > 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
   };
 
-  // Export Data & Columns
+  // Export
   const reportExportColumns: ExportColumn[] = [
     { header: 'Product Name', key: 'productName', width: 30 },
     { header: 'Category', key: 'category', width: 15 },
@@ -204,8 +260,6 @@ const ReportsPage: React.FC = () => {
     toast({ title: 'Success', description: 'Report exported to PDF' });
   };
 
-  // NEW: Consistent clean loading state (same as every other page)
-  // Consistent clean loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
@@ -241,7 +295,7 @@ const ReportsPage: React.FC = () => {
                 Export Report
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleExportExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Export to Excel
@@ -254,8 +308,126 @@ const ReportsPage: React.FC = () => {
           </DropdownMenu>
         </div>
 
+        {/* Date Badge */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
+            <CalendarIcon size={14} className="text-gray-500" />
+            <span className="text-gray-600 dark:text-gray-400">Report context:</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+          </Badge>
+        </div>
+
+        {/* Activity Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Activity Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">{activityStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Activity Value</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-3xl font-bold">{activityStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                <Award size={14} className="text-orange-500" />
+                Yearly Activity Value
+              </CardTitle>
+              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
+                {format(selectedDate, 'yyyy')} Yearly
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400 mb-1">Total Value Processed</p>
+                  <div className="text-3xl font-bold">{activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Weekly Day Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+          {activityStats.timelineData.map((item, idx) => {
+            const isSelected = isSameDay(item.date, selectedDate);
+            const isToday = isSameDay(item.date, new Date());
+
+            return (
+              <motion.div
+                key={idx}
+                whileHover={{ y: -4 }}
+                onClick={() => setSelectedDate(item.date)}
+                className={`
+                  p-4 rounded-xl border cursor-pointer transition-all duration-300 relative
+                  ${isSelected 
+                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                    : isToday
+                      ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                  }
+                `}
+              >
+                {isToday && !isSelected && (
+                  <div className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                    Today
+                  </div>
+                )}
+                <div className="flex flex-col items-center text-center gap-2">
+                  <span className={`
+                    text-[10px] font-bold tracking-tighter uppercase
+                    ${isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"}
+                  `}>
+                    {item.dayName} {isSelected && "•"}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className={`
+                      text-sm font-black
+                      ${isSelected ? "text-white" : "text-blue-600 dark:text-blue-400"}
+                    `}>
+                      {item.value.toLocaleString()}
+                    </span>
+                    <span className={`
+                      text-[9px] uppercase font-medium opacity-60
+                      ${isSelected ? "text-amber-200" : "text-gray-500"}
+                    `}>
+                      value
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Existing summary cards */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">Total Products</p>
             <p className="text-2xl font-bold">{summary.totalProducts}</p>
@@ -413,12 +585,12 @@ const ReportsPage: React.FC = () => {
                         {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
                       </Badge>
                     </TableCell>
-                    <TableCell className={getPriceColor(p.costPrice)}>
+                    <TableCell className={getProfitColor(p.costPrice)}>
                       {p.costPrice.toLocaleString()} RWF
                     </TableCell>
                     <TableCell>
                       {p.sellingPrice !== null
-                        ? <span className={getPriceColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</span>
+                        ? <span className={getProfitColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</span>
                         : '-'}
                     </TableCell>
                     <TableCell className={getProfitColor(p.profitLoss)}>

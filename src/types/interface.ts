@@ -163,6 +163,7 @@ export interface DashboardStats {
 }
 
 export interface ProductReport {
+    restoredDate: string;
     id: string;
     productName: string;
     category: string;
