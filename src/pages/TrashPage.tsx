@@ -167,8 +167,8 @@ const ProductsDeletedPage: React.FC = () => {
       model: p.model || '-',
       quantity: p.quantity,
       branchName: getBranchName(p.branch),
-      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
-      totalLoss: `${(p.costPrice * p.quantity).toLocaleString()} RWF`,
+      costPriceFormatted: `${(p.costPricePerUnit || p.costPrice).toLocaleString()} RWF`,
+      totalLoss: `${((p.costPricePerUnit || p.costPrice) * p.quantity).toLocaleString()} RWF`,
       deletedDateFormatted: new Date(p.deletedDate).toLocaleDateString(),
       restoreComment: p.restoreComment || '-',
     }));
@@ -440,7 +440,7 @@ const ProductsDeletedPage: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className={getPriceColor(p.costPrice)}>
-                      {p.costPrice.toLocaleString()} RWF
+                      {(p.costPricePerUnit || p.costPrice).toLocaleString()} RWF
                     </TableCell>
                     <TableCell>{new Date(p.deletedDate).toLocaleDateString()}</TableCell>
                     <TableCell className="max-w-xs truncate">{p.restoreComment || '-'}</TableCell>
@@ -481,8 +481,8 @@ const ProductsDeletedPage: React.FC = () => {
                 <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
                 <p><strong>Quantity:</strong> {currentProduct.quantity}</p>
                 <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
-                <p><strong>Cost Price:</strong> {currentProduct.costPrice.toLocaleString()} RWF</p>
-                <p><strong>Selling Price:</strong> {(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
+                <p><strong>Cost Price:</strong> {(currentProduct.costPricePerUnit || currentProduct.costPrice).toLocaleString()} RWF</p>
+                <p><strong>Selling Price:</strong> {(currentProduct.sellingPrice || (currentProduct.costPricePerUnit || currentProduct.costPrice)).toLocaleString()} RWF</p>
                 <p><strong>Deleted Date:</strong> {new Date(currentProduct.deletedDate).toLocaleDateString()}</p>
                 {currentProduct.restoreComment && (
                   <div>

@@ -22,6 +22,8 @@ export interface DeletedProduct {
   quantity: number;
   branch: string;
   costPrice: number;
+  costPricePerUnit?: number;
+  unit?: string;
   sellingPrice?: number | null;
   deletedDate: string;
   restoreComment?: string;
