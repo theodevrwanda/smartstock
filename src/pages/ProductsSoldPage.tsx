@@ -8,35 +8,35 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Search, 
-  Download, 
-  Eye, 
-  Trash2, 
-  ArrowUpDown, 
-  Undo, 
-  FileSpreadsheet, 
-  FileText, 
-  AlertCircle, 
-  Info, 
-  Calendar as CalendarIcon, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Award, 
-  Package 
+import {
+  Search,
+  Download,
+  Eye,
+  Trash2,
+  ArrowUpDown,
+  Undo,
+  FileSpreadsheet,
+  FileText,
+  AlertCircle,
+  Info,
+  Calendar as CalendarIcon,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Award,
+  Package
 } from 'lucide-react';
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameDay, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfYear, 
-  endOfYear, 
-  isWithinInterval 
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  isWithinInterval
 } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -383,7 +383,7 @@ const ProductsSoldPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -392,7 +392,7 @@ const ProductsSoldPage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Sold Products" description="View and manage sold products" />
-      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+      <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Sold Products</h1>
@@ -429,7 +429,7 @@ const ProductsSoldPage: React.FC = () => {
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-white dark:bg-gray-900 shadow-sm">
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-background shadow-sm">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
               </Button>
@@ -514,10 +514,10 @@ const ProductsSoldPage: React.FC = () => {
                 className={cn(
                   "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
                   isSelected
-                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                    ? "bg-primary border-primary shadow-lg text-primary-foreground ring-2 ring-primary/50"
                     : isToday
-                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      ? "bg-secondary/50 border-border dark:bg-secondary/20 shadow-sm"
+                      : "bg-card border-border hover:border-primary/50"
                 )}
               >
                 {isToday && !isSelected && (
@@ -553,7 +553,7 @@ const ProductsSoldPage: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-card p-6 rounded-xl shadow-md border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
@@ -660,7 +660,7 @@ const ProductsSoldPage: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                        <Badge variant="outline" className="bg-secondary/50 text-foreground text-[10px]">
                           {getBranchName(product.branch)}
                         </Badge>
                       </TableCell>
@@ -701,7 +701,7 @@ const ProductsSoldPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100 hover:bg-secondary"
+                            className="h-8 w-8 hover:text-primary hover:bg-primary/10 transition-colors"
                             onClick={() => openDetails(product)}
                           >
                             <Eye className="h-4 w-4" />
@@ -709,7 +709,7 @@ const ProductsSoldPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                            className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
                             onClick={() => openRestore(product)}
                             title="Return Product"
                           >
@@ -719,7 +719,7 @@ const ProductsSoldPage: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              className="h-8 w-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10 transition-colors"
                               onClick={() => openDelete(product)}
                             >
                               <Trash2 className="h-4 w-4" />

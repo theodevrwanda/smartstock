@@ -501,7 +501,7 @@ const ProductsStorePage: React.FC = () => {
       unit: newProduct.unit,
       costPrice: enteredCost,
       costPricePerUnit: costPricePerUnit,
-      costType: newProduct.costType,
+      costType: newProduct.costType as 'costPerUnit' | 'bulkCost',
       branch: targetBranch,
       confirm: isAdmin ? true : false,
       businessId: businessId || '',
@@ -698,7 +698,7 @@ const ProductsStorePage: React.FC = () => {
             </DropdownMenu>
 
             {(isAdmin || canAddProduct) && (
-              <Button onClick={() => setAddDialogOpen(true)} className="bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90">
+              <Button onClick={() => setAddDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
@@ -1084,36 +1084,6 @@ const ProductsStorePage: React.FC = () => {
                       </div>
 
                       <div className="mt-3 flex gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="outline" className="h-8 flex-1 gap-1">
-                              Actions <ArrowUpDown className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { setCurrentProduct(p); setDetailsDialogOpen(true); }}>
-                              <Eye className="mr-2 h-4 w-4" /> View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => { setCurrentProduct(p); setSellDialogOpen(true); }}
-                              disabled={user?.role === 'staff' && !p.confirm}
-                            >
-                              <ShoppingCart className="mr-2 h-4 w-4" /> Sell Product
-                            </DropdownMenuItem>
-
-                            {isAdmin && (
-                              <DropdownMenuItem onClick={() => { setCurrentProduct(p); setEditDialogOpen(true); }}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit Product
-                              </DropdownMenuItem>
-                            )}
-                            {isAdmin && (
-                              <DropdownMenuItem onClick={() => { setProductToDelete(p.id!); setDeleteConfirmOpen(true); }} className="text-red-600">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete Product
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1123,6 +1093,55 @@ const ProductsStorePage: React.FC = () => {
                         >
                           {p.confirm ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                         </Button>
+
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:text-primary transition-colors"
+                            onClick={() => {
+                              setCurrentProduct(p);
+                              setDetailsDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:text-primary transition-colors"
+                            onClick={() => {
+                              setCurrentProduct({ ...p });
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive/80 transition-colors"
+                            onClick={() => {
+                              setProductToDelete(p.id!);
+                              setDeleteConfirmOpen(true);
+                            }}
+                            disabled={!canDelete}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-8 ml-2"
+                            onClick={() => {
+                              setCurrentProduct(p);
+                              setSellDialogOpen(true);
+                            }}
+                          >
+                            <ShoppingCart className="mr-2 h-3.5 w-3.5" />
+                            Sell
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1473,7 +1492,8 @@ const ProductsStorePage: React.FC = () => {
                 disabled={actionLoading || !currentProduct}
                 className="bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90 text-white min-w-[140px]"
               >
-                {actionLoading ? 'Saving...' : 'Save Changes'}
+                {actionLoading ? <LoadingSpinner size="sm" className="mr-2" /> : <Edit className="mr-2 h-4 w-4" />}
+                Update Product
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1572,7 +1592,8 @@ const ProductsStorePage: React.FC = () => {
                   Number(sellForm.quantity) > currentProduct?.quantity
                 }
               >
-                Proceed to Confirm
+                {actionLoading ? <LoadingSpinner size="sm" className="mr-2" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                Complete Sale
               </Button>
             </DialogFooter>
           </DialogContent>

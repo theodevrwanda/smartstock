@@ -8,33 +8,33 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Search, 
-  Download, 
-  Eye, 
-  Trash2, 
-  ArrowUpDown, 
-  ShoppingCart, 
-  FileSpreadsheet, 
-  FileText, 
-  AlertCircle, 
+import {
+  Search,
+  Download,
+  Eye,
+  Trash2,
+  ArrowUpDown,
+  ShoppingCart,
+  FileSpreadsheet,
+  FileText,
+  AlertCircle,
   Package,
   Calendar as CalendarIcon,
   TrendingUp,
   DollarSign,
   Award
 } from 'lucide-react';
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameDay, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfYear, 
-  endOfYear, 
-  isWithinInterval 
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  isWithinInterval
 } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -342,10 +342,10 @@ const ProductsRestoredPage: React.FC = () => {
   const openSell = (product: RestoredProduct) => {
     setCurrentProduct(product);
     const defaultPrice = product.sellingPrice || Math.round(getActualUnitCost(product) * 1.3);
-    setSellForm({ 
-      quantity: '', 
-      sellingPrice: defaultPrice, 
-      deadline: '' 
+    setSellForm({
+      quantity: '',
+      sellingPrice: defaultPrice,
+      deadline: ''
     });
     setSellDialogOpen(true);
   };
@@ -357,7 +357,7 @@ const ProductsRestoredPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -366,7 +366,7 @@ const ProductsRestoredPage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Restored Products" description="View and sell restored products" />
-      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+      <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -405,7 +405,7 @@ const ProductsRestoredPage: React.FC = () => {
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-white dark:bg-gray-900 shadow-sm">
+              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-background shadow-sm">
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
               </Button>
@@ -490,10 +490,10 @@ const ProductsRestoredPage: React.FC = () => {
                 className={cn(
                   "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
                   isSelected
-                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                    ? "bg-primary border-primary shadow-lg text-primary-foreground ring-2 ring-primary/50"
                     : isToday
-                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      ? "bg-secondary/50 border-border dark:bg-secondary/20 shadow-sm"
+                      : "bg-card border-border hover:border-primary/50"
                 )}
               >
                 {isToday && !isSelected && (
@@ -529,7 +529,7 @@ const ProductsRestoredPage: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-card p-6 rounded-xl shadow-md border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
@@ -633,7 +633,7 @@ const ProductsRestoredPage: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                        <Badge variant="outline" className="bg-secondary/50 text-foreground text-[10px]">
                           {getBranchName(product.branch)}
                         </Badge>
                       </TableCell>
@@ -663,7 +663,7 @@ const ProductsRestoredPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100 hover:bg-secondary"
+                            className="h-8 w-8 hover:text-primary hover:bg-primary/10 transition-colors"
                             onClick={() => openDetails(product)}
                           >
                             <Eye className="h-4 w-4" />
@@ -671,7 +671,7 @@ const ProductsRestoredPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
                             onClick={() => openSell(product)}
                           >
                             <ShoppingCart className="h-4 w-4" />
@@ -680,7 +680,7 @@ const ProductsRestoredPage: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              className="h-8 w-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10 transition-colors"
                               onClick={() => openDelete(product)}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -760,135 +760,135 @@ const ProductsRestoredPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-  <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
-  <DialogContent className="max-w-lg">
-    <DialogHeader>
-      <DialogTitle>Sell Restored Product</DialogTitle>
-      <DialogDescription>
-        {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
-        <br />
-        Available in restored stock: {currentProduct?.quantity} {currentProduct?.unit || 'pcs'}
-      </DialogDescription>
-    </DialogHeader>
+        <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Sell Restored Product</DialogTitle>
+              <DialogDescription>
+                {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
+                <br />
+                Available in restored stock: {currentProduct?.quantity} {currentProduct?.unit || 'pcs'}
+              </DialogDescription>
+            </DialogHeader>
 
-    {currentProduct && (
-      <div className="space-y-6 py-4">
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <Label>Quantity to Sell *</Label>
-            <Input
-              type="number"
-              min="1"
-              max={currentProduct.quantity}
-              placeholder="How many units?"
-              value={sellForm.quantity}
-              onChange={(e) => {
-                const val = e.target.value;
-                const num = val === '' ? '' : Number(val);
-                if (num !== '' && (num < 1 || num > currentProduct.quantity)) return;
-                setSellForm(s => ({ ...s, quantity: num }));
-              }}
-            />
-          </div>
+            {currentProduct && (
+              <div className="space-y-6 py-4">
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label>Quantity to Sell *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={currentProduct.quantity}
+                      placeholder="How many units?"
+                      value={sellForm.quantity}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const num = val === '' ? '' : Number(val);
+                        if (num !== '' && (num < 1 || num > currentProduct.quantity)) return;
+                        setSellForm(s => ({ ...s, quantity: num }));
+                      }}
+                    />
+                  </div>
 
-          <div className="grid gap-2">
-            <Label>Selling Price per Unit (RWF) *</Label>
-            <Input
-              type="number"
-              min="1"
-              placeholder="Enter selling price"
-              value={sellForm.sellingPrice}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
-              }}
-            />
-          </div>
+                  <div className="grid gap-2">
+                    <Label>Selling Price per Unit (RWF) *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Enter selling price"
+                      value={sellForm.sellingPrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSellForm(s => ({ ...s, sellingPrice: val === '' ? '' : Number(val) }));
+                      }}
+                    />
+                  </div>
 
-          <div className="grid gap-2">
-            <Label>Return Deadline (optional)</Label>
-            <Input
-              type="date"
-              value={sellForm.deadline}
-              onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
-            />
-          </div>
-        </div>
+                  <div className="grid gap-2">
+                    <Label>Return Deadline (optional)</Label>
+                    <Input
+                      type="date"
+                      value={sellForm.deadline}
+                      onChange={(e) => setSellForm(s => ({ ...s, deadline: e.target.value }))}
+                    />
+                  </div>
+                </div>
 
-        {/* Warning for invalid quantity */}
-        {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Quantity exceeds available restored stock ({currentProduct.quantity} units).
-            </AlertDescription>
-          </Alert>
-        )}
+                {/* Warning for invalid quantity */}
+                {sellForm.quantity !== '' && Number(sellForm.quantity) > currentProduct.quantity && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Quantity exceeds available restored stock ({currentProduct.quantity} units).
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-        {/* Sale Summary - NOW USES getActualUnitCost (costPricePerUnit) */}
-        {sellForm.quantity !== '' && 
-         sellForm.sellingPrice !== '' && 
-         Number(sellForm.quantity) > 0 && 
-         Number(sellForm.sellingPrice) > 0 && 
-         Number(sellForm.quantity) <= currentProduct.quantity && (
-          <Card className="bg-secondary dark:bg-card border-border">
-            <CardContent className="pt-6 space-y-4">
-              <div className="flex justify-between text-lg">
-                <span>Total Revenue:</span>
-                <span className="font-bold text-green-600">
-                  {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
-                </span>
+                {/* Sale Summary - NOW USES getActualUnitCost (costPricePerUnit) */}
+                {sellForm.quantity !== '' &&
+                  sellForm.sellingPrice !== '' &&
+                  Number(sellForm.quantity) > 0 &&
+                  Number(sellForm.sellingPrice) > 0 &&
+                  Number(sellForm.quantity) <= currentProduct.quantity && (
+                    <Card className="bg-secondary dark:bg-card border-border">
+                      <CardContent className="pt-6 space-y-4">
+                        <div className="flex justify-between text-lg">
+                          <span>Total Revenue:</span>
+                          <span className="font-bold text-green-600">
+                            {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-lg">
+                          <span>Cost of Goods (Actual):</span>
+                          <span className="font-medium text-purple-600">
+                            {(Number(sellForm.quantity) * getActualUnitCost(currentProduct)).toLocaleString()} RWF
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xl font-bold pt-3 border-t">
+                          <span>Profit / Loss:</span>
+                          <span className={cn(
+                            Number(sellForm.sellingPrice) >= getActualUnitCost(currentProduct)
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                          )}>
+                            {(
+                              (Number(sellForm.sellingPrice) - getActualUnitCost(currentProduct)) * Number(sellForm.quantity)
+                            ).toLocaleString()} RWF
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
-              <div className="flex justify-between text-lg">
-                <span>Cost of Goods (Actual):</span>
-                <span className="font-medium text-purple-600">
-                  {(Number(sellForm.quantity) * getActualUnitCost(currentProduct)).toLocaleString()} RWF
-                </span>
-              </div>
-              <div className="flex justify-between text-xl font-bold pt-3 border-t">
-                <span>Profit / Loss:</span>
-                <span className={cn(
-                  Number(sellForm.sellingPrice) >= getActualUnitCost(currentProduct)
-                    ? 'text-green-600'
-                    : 'text-red-600'
-                )}>
-                  {(
-                    (Number(sellForm.sellingPrice) - getActualUnitCost(currentProduct)) * Number(sellForm.quantity)
-                  ).toLocaleString()} RWF
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    )}
+            )}
 
-    <DialogFooter>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setSellDialogOpen(false);
-          setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
-        }}
-      >
-        Cancel
-      </Button>
-      <Button
-        onClick={handleSell}
-        disabled={
-          actionLoading ||
-          sellForm.quantity === '' ||
-          Number(sellForm.quantity) <= 0 ||
-          Number(sellForm.quantity) > currentProduct?.quantity ||
-          sellForm.sellingPrice === '' ||
-          Number(sellForm.sellingPrice) <= 0
-        }
-      >
-        {actionLoading ? 'Selling...' : 'Confirm Sale'}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSellDialogOpen(false);
+                  setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSell}
+                disabled={
+                  actionLoading ||
+                  sellForm.quantity === '' ||
+                  Number(sellForm.quantity) <= 0 ||
+                  Number(sellForm.quantity) > currentProduct?.quantity ||
+                  sellForm.sellingPrice === '' ||
+                  Number(sellForm.sellingPrice) <= 0
+                }
+              >
+                {actionLoading ? 'Selling...' : 'Confirm Sale'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {/* Delete Confirm Dialog */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>

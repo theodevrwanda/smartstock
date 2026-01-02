@@ -241,7 +241,7 @@ const ManageBranchPage: React.FC = () => {
   // Consistent clean loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -252,8 +252,8 @@ const ManageBranchPage: React.FC = () => {
     return (
       <>
         <SEOHelmet title="Branches" description="View all branches" />
-        <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
-          <h1 className="text-3xl font-bold">Branches</h1>
+        <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
+          <h1 className="text-3xl font-bold text-foreground">Branches</h1>
 
           <div className="overflow-x-auto">
             <Table>
@@ -298,7 +298,7 @@ const ManageBranchPage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Manage Branches" description="Create, update, delete branches" />
-      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+      <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -390,6 +390,7 @@ const ManageBranchPage: React.FC = () => {
                         <Button
                           size="sm"
                           variant="ghost"
+                          className="hover:text-primary transition-colors"
                           onClick={() => {
                             setCurrentBranch(branch);
                             setIsDetailsDialogOpen(true);
@@ -400,6 +401,7 @@ const ManageBranchPage: React.FC = () => {
                         <Button
                           size="sm"
                           variant="ghost"
+                          className="hover:text-primary transition-colors"
                           onClick={() => {
                             setCurrentBranch(branch);
                             setIsUpdateDialogOpen(true);
@@ -410,12 +412,13 @@ const ManageBranchPage: React.FC = () => {
                         <Button
                           size="sm"
                           variant="ghost"
+                          className="text-destructive hover:text-destructive/80 transition-colors"
                           onClick={() => {
                             setBranchToDelete(branch.id!);
                             setIsDeleteConfirmOpen(true);
                           }}
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -663,7 +666,7 @@ const ManageBranchPage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </div >
     </>
   );
 };

@@ -108,34 +108,34 @@ const DashboardPage: React.FC = () => {
     <>
       <SEOHelmet title="Dashboard - SmartStock" description="Inventory Management" />
 
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-8 space-y-8 transition-colors duration-300">
+      <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 transition-colors duration-300">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-              Inventory Console <Zap className="h-6 w-6 text-amber-500 fill-amber-500" />
+            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              Inventory Console <Zap className="h-6 w-6 text-primary" />
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium text-sm">
-              Real-time Stock Value & Profit Analytics (Cost × Quantity)
+            <p className="text-muted-foreground mt-1 font-medium text-sm">
+              Real-time Stock Value & Profit Analytics
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-white dark:bg-[#1e293b] p-3 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-            <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
+          <div className="flex items-center gap-3 bg-secondary p-3 rounded-2xl shadow-sm border border-border">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
             <div className="pr-2">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">System Status</p>
-              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-500">Live Connection</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">System Status</p>
+              <p className="text-sm font-bold text-primary">Live Connection</p>
             </div>
           </div>
         </div>
 
         {/* Date Context */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
-            <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">Dashboard context:</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+          <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
+            <CalendarIcon size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">Dashboard context:</span>
+            <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
         </div>
 
@@ -221,34 +221,34 @@ const DashboardPage: React.FC = () => {
                 className={cn(
                   "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
                   isSelected
-                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                    ? "bg-primary border-primary shadow-lg text-primary-foreground ring-2 ring-primary/50"
                     : isToday
-                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      ? "bg-secondary border-border"
+                      : "bg-card border-border hover:border-primary/50"
                 )}
               >
                 {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                  <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
                     Today
                   </div>
                 )}
                 <div className="flex flex-col items-center text-center gap-2">
                   <span className={cn(
                     "text-[10px] font-bold tracking-tighter uppercase",
-                    isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"
+                    isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
                   )}>
                     {item.dayName} {isSelected && "•"}
                   </span>
                   <div className="flex flex-col">
                     <span className={cn(
                       "text-sm font-black",
-                      isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"
+                      isSelected ? "text-primary-foreground" : "text-foreground"
                     )}>
                       {item.value > 0 ? item.value.toLocaleString() : '—'}
                     </span>
                     <span className={cn(
                       "text-[9px] uppercase font-medium opacity-60",
-                      isSelected ? "text-amber-200" : "text-gray-500"
+                      isSelected ? "text-primary-foreground/60" : "text-muted-foreground"
                     )}>
                       RWF
                     </span>
@@ -351,7 +351,7 @@ const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
     red: "bg-rose-600 dark:bg-rose-700",
   };
   return (
-    <Card className={`border-none shadow-lg ${colors[color] || colors.blue} text-white transition-all hover:scale-[1.01] hover:shadow-xl rounded-2xl overflow-hidden`}>
+    <Card className={`border-none shadow-lg ${colors[color] || colors.blue} text-white transition-all rounded-2xl overflow-hidden`}>
       <CardContent className="p-6 relative">
         <div className="flex justify-between items-start mb-4 relative z-10">
           <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl">
@@ -373,20 +373,20 @@ const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
 };
 
 const SmallProCard = ({ title, value, subtitle, icon, highlight, danger }: any) => (
-  <Card className={`border-none shadow-sm group hover:shadow-md transition-all duration-200 bg-white dark:bg-[#1e293b] rounded-2xl overflow-hidden`}>
+  <Card className={`border-none group bg-white dark:bg-secondary rounded-2xl overflow-hidden`}>
     <CardContent className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <div className={`p-2 rounded-xl transition-colors ${highlight ? 'bg-indigo-50 dark:bg-indigo-900/20' :
-          danger ? 'bg-amber-50 dark:bg-amber-900/20' :
-            'bg-slate-50 dark:bg-slate-800'
+        <div className={`p-2 rounded-xl transition-colors ${highlight ? 'bg-primary/10' :
+          danger ? 'bg-destructive/10' :
+            'bg-secondary'
           }`}>
-          {React.cloneElement(icon, { className: highlight ? "h-4 w-4 text-indigo-600" : danger ? "h-4 w-4 text-amber-600" : "h-4 w-4" })}
+          {React.cloneElement(icon, { className: highlight ? "h-4 w-4 text-primary" : danger ? "h-4 w-4 text-destructive" : "h-4 w-4" })}
         </div>
-        {highlight && <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">NEW</span>}
+        {highlight && <span className="text-[9px] font-black bg-primary text-primary-foreground px-2 py-0.5 rounded-full">NEW</span>}
       </div>
-      <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{title}</p>
-      <p className={`text-2xl font-black mt-1 ${danger ? 'text-amber-600 dark:text-amber-500' : 'text-slate-900 dark:text-white'}`}>{value}</p>
-      <p className="text-[10px] font-medium text-slate-400 mt-1">{subtitle}</p>
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+      <p className={`text-2xl font-black mt-1 ${danger ? 'text-destructive' : 'text-foreground'}`}>{value}</p>
+      <p className="text-[10px] font-medium text-muted-foreground mt-1">{subtitle}</p>
     </CardContent>
   </Card>
 );

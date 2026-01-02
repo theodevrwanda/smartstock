@@ -155,8 +155,8 @@ export interface DashboardStats {
     deletedProducts: number;
     lowStockProducts: number;
     outOfStockProducts: number;
-    mostStockedProduct: { name: string; quantity: number };
-    leastStockedProduct: { name: string; quantity: number };
+    mostStockedProduct: { name: string; quantity: number; value: number };
+    leastStockedProduct: { name: string; quantity: number; value: number };
     averageStockPerProduct: number;
     totalStockQuantity: number;
     totalNetProfit: number;

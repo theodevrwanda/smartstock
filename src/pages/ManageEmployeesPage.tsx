@@ -266,7 +266,7 @@ const ManageEmployeesPage: React.FC = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F1F5F9] dark:bg-[#0f172a] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -277,8 +277,8 @@ const ManageEmployeesPage: React.FC = () => {
     return (
       <>
         <SEOHelmet title="Employees" />
-        <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
-          <h1 className="text-3xl font-bold">Employees</h1>
+        <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
+          <h1 className="text-3xl font-bold text-foreground">Employees</h1>
 
           <div className="overflow-x-auto">
             <Table>
@@ -323,7 +323,7 @@ const ManageEmployeesPage: React.FC = () => {
   return (
     <>
       <SEOHelmet title="Manage Employees" />
-      <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
+      <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -423,17 +423,17 @@ const ManageEmployeesPage: React.FC = () => {
                     <TableCell>{emp.createdAt ? new Date(emp.createdAt).toLocaleDateString() : '-'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => { setCurrentEmployee(emp); setIsDetailsDialogOpen(true); }}>
+                        <Button size="sm" variant="ghost" className="hover:text-primary transition-colors" onClick={() => { setCurrentEmployee(emp); setIsDetailsDialogOpen(true); }}>
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setCurrentEmployee(emp); setIsUpdateDialogOpen(true); }}>
+                        <Button size="sm" variant="ghost" className="hover:text-primary transition-colors" onClick={() => { setCurrentEmployee(emp); setIsUpdateDialogOpen(true); }}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setCurrentEmployee(emp); setAssignBranchId(emp.branch); setIsAssignBranchDialogOpen(true); }}>
+                        <Button size="sm" variant="ghost" className="hover:text-primary transition-colors" onClick={() => { setCurrentEmployee(emp); setAssignBranchId(emp.branch); setIsAssignBranchDialogOpen(true); }}>
                           <UserPlus className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setEmployeeToDelete(emp.id!); setIsDeleteConfirmOpen(true); }}>
-                          <Trash2 className="h-4 w-4 text-red-600" />
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive/80 transition-colors" onClick={() => { setEmployeeToDelete(emp.id!); setIsDeleteConfirmOpen(true); }}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
