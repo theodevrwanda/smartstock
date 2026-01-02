@@ -208,6 +208,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userData = await getUserFromFirestore(firebaseUser);
 
         if (userData) {
+          // Check active status immediately
+          if (!userData.isActive || !userData.businessActive) {
+            await signOut(auth);
+            setErrorMessage(
+              !userData.isActive
+                ? 'Your account has been deactivated. Please contact your administrator.'
+                : 'Your business account is inactive. Please contact system administration.'
+            );
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              loading: false,
+              token: undefined,
+            });
+            return;
+          }
+
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
           setAuthState({
@@ -231,6 +248,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   const businessInfo = await getBusinessStatus(data.businessId);
                   businessActive = businessInfo.isActive;
                   businessName = businessInfo.businessName || businessName;
+                }
+
+                // Check active status on update
+                if (data.isActive === false || businessActive === false) {
+                  await signOut(auth);
+                  setErrorMessage(
+                    data.isActive === false
+                      ? 'Your account has been deactivated.'
+                      : 'Your business account has been deactivated.'
+                  );
+                  // Auth state will be handled by the main onAuthStateChanged listener triggering again with null
+                  return;
                 }
 
                 const updatedUser: AuthUser = {
