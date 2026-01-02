@@ -183,6 +183,7 @@ export interface ProductReport {
     businessId: string;
     unit: string;
     costPricePerUnit?: number;
+    confirm?: boolean;
 }
 
 export interface ReportSummary {

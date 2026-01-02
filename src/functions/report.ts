@@ -91,6 +91,7 @@ export const getReportData = async (
         businessId: data.businessId,
         unit: data.unit || 'pcs',
         costPricePerUnit: data.costPricePerUnit,
+        confirm: data.confirm === true,
       };
     });
 

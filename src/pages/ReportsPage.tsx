@@ -129,7 +129,7 @@ const ReportsPage: React.FC = () => {
         const date = new Date(dateStr);
         if (!isSameDay(date, day)) return;
 
-        if (p.status === 'store' || p.status === 'restored') {
+        if (p.status === 'store' && p.confirm === true) {
           dayValue += (p.costPricePerUnit ?? p.costPrice) * p.quantity;
         }
       });
@@ -142,8 +142,12 @@ const ReportsPage: React.FC = () => {
     });
 
     products.forEach(p => {
-      const dateStr = p.addedDate || p.soldDate || p.restoredDate || p.deletedDate || '';
+      // Only confirmed store products for Activity Value
+      if (p.status !== 'store' || !p.confirm) return;
+
+      const dateStr = p.addedDate || '';
       if (!dateStr) return;
+
       const date = new Date(dateStr);
       const value = (p.costPricePerUnit ?? p.costPrice) * p.quantity;
 
