@@ -15,17 +15,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats } from '@/functions/dashboard';
 import { DashboardStats } from '@/types/interface';
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameDay, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfYear, 
-  endOfYear, 
-  isWithinInterval 
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  isWithinInterval
 } from 'date-fns';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -377,8 +377,8 @@ const SmallProCard = ({ title, value, subtitle, icon, highlight, danger }: any) 
     <CardContent className="p-5">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-xl transition-colors ${highlight ? 'bg-indigo-50 dark:bg-indigo-900/20' :
-            danger ? 'bg-amber-50 dark:bg-amber-900/20' :
-              'bg-slate-50 dark:bg-slate-800'
+          danger ? 'bg-amber-50 dark:bg-amber-900/20' :
+            'bg-slate-50 dark:bg-slate-800'
           }`}>
           {React.cloneElement(icon, { className: highlight ? "h-4 w-4 text-indigo-600" : danger ? "h-4 w-4 text-amber-600" : "h-4 w-4" })}
         </div>

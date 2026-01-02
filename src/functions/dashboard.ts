@@ -17,6 +17,7 @@ interface ProductData {
   category: string;
   model?: string;
   costPrice: number;
+  costPricePerUnit?: number;
   sellingPrice?: number | null;
   status: string;
   confirm: boolean;
@@ -107,6 +108,7 @@ export const getDashboardStats = async (
         category: data.category || '',
         model: data.model || undefined,
         costPrice: data.costPrice || 0,
+        costPricePerUnit: data.costPricePerUnit,
         sellingPrice: data.sellingPrice ?? null,
         status: data.status || 'store',
         confirm: data.confirm === true,
@@ -171,7 +173,7 @@ export const getDashboardStats = async (
     const totalNetProfit = grossProfit - totalLoss;
 
     // Stock value (confirmed store)
-    const totalStockValue = confirmedStoreProducts.reduce((sum, p) => sum + p.costPrice * p.quantity, 0);
+    const totalStockValue = confirmedStoreProducts.reduce((sum, p) => sum + (p.costPricePerUnit || p.costPrice) * p.quantity, 0);
 
     // Categories & models (all)
     const categories = new Set(products.map(p => p.category)).size;

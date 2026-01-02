@@ -18,7 +18,7 @@ export interface Product {
     confirm: boolean;
     businessId: string;
     unit: string;
-    costType?: 'costPerUnit' | 'bulkCost'| 'costPricePerUnit';
+    costType?: 'costPerUnit' | 'bulkCost' | 'costPricePerUnit';
     costPricePerUnit?: number; // Added to store unit cost specifically
     updatedAt?: string;
     productNameLower?: string;
@@ -180,6 +180,7 @@ export interface ProductReport {
     restoreComment?: string;
     businessId: string;
     unit: string;
+    costPricePerUnit?: number;
 }
 
 export interface ReportSummary {

@@ -249,9 +249,6 @@ const ProductsStorePage: React.FC = () => {
 
   const getTotalValue = (p: Product | null): number => {
     if (!p) return 0;
-    if (p.costType === 'bulkCost') {
-      return p.costPrice ?? 0;
-    }
     return getUnitCost(p) * p.quantity;
   };
 
@@ -1280,7 +1277,7 @@ const ProductsStorePage: React.FC = () => {
                           {newProduct.costType === 'bulkCost'
                             ? Number(newProduct.costPrice || 0).toLocaleString()
                             : (Number(newProduct.costPrice || 0) * Number(newProduct.quantity || 0)).toLocaleString()} RWF
-                          </span>
+                        </span>
                       </div>
                     </div>
                   </div>

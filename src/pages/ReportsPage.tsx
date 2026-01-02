@@ -15,17 +15,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Search, Download, ArrowUpDown, FileSpreadsheet, FileText, Package, Calendar as CalendarIcon, TrendingUp, DollarSign, Award } from 'lucide-react';
-import { 
-  format, 
-  startOfWeek, 
-  endOfWeek, 
-  eachDayOfInterval, 
-  isSameDay, 
-  startOfMonth, 
-  endOfMonth, 
-  startOfYear, 
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
+  startOfYear,
   endOfYear,
-  isWithinInterval 
+  isWithinInterval
 } from 'date-fns';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
@@ -130,7 +130,7 @@ const ReportsPage: React.FC = () => {
         if (!isSameDay(date, day)) return;
 
         if (p.status === 'store' || p.status === 'restored') {
-          dayValue += p.costPrice * p.quantity;
+          dayValue += (p.costPricePerUnit ?? p.costPrice) * p.quantity;
         }
       });
 
@@ -145,7 +145,7 @@ const ReportsPage: React.FC = () => {
       const dateStr = p.addedDate || p.soldDate || p.restoredDate || p.deletedDate || '';
       if (!dateStr) return;
       const date = new Date(dateStr);
-      const value = p.costPrice * p.quantity;
+      const value = (p.costPricePerUnit ?? p.costPrice) * p.quantity;
 
       if (isWithinInterval(date, { start: weekStart, end: weekEnd })) weekly += value;
       if (isWithinInterval(date, { start: monthStart, end: monthEnd })) monthly += value;
@@ -227,7 +227,7 @@ const ReportsPage: React.FC = () => {
       quantityFormatted: `${p.quantity} ${p.unit || 'pcs'}`,
       ...(isAdmin ? { branchName: getBranchName(p.branch) } : {}),
       status: p.status.charAt(0).toUpperCase() + p.status.slice(1),
-      costPriceFormatted: `${p.costPrice.toLocaleString()} RWF`,
+      costPriceFormatted: `${(p.costPricePerUnit ?? p.costPrice).toLocaleString()} RWF`,
       sellingPriceFormatted: p.sellingPrice !== null ? `${p.sellingPrice.toLocaleString()} RWF` : 'N/A',
       profitLossFormatted: p.profitLoss !== null ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF` : 'N/A',
       addedDateFormatted: new Date(p.addedDate).toLocaleDateString(),
@@ -295,7 +295,7 @@ const ReportsPage: React.FC = () => {
                 Export Report
               </Button>
             </DropdownMenuTrigger>
-             <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleExportExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Export to Excel
@@ -385,7 +385,7 @@ const ReportsPage: React.FC = () => {
                 onClick={() => setSelectedDate(item.date)}
                 className={`
                   p-4 rounded-xl border cursor-pointer transition-all duration-300 relative
-                  ${isSelected 
+                  ${isSelected
                     ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
                     : isToday
                       ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
@@ -586,7 +586,7 @@ const ReportsPage: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className={getProfitColor(p.costPrice)}>
-                      {p.costPrice.toLocaleString()} RWF
+                      {(p.costPricePerUnit ?? p.costPrice).toLocaleString()} RWF
                     </TableCell>
                     <TableCell>
                       {p.sellingPrice !== null

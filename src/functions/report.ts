@@ -90,6 +90,7 @@ export const getReportData = async (
         restoreComment: data.restoreComment || undefined,
         businessId: data.businessId,
         unit: data.unit || 'pcs',
+        costPricePerUnit: data.costPricePerUnit,
       };
     });
 
