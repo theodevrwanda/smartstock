@@ -26,9 +26,14 @@ const emptySummary: ReportSummary = {
   outOfStockCount: 0,
 };
 
-// Helper: Get true unit cost (costPricePerUnit first)
+// Helper: Get true unit cost based on costType
 const getActualUnitCost = (data: any): number => {
-  return data.costPricePerUnit ?? data.costPrice ?? 0;
+  // If costType is 'bulkCost', use costPricePerUnit (which should be calculated as costPrice / quantity)
+  if (data.costType === 'bulkCost' && data.costPricePerUnit) {
+    return data.costPricePerUnit;
+  }
+  // Otherwise, use costPrice directly (per-unit cost)
+  return data.costPrice ?? 0;
 };
 
 export const getReportData = async (

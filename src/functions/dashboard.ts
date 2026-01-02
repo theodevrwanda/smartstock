@@ -18,6 +18,7 @@ interface ProductData {
   model?: string;
   costPrice: number;
   costPricePerUnit?: number;
+  costType?: 'costPerUnit' | 'bulkCost' | 'costPricePerUnit';
   sellingPrice?: number | null;
   status: string;
   confirm: boolean;
@@ -109,6 +110,7 @@ export const getDashboardStats = async (
         model: data.model || undefined,
         costPrice: data.costPrice || 0,
         costPricePerUnit: data.costPricePerUnit,
+        costType: data.costType,
         sellingPrice: data.sellingPrice ?? null,
         status: data.status || 'store',
         confirm: data.confirm === true,
@@ -153,27 +155,43 @@ export const getDashboardStats = async (
     const outOfStockProducts = confirmedStoreProducts.filter(p => p.quantity === 0).length;
     const totalStockQuantity = confirmedStoreProducts.reduce((sum, p) => sum + p.quantity, 0);
 
+    // Helper: Get actual unit cost based on costType
+    const getUnitCost = (p: ProductData): number => {
+      if (p.costType === 'bulkCost' && p.costPricePerUnit) {
+        return p.costPricePerUnit;
+      }
+      return p.costPrice;
+    };
+
     // Financials (confirmed sold)
-    const grossProfit = confirmedSoldProducts.reduce((sum, p) => {
+    // Net Profit: Sum of all (sellingPrice - unitCost) * quantity for sold products
+    const totalNetProfit = confirmedSoldProducts.reduce((sum, p) => {
       if (p.sellingPrice !== null) {
-        const profit = (p.sellingPrice - p.costPrice) * p.quantity;
-        return profit > 0 ? sum + profit : sum;
+        const unitCost = getUnitCost(p);
+        const profit = (p.sellingPrice - unitCost) * p.quantity;
+        return sum + profit;
       }
       return sum;
     }, 0);
 
+    // Total Loss: Only actual losses where sellingPrice < unitCost
     const totalLoss = confirmedSoldProducts.reduce((sum, p) => {
       if (p.sellingPrice !== null) {
-        const profit = (p.sellingPrice - p.costPrice) * p.quantity;
-        return profit < 0 ? sum + Math.abs(profit) : sum;
+        const unitCost = getUnitCost(p);
+        if (p.sellingPrice < unitCost) {
+          const loss = (unitCost - p.sellingPrice) * p.quantity;
+          return sum + loss;
+        }
       }
       return sum;
     }, 0);
 
-    const totalNetProfit = grossProfit - totalLoss;
-
-    // Stock value (confirmed store)
-    const totalStockValue = confirmedStoreProducts.reduce((sum, p) => sum + (p.costPricePerUnit || p.costPrice) * p.quantity, 0);
+    // Stock value: Only unsold confirmed products (status !== 'sold')
+    const unsoldConfirmedProducts = products.filter(p => p.status !== 'sold' && p.confirm);
+    const totalStockValue = unsoldConfirmedProducts.reduce((sum, p) => {
+      const unitCost = getUnitCost(p);
+      return sum + (unitCost * p.quantity);
+    }, 0);
 
     // Categories & models (all)
     const categories = new Set(products.map(p => p.category)).size;
