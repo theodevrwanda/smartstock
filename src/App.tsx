@@ -32,39 +32,39 @@ const App = () => (
       <ThemeProvider>
         <AuthProvider>
           <OfflineProvider>
-              <SearchProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <Routes>
-                      <Route path="/login" element={<LoginPage />} />
-                      <Route path="/register" element={<RegisterPage />} />
-                      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                      <Route
-                        path="/"
-                        element={
-                          <ProtectedRoute>
-                            <DashboardLayout />
-                          </ProtectedRoute>
-                        }
-                      >
-                        <Route index element={<Navigate to="/dashboard" replace />} />
-                        <Route path="dashboard" element={<DashboardPage />} />
-                        <Route path="products" element={<ProductsStorePage />} />
-                        <Route path="products-sold" element={<ProductsSoldPage />} />
-                        <Route path="products-restored" element={<ProductsRestoredPage />} />
-                        <Route path="profile" element={<ProfilePage />} />
-                        <Route path="reports" element={<ReportsPage />} />
-                        <Route path="trash" element={<TrashPage />} />
-                        <Route path="manage-branch" element={<ManageBranchPage />} />
-                        <Route path="manage-employees" element={<ManageEmployeesPage />} />
-                      </Route>
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </BrowserRouter>
-                </TooltipProvider>
-              </SearchProvider>
+            <SearchProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route
+                      path="/"
+                      element={
+                        <ProtectedRoute>
+                          <DashboardLayout />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route index element={<Navigate to="/dashboard" replace />} />
+                      <Route path="dashboard" element={<div className="page-transition"><DashboardPage /></div>} />
+                      <Route path="products" element={<div className="page-transition"><ProductsStorePage /></div>} />
+                      <Route path="products-sold" element={<div className="page-transition"><ProductsSoldPage /></div>} />
+                      <Route path="products-restored" element={<div className="page-transition"><ProductsRestoredPage /></div>} />
+                      <Route path="profile" element={<div className="page-transition"><ProfilePage /></div>} />
+                      <Route path="reports" element={<div className="page-transition"><ReportsPage /></div>} />
+                      <Route path="trash" element={<div className="page-transition"><TrashPage /></div>} />
+                      <Route path="manage-branch" element={<div className="page-transition"><ManageBranchPage /></div>} />
+                      <Route path="manage-employees" element={<div className="page-transition"><ManageEmployeesPage /></div>} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </SearchProvider>
           </OfflineProvider>
         </AuthProvider>
       </ThemeProvider>

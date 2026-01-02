@@ -223,12 +223,12 @@ const DashboardPage: React.FC = () => {
                   isSelected
                     ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
                     : isToday
-                      ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
+                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
                       : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                 )}
               >
                 {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                  <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
                     Today
                   </div>
                 )}
@@ -242,7 +242,7 @@ const DashboardPage: React.FC = () => {
                   <div className="flex flex-col">
                     <span className={cn(
                       "text-sm font-black",
-                      isSelected ? "text-white" : "text-blue-600 dark:text-blue-400"
+                      isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"
                     )}>
                       {item.value > 0 ? item.value.toLocaleString() : '—'}
                     </span>
@@ -294,7 +294,7 @@ const DashboardPage: React.FC = () => {
         {/* Secondary Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           <SmallProCard title="Added Today" value={stats.productsAddedToday} subtitle="New today" icon={<PlusCircle className="text-emerald-600" />} highlight />
-          <SmallProCard title="Added This Week" value={stats.productsAddedThisWeek} subtitle="This week" icon={<TrendingUp className="text-blue-600" />} />
+          <SmallProCard title="Added This Week" value={stats.productsAddedThisWeek} subtitle="This week" icon={<TrendingUp className="text-gray-900 dark:text-gray-100" />} />
           <SmallProCard title="Added This Month" value={stats.productsAddedThisMonth} subtitle="This month" icon={<TrendingUp className="text-violet-600" />} />
           <SmallProCard title="Updated Today" value={stats.productsUpdatedToday} subtitle="Updated today" icon={<RefreshCw className="text-orange-600" />} />
 
@@ -344,7 +344,7 @@ const DashboardPage: React.FC = () => {
 const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
   const colors: any = {
     indigo: "bg-indigo-600 dark:bg-indigo-700",
-    blue: "bg-blue-600 dark:bg-blue-700",
+    blue: "bg-gray-900 dark:bg-gray-100 dark:bg-gray-900 dark:bg-gray-100/90",
     violet: "bg-violet-600 dark:bg-violet-700",
     emerald: "bg-emerald-600 dark:bg-emerald-700",
     green: "bg-emerald-600 dark:bg-emerald-700",

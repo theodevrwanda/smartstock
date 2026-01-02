@@ -492,12 +492,12 @@ const ProductsRestoredPage: React.FC = () => {
                   isSelected
                     ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
                     : isToday
-                      ? "bg-blue-50/50 border-blue-400 dark:bg-blue-900/20 dark:border-blue-700 shadow-sm"
+                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
                       : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                 )}
               >
                 {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                  <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
                     Today
                   </div>
                 )}
@@ -511,7 +511,7 @@ const ProductsRestoredPage: React.FC = () => {
                   <div className="flex flex-col">
                     <span className={cn(
                       "text-sm font-black",
-                      isSelected ? "text-white" : "text-blue-600 dark:text-blue-400"
+                      isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"
                     )}>
                       {item.value.toLocaleString()}
                     </span>
@@ -628,7 +628,7 @@ const ProductsRestoredPage: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <Badge variant="secondary" className="bg-secondary text-gray-900 dark:text-gray-100 dark:bg-accent/30 dark:text-gray-900 dark:text-gray-100">
                           {product.category}
                         </Badge>
                       </TableCell>
@@ -663,7 +663,7 @@ const ProductsRestoredPage: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                            className="h-8 w-8 text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100 hover:bg-secondary"
                             onClick={() => openDetails(product)}
                           >
                             <Eye className="h-4 w-4" />
@@ -831,7 +831,7 @@ const ProductsRestoredPage: React.FC = () => {
          Number(sellForm.quantity) > 0 && 
          Number(sellForm.sellingPrice) > 0 && 
          Number(sellForm.quantity) <= currentProduct.quantity && (
-          <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+          <Card className="bg-secondary dark:bg-card border-border">
             <CardContent className="pt-6 space-y-4">
               <div className="flex justify-between text-lg">
                 <span>Total Revenue:</span>

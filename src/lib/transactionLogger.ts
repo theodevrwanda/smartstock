@@ -76,7 +76,7 @@ export const getTransactionColor = (type: TransactionType): string => {
       return 'text-orange-600 bg-orange-50';
     case 'employee_added':
     case 'branch_created':
-      return 'text-blue-600 bg-blue-50';
+      return 'text-primary bg-secondary';
     case 'employee_deleted':
     case 'branch_deleted':
       return 'text-red-600 bg-red-50';

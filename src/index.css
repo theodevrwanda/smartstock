@@ -8,103 +8,118 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Primary Blue & Smooth White Theme */
-    --background: 0 0% 99%;
-    --foreground: 220 10% 15%;
+    /* Yellow, Black & White Theme - Light Mode */
+    --background: 0 0% 100%;
+    /* Pure white */
+    --foreground: 0 0% 10%;
+    /* Almost black */
 
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 15%;
+    --card-foreground: 0 0% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 15%;
+    --popover-foreground: 0 0% 10%;
 
     --primary: 48 96% 64%;
-    /* #FCD34D */
-    --primary-foreground: 220 10% 15%;
-    /* Dark slate text for contrast */
+    /* Yellow #FCD34D */
+    --primary-foreground: 0 0% 10%;
+    /* Black text on yellow */
 
-    --secondary: 214 20% 97%;
-    --secondary-foreground: 220 10% 20%;
+    --secondary: 48 100% 96%;
+    /* Very light yellow */
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 214 15% 96%;
-    --muted-foreground: 220 8% 50%;
+    --muted: 48 100% 95%;
+    /* Light yellow tint */
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 214 30% 95%;
-    --accent-foreground: 214 100% 50%;
+    --accent: 48 96% 88%;
+    /* Light yellow accent */
+    --accent-foreground: 0 0% 10%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 90%;
-    --input: 214 20% 94%;
-    --ring: 214 100% 50%;
+    --border: 0 0% 90%;
+    /* Light gray */
+    --input: 0 0% 95%;
+    --ring: 48 96% 64%;
+    /* Yellow ring */
 
     --radius: 0.75rem;
 
-    /* Premium shadows with blue tint */
+    /* Clean shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
-    /* Sidebar theme - blue gradient */
-    --sidebar-background: 214 30% 98%;
-    --sidebar-foreground: 220 10% 20%;
-    --sidebar-primary: 214 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 20% 96%;
-    --sidebar-accent-foreground: 214 100% 50%;
-    --sidebar-border: 214 20% 88%;
-    --sidebar-ring: 214 100% 50%;
+    /* Sidebar theme - yellow accent */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 48 96% 64%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 48 100% 95%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 48 96% 64%;
   }
 
   .dark {
-    /* Dark Blue Theme */
-    --background: 220 30% 8%;
+    /* Yellow, Black & White Theme - Dark Mode */
+    --background: 0 0% 6%;
+    /* Almost black */
     --foreground: 0 0% 98%;
+    /* Almost white */
 
-    --card: 220 25% 12%;
+    --card: 0 0% 10%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 220 25% 12%;
+    --popover: 0 0% 10%;
     --popover-foreground: 0 0% 98%;
 
     --primary: 48 96% 64%;
-    --primary-foreground: 220 30% 8%;
+    /* Yellow stays bright */
+    --primary-foreground: 0 0% 6%;
+    /* Dark background on yellow */
 
-    --secondary: 220 25% 15%;
+    --secondary: 0 0% 15%;
+    /* Dark gray */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 25% 15%;
-    --muted-foreground: 220 10% 70%;
+    --muted: 48 20% 15%;
+    /* Dark yellow tint */
+    --muted-foreground: 0 0% 70%;
 
-    --accent: 220 25% 18%;
-    --accent-foreground: 214 100% 60%;
+    --accent: 48 30% 20%;
+    /* Dark yellow accent */
+    --accent-foreground: 48 96% 64%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 25% 18%;
-    --input: 220 25% 18%;
-    --ring: 214 100% 60%;
+    --border: 0 0% 20%;
+    /* Dark gray */
+    --input: 0 0% 18%;
+    --ring: 48 96% 64%;
 
-    /* Dark mode shadows with blue tint */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.2);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.2);
+    /* Dark mode shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.3);
 
     /* Dark sidebar */
-    --sidebar-background: 220 30% 10%;
+    --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 214 100% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 16%;
-    --sidebar-accent-foreground: 214 100% 60%;
-    --sidebar-border: 220 25% 16%;
-    --sidebar-ring: 214 100% 60%;
+    --sidebar-primary: 48 96% 64%;
+    --sidebar-primary-foreground: 0 0% 6%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 48 96% 64%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 48 96% 64%;
   }
 }
 
@@ -114,7 +129,7 @@ All colors MUST be HSL.
   }
 
   * {
-    @apply border-border;
+    @apply border-border transition-colors duration-200;
   }
 
   body {
@@ -125,15 +140,38 @@ All colors MUST be HSL.
 
 @layer components {
 
+  /* Page transitions */
+  .page-transition {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* Mobile app style cards */
   .mobile-card {
     @apply bg-card text-card-foreground rounded-xl border border-border/50;
     box-shadow: var(--shadow-lg);
+    transition: all 0.3s ease;
+  }
+
+  .mobile-card:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-2px);
   }
 
   /* Smooth buttons */
   .smooth-button {
-    @apply rounded-xl transition-all duration-200 ease-in-out;
+    @apply rounded-xl transition-all duration-300 ease-in-out;
     box-shadow: var(--shadow);
   }
 
@@ -142,9 +180,26 @@ All colors MUST be HSL.
     box-shadow: var(--shadow-lg);
   }
 
+  .smooth-button:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Loading spinner */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
   /* Mobile app container */
   .mobile-container {
     @apply bg-background/95 backdrop-blur-sm border border-border/50 rounded-2xl;
     box-shadow: var(--shadow-xl);
+    transition: all 0.3s ease;
   }
 }

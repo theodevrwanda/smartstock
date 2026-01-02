@@ -185,7 +185,7 @@ const ProductsDeletedPage: React.FC = () => {
   };
 
   const getPriceColor = (price: number) => {
-    if (price < 100000) return 'text-blue-600 font-bold';
+    if (price < 100000) return 'text-gray-900 dark:text-gray-100 font-bold';
     if (price < 500000) return 'text-green-600 font-bold';
     if (price < 1000000) return 'text-yellow-600 font-bold';
     if (price < 2000000) return 'text-orange-600 font-bold';

@@ -429,7 +429,7 @@ const ProfilePage: React.FC = () => {
   };
 
   const getRoleBadge = (role: 'admin' | 'staff') => (
-    <Badge className={role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'}>
+    <Badge className={role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-secondary text-blue-800 dark:bg-accent dark:text-gray-900 dark:text-gray-100'}>
       {role.charAt(0).toUpperCase() + role.slice(1)}
     </Badge>
   );

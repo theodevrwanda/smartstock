@@ -84,7 +84,7 @@ export default function ForgotPasswordPage() {
               
               <Link to="/login">
                 <Button
-                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full h-11 bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90 text-white"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to login
@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
                 id="email"
                 type="email"
                 placeholder="Enter your email"
-                className="pl-10 h-12 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
+                className="pl-10 h-12 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-gray-300 dark:border-gray-700 focus:ring-blue-500"
                 {...register('email')}
               />
             </div>
@@ -132,7 +132,7 @@ export default function ForgotPasswordPage() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            className="w-full h-12 bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90 text-white font-medium rounded-lg transition-colors"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -145,7 +145,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center">
           <Link 
             to="/login" 
-            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to login
