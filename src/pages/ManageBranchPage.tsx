@@ -1,5 +1,3 @@
-// src/pages/ManageBranchPage.tsx
-
 import React, { useState, useEffect } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -19,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Search, PlusCircle, Edit, Trash2, MapPin, Clock, Eye, CloudOff, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getBranches,
   addBranch,
@@ -32,6 +31,8 @@ import { Branch } from '@/types/interface';
 
 const ManageBranchPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
+
   const [branches, setBranches] = useState<Branch[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
@@ -107,11 +108,7 @@ const ManageBranchPage: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      return new Date(dateString).toLocaleDateString();
     } catch {
       return 'Invalid Date';
     }
@@ -128,7 +125,7 @@ const ManageBranchPage: React.FC = () => {
   const handleCreateBranch = async () => {
     const { branchName, district, sector, cell, village } = newBranch;
     if (!branchName || !district || !sector || !cell || !village) {
-      toast.error('Please fill all fields');
+      toast.error(t('fill_all_fields_error'));
       return;
     }
 
@@ -139,7 +136,7 @@ const ManageBranchPage: React.FC = () => {
 
       if (createdBranch) {
         setBranches((prev) => [...prev, createdBranch]);
-        toast.success('Branch created successfully');
+        toast.success(t('branch_created_success'));
       }
 
       setNewBranch({
@@ -152,7 +149,7 @@ const ManageBranchPage: React.FC = () => {
       });
       setIsCreateDialogOpen(false);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create branch');
+      toast.error(error.message || t('error'));
     } finally {
       setActionLoading(false);
     }
@@ -176,12 +173,12 @@ const ManageBranchPage: React.FC = () => {
         setBranches((prev) =>
           prev.map((b) => (b.id === currentBranch.id ? currentBranch : b))
         );
-        toast.success('Branch updated successfully');
+        toast.success(t('branch_updated_success'));
         setIsUpdateDialogOpen(false);
         setCurrentBranch(null);
       }
     } catch (error) {
-      toast.error('Failed to update branch');
+      toast.error(t('error'));
     } finally {
       setActionLoading(false);
     }
@@ -196,11 +193,11 @@ const ManageBranchPage: React.FC = () => {
       await deleteBranch(branchToDelete);
       setBranches((prev) => prev.filter((b) => b.id !== branchToDelete));
       setSelectedBranches((prev) => prev.filter((id) => id !== branchToDelete));
-      toast.success('Branch removed successfully');
+      toast.success(t('branch_removed_success'));
       setBranchToDelete(null);
       setIsDeleteConfirmOpen(false);
     } catch (error) {
-      toast.error('Failed to delete branch');
+      toast.error(t('error'));
     } finally {
       setActionLoading(false);
     }
@@ -215,10 +212,10 @@ const ManageBranchPage: React.FC = () => {
       await deleteMultipleBranches(selectedBranches);
       setBranches((prev) => prev.filter((b) => !selectedBranches.includes(b.id!)));
       setSelectedBranches([]);
-      toast.success(`${selectedBranches.length} branch(es) removed successfully`);
+      toast.success(`${selectedBranches.length} branches removed successfully`); // Partially hardcoded as no key for count specific
       setIsDeleteSelectedConfirmOpen(false);
     } catch (error) {
-      toast.error('Failed to delete selected branches');
+      toast.error(t('error'));
     } finally {
       setActionLoading(false);
     }
@@ -251,27 +248,27 @@ const ManageBranchPage: React.FC = () => {
   if (!isAdmin) {
     return (
       <>
-        <SEOHelmet title="Branches" description="View all branches" />
+        <SEOHelmet title={t('branches')} description={t('branches_desc')} />
         <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
-          <h1 className="text-3xl font-bold text-foreground">Branches</h1>
+          <h1 className="text-3xl font-bold text-foreground">{t('branches')}</h1>
 
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Branch Name</TableHead>
-                  <TableHead>District</TableHead>
-                  <TableHead>Sector</TableHead>
-                  <TableHead>Cell</TableHead>
-                  <TableHead>Village</TableHead>
-                  <TableHead>Created At</TableHead>
+                  <TableHead>{t('branch_name')}</TableHead>
+                  <TableHead>{t('district')}</TableHead>
+                  <TableHead>{t('sector')}</TableHead>
+                  <TableHead>{t('cell')}</TableHead>
+                  <TableHead>{t('village')}</TableHead>
+                  <TableHead>{t('created_at')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredBranches.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No branches found.
+                      {t('no_branches_found')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -297,24 +294,24 @@ const ManageBranchPage: React.FC = () => {
   // Admin full management view (unchanged below)
   return (
     <>
-      <SEOHelmet title="Manage Branches" description="Create, update, delete branches" />
+      <SEOHelmet title={t('manage_branches')} description={t('manage_branches_desc')} />
       <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Manage Branches</h1>
-            <p className="text-muted-foreground">Create, update, or delete branches</p>
+            <h1 className="text-3xl font-bold">{t('manage_branches')}</h1>
+            <p className="text-muted-foreground">{t('manage_branches_desc')}</p>
             {!isOnline && (
               <p className="text-orange-600 text-sm mt-2 flex items-center gap-2">
                 <CloudOff className="h-4 w-4" />
-                You are offline – changes will sync automatically when back online
+                {t('offline_warning')}
               </p>
             )}
           </div>
           <div className="flex gap-3">
             <Button onClick={() => setIsCreateDialogOpen(true)} disabled={actionLoading}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Branch
+              {t('add_branch')}
             </Button>
             <Button
               variant="destructive"
@@ -322,7 +319,7 @@ const ManageBranchPage: React.FC = () => {
               disabled={selectedBranches.length === 0 || actionLoading}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete Selected ({selectedBranches.length})
+              {t('delete_selected')} ({selectedBranches.length})
             </Button>
           </div>
         </div>
@@ -331,7 +328,7 @@ const ManageBranchPage: React.FC = () => {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
           <Input
-            placeholder="Search branches..."
+            placeholder={t('search_branches')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -351,13 +348,13 @@ const ManageBranchPage: React.FC = () => {
                     onCheckedChange={selectAll}
                   />
                 </TableHead>
-                <TableHead>Branch Name</TableHead>
-                <TableHead>District</TableHead>
-                <TableHead>Sector</TableHead>
-                <TableHead>Cell</TableHead>
-                <TableHead>Village</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('branch_name')}</TableHead>
+                <TableHead>{t('district')}</TableHead>
+                <TableHead>{t('sector')}</TableHead>
+                <TableHead>{t('cell')}</TableHead>
+                <TableHead>{t('village')}</TableHead>
+                <TableHead>{t('created_at')}</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -366,7 +363,7 @@ const ManageBranchPage: React.FC = () => {
                   <TableCell colSpan={8} className="h-64 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <Package className="h-12 w-12 opacity-20" />
-                      <p className="text-lg font-medium">No branches found. Click "Add Branch" to create one.</p>
+                      <p className="text-lg font-medium">{t('no_branches_found')}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -433,72 +430,72 @@ const ManageBranchPage: React.FC = () => {
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Create New Branch</DialogTitle>
-              <DialogDescription>Fill in the details for the new branch.</DialogDescription>
+              <DialogTitle>{t('create_new_branch')}</DialogTitle>
+              <DialogDescription>{t('create_branch_desc')}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="create-branchName">Branch Name *</Label>
+                <Label htmlFor="create-branchName">{t('branch_name')} *</Label>
                 <Input
                   id="create-branchName"
                   value={newBranch.branchName}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, branchName: e.target.value }))
                   }
-                  placeholder="e.g. Kigali Main"
+                  placeholder={t('enter_placeholder')}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-district">District *</Label>
+                <Label htmlFor="create-district">{t('district')} *</Label>
                 <Input
                   id="create-district"
                   value={newBranch.district}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, district: e.target.value }))
                   }
-                  placeholder="e.g. Gasabo"
+                  placeholder={t('enter_placeholder')}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-sector">Sector *</Label>
+                <Label htmlFor="create-sector">{t('sector')} *</Label>
                 <Input
                   id="create-sector"
                   value={newBranch.sector}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, sector: e.target.value }))
                   }
-                  placeholder="e.g. Kacyiru"
+                  placeholder={t('enter_placeholder')}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-cell">Cell *</Label>
+                <Label htmlFor="create-cell">{t('cell')} *</Label>
                 <Input
                   id="create-cell"
                   value={newBranch.cell}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, cell: e.target.value }))
                   }
-                  placeholder="e.g. Kagugu"
+                  placeholder={t('enter_placeholder')}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="create-village">Village *</Label>
+                <Label htmlFor="create-village">{t('village')} *</Label>
                 <Input
                   id="create-village"
                   value={newBranch.village}
                   onChange={(e) =>
                     setNewBranch((prev) => ({ ...prev, village: e.target.value }))
                   }
-                  placeholder="e.g. Rukiri"
+                  placeholder={t('enter_placeholder')}
                 />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
+                {t('cancel')}
               </Button>
               <Button onClick={handleCreateBranch} disabled={actionLoading}>
-                {actionLoading ? 'Creating...' : 'Create Branch'}
+                {actionLoading ? t('creating') : t('create_branch')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -508,13 +505,13 @@ const ManageBranchPage: React.FC = () => {
         <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Update Branch</DialogTitle>
-              <DialogDescription>Edit the branch information.</DialogDescription>
+              <DialogTitle>{t('update_branch')}</DialogTitle>
+              <DialogDescription>{t('update_branch_desc')}</DialogDescription>
             </DialogHeader>
             {currentBranch && (
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="update-branchName">Branch Name</Label>
+                  <Label htmlFor="update-branchName">{t('branch_name')}</Label>
                   <Input
                     id="update-branchName"
                     value={currentBranch.branchName}
@@ -526,7 +523,7 @@ const ManageBranchPage: React.FC = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="update-district">District</Label>
+                  <Label htmlFor="update-district">{t('district')}</Label>
                   <Input
                     id="update-district"
                     value={currentBranch.district}
@@ -538,7 +535,7 @@ const ManageBranchPage: React.FC = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="update-sector">Sector</Label>
+                  <Label htmlFor="update-sector">{t('sector')}</Label>
                   <Input
                     id="update-sector"
                     value={currentBranch.sector}
@@ -550,7 +547,7 @@ const ManageBranchPage: React.FC = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="update-cell">Cell</Label>
+                  <Label htmlFor="update-cell">{t('cell')}</Label>
                   <Input
                     id="update-cell"
                     value={currentBranch.cell}
@@ -562,7 +559,7 @@ const ManageBranchPage: React.FC = () => {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="update-village">Village</Label>
+                  <Label htmlFor="update-village">{t('village')}</Label>
                   <Input
                     id="update-village"
                     value={currentBranch.village}
@@ -577,10 +574,10 @@ const ManageBranchPage: React.FC = () => {
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
-                Cancel
+                {t('cancel')}
               </Button>
               <Button onClick={handleUpdateBranch} disabled={actionLoading}>
-                {actionLoading ? 'Saving...' : 'Save Changes'}
+                {actionLoading ? t('saving') : t('save_changes')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -590,38 +587,38 @@ const ManageBranchPage: React.FC = () => {
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Branch Details</DialogTitle>
+              <DialogTitle>{t('branch_details')}</DialogTitle>
             </DialogHeader>
             {currentBranch && (
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-2">
-                  <strong>Branch Name:</strong> {currentBranch.branchName}
+                  <strong>{t('branch_name')}:</strong> {currentBranch.branchName}
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <strong>District:</strong> {currentBranch.district}
+                  <strong>{t('district')}:</strong> {currentBranch.district}
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <strong>Sector:</strong> {currentBranch.sector}
+                  <strong>{t('sector')}:</strong> {currentBranch.sector}
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <strong>Cell:</strong> {currentBranch.cell}
+                  <strong>{t('cell')}:</strong> {currentBranch.cell}
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <strong>Village:</strong> {currentBranch.village}
+                  <strong>{t('village')}:</strong> {currentBranch.village}
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <strong>Created:</strong> {formatDate(currentBranch.createdAt || '')}
+                  <strong>{t('created_at')}:</strong> {formatDate(currentBranch.createdAt || '')}
                 </div>
               </div>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
-                Close
+                {t('close')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -631,17 +628,17 @@ const ManageBranchPage: React.FC = () => {
         <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Branch?</DialogTitle>
+              <DialogTitle>{t('delete_branch_q')}</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. This branch will be permanently deleted.
+                {t('delete_branch_warning')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
-                Cancel
+                {t('cancel')}
               </Button>
               <Button variant="destructive" onClick={handleDeleteBranch} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete'}
+                {actionLoading ? t('deleting') : t('delete')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -651,17 +648,17 @@ const ManageBranchPage: React.FC = () => {
         <Dialog open={isDeleteSelectedConfirmOpen} onOpenChange={setIsDeleteSelectedConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Selected Branches?</DialogTitle>
+              <DialogTitle>{t('delete_selected_branches_q')}</DialogTitle>
               <DialogDescription>
-                {selectedBranches.length} branch(es) will be permanently deleted. This action cannot be undone.
+                {t('delete_multiple_branches_warning').replace('{count}', selectedBranches.length.toString())}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDeleteSelectedConfirmOpen(false)}>
-                Cancel
+                {t('cancel')}
               </Button>
               <Button variant="destructive" onClick={handleDeleteSelected} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete Selected'}
+                {actionLoading ? t('deleting') : t('delete_selected')}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -145,8 +145,8 @@ const ProfilePage: React.FC = () => {
       reader.readAsDataURL(file);
 
       toast({
-        title: 'Image Selected',
-        description: isOnline ? 'Preview updated. Will upload when you save.' : 'Image saved locally. Will upload when online.',
+        title: t('image_selected'),
+        description: isOnline ? 'Preview updated. Will upload when you save.' : t('offline_changes_sync_later'),
       });
     }
   };
@@ -161,14 +161,14 @@ const ProfilePage: React.FC = () => {
       if (selectedFile) {
         if (isOnline) {
           try {
-            toast({ title: 'Uploading...', description: 'Uploading profile image...' });
+            toast({ title: t('uploading'), description: 'Uploading profile image...' });
             newImageUrl = await uploadToCloudinary(selectedFile);
-            toast({ title: 'Success', description: 'Image uploaded!' });
+            toast({ title: t('success'), description: 'Image uploaded!' });
             setLocalImageData(null);
           } catch (error) {
             toast({
-              title: 'Upload Failed',
-              description: 'Image saved locally. Will upload when connection improves.',
+              title: t('upload_failed'),
+              description: t('offline_changes_sync_later'),
               variant: 'destructive',
             });
             if (localImageData) {
@@ -256,16 +256,16 @@ const ProfilePage: React.FC = () => {
       }
 
       toast({
-        title: 'Success',
-        description: isOnline ? 'Profile updated successfully!' : 'Profile updated locally. Will sync when online.'
+        title: t('success'),
+        description: isOnline ? t('profile_updated_success') : t('offline_changes_sync_later')
       });
       setIsEditing(false);
       setSelectedFile(null);
     } catch (error) {
       console.error('Save error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to save profile. Please try again.',
+        title: t('error'),
+        description: t('profile_save_failed'),
         variant: 'destructive',
       });
     } finally {
@@ -296,15 +296,15 @@ const ProfilePage: React.FC = () => {
   const handleLogout = async () => {
     try {
       await logout();
-      toast({ title: 'Logged Out', description: 'Signed out successfully.' });
+      toast({ title: t('logged_out'), description: t('signed_out_success') });
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to log out.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('logout_failed'), variant: 'destructive' });
     }
   };
 
   const handleVerifyCurrentPassword = async () => {
     if (!currentPassword.trim()) {
-      setCurrentPasswordError('Please enter your current password.');
+      setCurrentPasswordError(t('enter_current_password_error'));
       return;
     }
 
@@ -312,7 +312,7 @@ const ProfilePage: React.FC = () => {
     setIsVerifyingCurrent(true);
 
     if (!auth.currentUser?.email) {
-      toast({ title: 'Error', description: 'User email not found.', variant: 'destructive' });
+      toast({ title: t('error'), description: 'User email not found.', variant: 'destructive' });
       setIsVerifyingCurrent(false);
       return;
     }
@@ -322,13 +322,13 @@ const ProfilePage: React.FC = () => {
       await reauthenticateWithCredential(auth.currentUser, credential);
 
       setPasswordStep(2);
-      toast({ title: 'Verified ✓', description: 'Current password correct. Set new one.' });
+      toast({ title: t('verified'), description: t('password_verified') });
     } catch (error: any) {
       let message = 'Failed to verify password.';
       if (error.code === 'auth/wrong-password') {
-        message = 'Incorrect current password.';
+        message = t('incorrect_password');
       } else if (error.code === 'auth/too-many-requests') {
-        message = 'Too many attempts. Try again later.';
+        message = t('too_many_attempts');
       }
       setCurrentPasswordError(message);
       toast({ title: 'Failed', description: message, variant: 'destructive' });
@@ -339,18 +339,18 @@ const ProfilePage: React.FC = () => {
 
   const handleUpdateNewPassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast({ title: 'Error', description: 'Passwords do not match.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('passwords_dont_match'), variant: 'destructive' });
       return;
     }
     if (newPassword.length < 6) {
-      toast({ title: 'Error', description: 'Password must be at least 6 characters.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('password_min_length'), variant: 'destructive' });
       return;
     }
 
     setIsUpdatingPassword(true);
     try {
       await updatePassword(auth.currentUser!, newPassword);
-      toast({ title: 'Success', description: 'Password changed successfully!' });
+      toast({ title: t('success'), description: 'Password changed successfully!' });
       setChangePasswordOpen(false);
       setPasswordStep(1);
       setCurrentPassword('');
@@ -358,7 +358,7 @@ const ProfilePage: React.FC = () => {
       setConfirmPassword('');
       setCurrentPasswordError('');
     } catch (error: any) {
-      toast({ title: 'Error', description: 'Failed to update password.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('password_update_failed'), variant: 'destructive' });
     } finally {
       setIsUpdatingPassword(false);
     }
@@ -366,16 +366,16 @@ const ProfilePage: React.FC = () => {
 
   const handleResetPassword = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
-      toast({ title: 'Error', description: 'Valid email required.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('invalid_email'), variant: 'destructive' });
       return;
     }
 
     try {
       await sendPasswordResetEmail(auth, resetEmail);
-      toast({ title: 'Sent', description: 'Check your email for reset link.' });
+      toast({ title: t('email_sent'), description: t('check_email_reset') });
       setResetPasswordOpen(false);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to send reset email.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('send_reset_failed'), variant: 'destructive' });
     }
   };
 
@@ -384,16 +384,16 @@ const ProfilePage: React.FC = () => {
 
     try {
       await deleteUser(auth.currentUser);
-      toast({ title: 'Deleted', description: 'Account permanently deleted.' });
+      toast({ title: t('deleted_success'), description: t('account_deleted') });
     } catch (error: any) {
       if (error.code === 'auth/requires-recent-login') {
         toast({
-          title: 'Re-login Needed',
-          description: 'Please sign in again before deleting account.',
+          title: t('relogin_needed'),
+          description: t('relogin_to_delete'),
           variant: 'destructive'
         });
       } else {
-        toast({ title: 'Error', description: 'Failed to delete account.', variant: 'destructive' });
+        toast({ title: t('error'), description: 'Failed to delete account.', variant: 'destructive' });
       }
     }
     setDeleteAccountOpen(false);
@@ -401,12 +401,12 @@ const ProfilePage: React.FC = () => {
 
   const handleUpdateEmail = async () => {
     if (!auth.currentUser?.email || !emailPassword.trim() || !newEmail.trim()) {
-      setEmailUpdateError('Please fill all fields.');
+      setEmailUpdateError(t('fill_all_fields_error'));
       return;
     }
 
     if (!newEmail.includes('@')) {
-      setEmailUpdateError('Please enter a valid email address.');
+      setEmailUpdateError(t('invalid_email'));
       return;
     }
 
@@ -425,18 +425,18 @@ const ProfilePage: React.FC = () => {
         updateUser({ email: newEmail });
       }
 
-      toast({ title: 'Success', description: 'Email updated successfully!' });
+      toast({ title: t('success'), description: 'Email updated successfully!' });
       setChangeEmailOpen(false);
       setNewEmail('');
       setEmailPassword('');
     } catch (error: any) {
-      let message = 'Failed to update email.';
-      if (error.code === 'auth/wrong-password') message = 'Incorrect password.';
-      else if (error.code === 'auth/email-already-in-use') message = 'This email is already in use.';
-      else if (error.code === 'auth/invalid-email') message = 'Invalid email address.';
-      else if (error.code === 'auth/requires-recent-login') message = 'Please log out and log in again.';
+      let message = t('email_update_failed');
+      if (error.code === 'auth/wrong-password') message = t('incorrect_password');
+      else if (error.code === 'auth/email-already-in-use') message = t('email_in_use');
+      else if (error.code === 'auth/invalid-email') message = t('invalid_email');
+      else if (error.code === 'auth/requires-recent-login') message = t('relogin_required');
       setEmailUpdateError(message);
-      toast({ title: 'Error', description: message, variant: 'destructive' });
+      toast({ title: t('error'), description: message, variant: 'destructive' });
     } finally {
       setIsUpdatingEmail(false);
     }
@@ -509,7 +509,7 @@ const ProfilePage: React.FC = () => {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] text-gray-500">
-        <p>Please log in to view your profile.</p>
+        <p>{t('login_to_view_profile')}</p>
       </div>
     );
   }
@@ -531,7 +531,7 @@ const ProfilePage: React.FC = () => {
 
           <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8">
             <Button variant="secondary" className="bg-white/90 text-black hover:bg-white shadow-sm font-semibold opacity-70 cursor-not-allowed">
-              <Camera className="mr-2 h-4 w-4" /> Edit Cover Photo
+              <Camera className="mr-2 h-4 w-4" /> {t('edit_cover_photo')}
             </Button>
           </div>
         </div>
@@ -590,11 +590,11 @@ const ProfilePage: React.FC = () => {
                 {getRoleBadge(user.role)}
                 {user.isActive ? (
                   <span className="text-sm text-green-600 font-medium flex items-center bg-green-50 px-2 py-0.5 rounded">
-                    <Check className="w-3 h-3 mr-1" /> Active
+                    <Check className="w-3 h-3 mr-1" /> {t('active')}
                   </span>
                 ) : (
                   <span className="text-sm text-amber-600 font-medium flex items-center bg-amber-50 px-2 py-0.5 rounded">
-                    Pending
+                    {t('pending')}
                   </span>
                 )}
               </div>
@@ -617,14 +617,14 @@ const ProfilePage: React.FC = () => {
                     className="bg-[#1B74E4] hover:bg-[#1B74E4]/90 text-white font-semibold px-6 h-9 rounded-md"
                   >
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save
+                    {t('save')}
                   </Button>
                   <Button
                     variant="secondary"
                     onClick={handleCancel}
                     className="bg-[#E4E6EB] hover:bg-[#D8DADF] text-[#050505] font-semibold px-4 h-9 rounded-md dark:bg-[#3A3B3C] dark:text-[#E4E6EB] dark:hover:bg-[#4E4F50]"
                   >
-                    Cancel
+                    {t('cancel')}
                   </Button>
                 </>
               )}
@@ -894,7 +894,7 @@ const ProfilePage: React.FC = () => {
             </DialogTitle>
             <DialogDescription>
               {passwordStep === 1
-                ? 'Enter your current password to proceed.'
+                ? t('enter_current_password')
                 : 'Your new password must be at least 6 characters long.'}
             </DialogDescription>
           </DialogHeader>
@@ -949,7 +949,7 @@ const ProfilePage: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setChangePasswordOpen(false)}>
-              Cancel
+              {t('cancel')}
             </Button>
             {passwordStep === 1 ? (
               <Button
@@ -994,18 +994,18 @@ const ProfilePage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Label htmlFor="reset-email">Email Address</Label>
+            <Label htmlFor="reset-email">{t('email_address')}</Label>
             <Input
               id="reset-email"
               type="email"
               value={resetEmail}
               onChange={(e) => setResetEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder={t('enter_email')}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setResetPasswordOpen(false)}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={handleResetPassword}>
               Send Reset Link
@@ -1045,23 +1045,23 @@ const ProfilePage: React.FC = () => {
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div>
-              <Label htmlFor="email-password">Current Password</Label>
+              <Label htmlFor="email-password">{t('current_password')}</Label>
               <Input
                 id="email-password"
                 type="password"
                 value={emailPassword}
                 onChange={(e) => { setEmailPassword(e.target.value); setEmailUpdateError(''); }}
-                placeholder="Enter your current password"
+                placeholder={t('enter_current_password')}
               />
             </div>
             <div>
-              <Label htmlFor="new-email">New Email Address</Label>
+              <Label htmlFor="new-email">{t('email_address')}</Label>
               <Input
                 id="new-email"
                 type="email"
                 value={newEmail}
                 onChange={(e) => { setNewEmail(e.target.value); setEmailUpdateError(''); }}
-                placeholder="Enter new email address"
+                placeholder={t('enter_email')}
               />
             </div>
             {emailUpdateError && (
@@ -1070,7 +1070,7 @@ const ProfilePage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setChangeEmailOpen(false); setEmailPassword(''); setNewEmail(''); setEmailUpdateError(''); }}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button onClick={handleUpdateEmail} disabled={isUpdatingEmail || !emailPassword.trim() || !newEmail.trim()}>
               {isUpdatingEmail ? (
@@ -1078,7 +1078,7 @@ const ProfilePage: React.FC = () => {
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}
-              Update Email
+              {t('update_email')}
             </Button>
           </DialogFooter>
         </DialogContent>

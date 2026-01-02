@@ -17,9 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import PWAInstallButton from '@/components/PWAInstallButton';
+import SEOHelmet from '@/components/SEOHelmet';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -35,6 +37,7 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const { login, loginWithGoogle, user, isAuthenticated, logout, errorMessage, clearError, loading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
@@ -45,7 +48,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!loading && isAuthenticated && user) {
       if (user.businessActive === false) {
-        setLoginError('Your business is not active. Please wait for central admin to approve your business.');
+        setLoginError().then(() => 'Your business is not active. Please wait for central admin to approve your business.');
         logout();
         setIsLoading(false);
         setIsGoogleLoading(false);
@@ -72,9 +75,11 @@ export default function LoginPage() {
     const success = await login(data.email.trim(), data.password);
 
     if (!success) {
-      setLoginError(errorMessage || 'Invalid email or password. Please try again.');
+      setLoginError(errorMessage || t('error'));
       clearError();
       setIsLoading(false);
+    } else {
+      toast.success(t('success'));
     }
   };
 
@@ -86,21 +91,24 @@ export default function LoginPage() {
     const success = await loginWithGoogle();
 
     if (!success) {
-      setLoginError(errorMessage || 'Google sign-in failed. Please try again.');
+      setLoginError(errorMessage || t('error'));
       clearError();
       setIsGoogleLoading(false);
+    } else {
+      toast.success(t('success'));
     }
   };
 
   return (
     <AuthLayout>
+      <SEOHelmet title="Login" />
       <div className="space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-medium text-slate-900 tracking-tight">
-            Welcome back
+            {t('welcome_back_login')}
           </h1>
           <p className="text-slate-500 font-medium text-sm">
-            Please enter your details to sign in.
+            {t('enter_details_login')}
           </p>
         </div>
 
@@ -117,13 +125,13 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                Email Address
+                {t('email_label')}
               </Label>
               <div className="relative">
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder={t('email_placeholder')}
                   className="pl-4 h-12 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-2xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...register('email')}
                 />
@@ -135,13 +143,13 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                Password
+                {t('password_label')}
               </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
+                  placeholder={t('password_placeholder')}
                   className="pl-4 pr-10 h-12 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-2xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...register('password')}
                 />
@@ -164,7 +172,7 @@ export default function LoginPage() {
               to="/forgot-password"
               className="text-xs font-medium text-slate-500 hover:text-slate-800"
             >
-              Forgot password?
+              {t('forgot_password')}
             </Link>
           </div>
 
@@ -177,7 +185,7 @@ export default function LoginPage() {
               {isLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                'Sign in'
+                t('sign_in_button')
               )}
             </Button>
 
@@ -186,7 +194,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-slate-200" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#F8F7F2] px-2 text-slate-400 font-medium">Or</span>
+                <span className="bg-[#F8F7F2] px-2 text-slate-400 font-medium">{t('or_divider')}</span>
               </div>
             </div>
 
@@ -207,7 +215,7 @@ export default function LoginPage() {
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
-                  Google
+                  {t('google_login')}
                 </>
               )}
             </Button>
@@ -216,12 +224,12 @@ export default function LoginPage() {
 
         <div className="text-center">
           <p className="text-slate-500 text-sm">
-            Don't have an account?{' '}
+            {t('dont_have_account')}{' '}
             <Link
               to="/register"
               className="font-bold text-slate-900 hover:underline"
             >
-              Sign up
+              {t('sign_up_link')}
             </Link>
           </p>
         </div>

@@ -184,7 +184,7 @@ const ProductsStorePage: React.FC = () => {
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      toast.success('Back Online – Syncing...');
+      toast.success(t('back_online_syncing'));
       syncOfflineOperations().then(() => {
         if (businessId) {
           getProducts(businessId, user?.role || 'staff', isAdmin ? (branchFilter === 'All' ? null : branchFilter) : userBranch).then(setProducts);
@@ -193,7 +193,7 @@ const ProductsStorePage: React.FC = () => {
     };
     const handleOffline = () => {
       setIsOnline(false);
-      toast.warning('Offline – Changes will sync later');
+      toast.warning(t('offline_changes_sync_later'));
     };
     if (!navigator.onLine) handleOffline();
     window.addEventListener('online', handleOnline);
@@ -219,7 +219,7 @@ const ProductsStorePage: React.FC = () => {
         setBranchMap(map);
       })
       .catch(() => {
-        toast.warning(isOnline ? 'Failed to load branches' : 'Using cached branch data');
+        toast.warning(isOnline ? t('failed_load_branches') : t('using_cached_data'));
       });
 
     const unsubscribe = subscribeToProducts(
@@ -522,7 +522,7 @@ const ProductsStorePage: React.FC = () => {
         if (existing) return prev.map(p => p.id === result.id ? result : p);
         return [...prev, result];
       });
-      toast.success(isOnline ? 'Product added successfully' : 'Added locally');
+      toast.success(isOnline ? t('product_added_success') : t('offline_changes_sync_later'));
       setAddDialogOpen(false);
       setNewProduct({
         productName: '',
@@ -536,7 +536,7 @@ const ProductsStorePage: React.FC = () => {
         deadline: '',
       });
     } else {
-      toast.error('Failed to add product');
+      toast.error(t('product_add_failed'));
     }
     setActionLoading(false);
   };
@@ -574,7 +574,7 @@ const ProductsStorePage: React.FC = () => {
     const success = await updateProduct(currentProduct.id!, updates);
     if (success) {
       setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, ...updates } : p));
-      toast.success('Product updated');
+      toast.success(t('product_updated_success'));
       setEditDialogOpen(false);
       setCurrentProduct(null);
     }
@@ -592,7 +592,7 @@ const ProductsStorePage: React.FC = () => {
     const qty = Number(sellForm.quantity);
     const price = Number(sellForm.sellingPrice);
     if (qty > currentProduct.quantity || price <= 0 || qty <= 0) {
-      toast.error('Invalid sale');
+      toast.error(t('invalid_sale'));
       return;
     }
 
@@ -603,7 +603,7 @@ const ProductsStorePage: React.FC = () => {
       const success = await sellProduct(currentProduct.id!, qty, price, sellForm.deadline, userBranch);
       if (success) {
         setProducts(prev => prev.map(p => p.id === currentProduct.id ? { ...p, quantity: p.quantity - qty } : p));
-        toast.success(`Sold ${qty} ${currentProduct.unit}`);
+        toast.success(`${t('sold_success_msg')} ${qty} ${currentProduct.unit}`);
         setSellDialogOpen(false);
         setConfirmSaleDialogOpen(false);
         setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true });
@@ -620,7 +620,7 @@ const ProductsStorePage: React.FC = () => {
     const success = await deleteProduct(productToDelete);
     if (success) {
       setProducts(prev => prev.filter(p => p.id !== productToDelete));
-      toast.success('Deleted');
+      toast.success(t('deleted_success'));
       setDeleteConfirmOpen(false);
     }
     setActionLoading(false);
@@ -637,7 +637,7 @@ const ProductsStorePage: React.FC = () => {
     const success = await updateProduct(productToConfirm.id, { confirm: !productToConfirm.current });
     if (success) {
       setProducts(prev => prev.map(p => p.id === productToConfirm.id ? { ...p, confirm: !productToConfirm.current } : p));
-      toast.success('Status updated');
+      toast.success(t('status_updated'));
       setConfirmProductDialogOpen(false);
       setProductToConfirm(null);
     }
@@ -661,7 +661,7 @@ const ProductsStorePage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold">{t('products_store')}</h1>
             <p className="text-muted-foreground">
-              {isAdmin ? 'All branches' : (canAddProduct ? `Products in ${currentBranchName}` : 'No branch assigned')}
+              {isAdmin ? t('all_branches') : (canAddProduct ? `${t('products_in')} ${currentBranchName}` : t('no_branch_assigned'))}
             </p>
           </div>
           <div className="flex flex-wrap gap-3 mt-4 sm:mt-0">
@@ -669,14 +669,14 @@ const ProductsStorePage: React.FC = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className={selectedDate ? 'border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100' : ''}>
                   <CalendarDays className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'PPP') : t('pick_date') || 'Pick a date'}
+                  {selectedDate ? format(selectedDate, 'PPP') : t('pick_date')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
                 {selectedDate && (
                   <div className="p-2 border-t">
-                    <Button variant="ghost" className="w-full text-xs" onClick={() => setSelectedDate(undefined)}>{t('clear_date') || 'Clear Date'}</Button>
+                    <Button variant="ghost" className="w-full text-xs" onClick={() => setSelectedDate(undefined)}>{t('clear_date')}</Button>
                   </div>
                 )}
               </PopoverContent>
@@ -718,7 +718,7 @@ const ProductsStorePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold">{storeStats.week.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-blue-100 mt-1 opacity-80">{storeStats.week.count} confirmed products</p>
+                  <p className="text-xs text-blue-100 mt-1 opacity-80">{storeStats.week.count} {t('confirmed_stock')}</p>
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-white" />
@@ -735,7 +735,7 @@ const ProductsStorePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-3xl font-bold">{storeStats.month.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-emerald-100 mt-1 opacity-80">{storeStats.month.count} confirmed products</p>
+                  <p className="text-xs text-emerald-100 mt-1 opacity-80">{storeStats.month.count} {t('confirmed_stock')}</p>
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <Package className="h-6 w-6 text-white" />
@@ -748,7 +748,7 @@ const ProductsStorePage: React.FC = () => {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <CalendarDays size={14} className="text-orange-500" />
-                Yearly Investment
+                {t('yearly_investment')}
               </CardTitle>
               <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
                 {format(referenceDate, 'yyyy')}
@@ -757,9 +757,9 @@ const ProductsStorePage: React.FC = () => {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Confirmed Investment</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('total_confirmed_investment')}</p>
                   <div className="text-3xl font-bold">{storeStats.year.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-orange-500 mt-1 font-semibold">{storeStats.year.count} products</p>
+                  <p className="text-xs text-orange-500 mt-1 font-semibold">{storeStats.year.count} {t('total_products')}</p>
                 </div>
                 <div className="bg-white/5 p-2 rounded-lg">
                   <DollarSign className="h-6 w-6 text-orange-500" />
@@ -812,7 +812,7 @@ const ProductsStorePage: React.FC = () => {
                       "text-[9px] uppercase font-medium opacity-60",
                       isSelected ? "text-amber-200" : "text-gray-500"
                     )}>
-                      {storeStats.daily[idx].count} products
+                      {storeStats.daily[idx].count} {t('total_products')}
                     </span>
                   </div>
                 </div>
@@ -826,7 +826,7 @@ const ProductsStorePage: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
-              placeholder="Search name, category, model..."
+              placeholder={t('search_placeholder_products')}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -834,18 +834,18 @@ const ProductsStorePage: React.FC = () => {
           </div>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t('all_categories')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="All">All Categories</SelectItem>
+              <SelectItem value="All">{t('all_categories')}</SelectItem>
               {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
 
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('all_branches')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
+                <SelectItem value="All">{t('all_branches')}</SelectItem>
                 {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -902,7 +902,7 @@ const ProductsStorePage: React.FC = () => {
                     <TableCell colSpan={isAdmin ? 11 : 10} className="h-64 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="h-12 w-12 opacity-20" />
-                        <p className="text-lg font-medium">No products found matching your filters.</p>
+                        <p className="text-lg font-medium">{t('no_products_found_filters')}</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1044,7 +1044,7 @@ const ProductsStorePage: React.FC = () => {
         {/* Mobile Cards */}
         <div className="md:hidden space-y-3">
           {sortedProducts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No products found.</div>
+            <div className="text-center py-12 text-muted-foreground">{t('no_products_found')}</div>
           ) : (
             <AnimatePresence mode='popLayout'>
               {sortedProducts.map(p => (
@@ -1067,13 +1067,13 @@ const ProductsStorePage: React.FC = () => {
 
                       <div className="flex items-center justify-between mt-3 pt-3 border-t">
                         <div className="flex flex-col">
-                          <span className="text-[10px] text-muted-foreground uppercase">Unit Cost</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{t('cost_per_unit')}</span>
                           <span className="text-sm font-medium">
                             {getUnitCost(p).toLocaleString()} RWF
                           </span>
                         </div>
                         <div className="flex flex-col items-end">
-                          <span className="text-[10px] text-muted-foreground uppercase">Total Value</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{t('total_value')}</span>
                           <span className="text-lg font-black text-amber-600">
                             {getTotalValue(p).toLocaleString()} RWF
                           </span>
@@ -1081,7 +1081,7 @@ const ProductsStorePage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px] text-muted-foreground">
-                        <span>Added: {p.addedDate ? format(new Date(p.addedDate), 'dd MMM yyyy') : '-'}</span>
+                        <span>{t('added_date')}: {p.addedDate ? format(new Date(p.addedDate), 'dd MMM yyyy') : '-'}</span>
                         {isAdmin && <span>{getBranchName(p.branch)}</span>}
                       </div>
 
@@ -1356,19 +1356,19 @@ const ProductsStorePage: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label>Category *</Label>
+                      <Label>{t('category_label')} *</Label>
                       <Select
                         value={currentProduct.category}
                         onValueChange={(val) => setCurrentProduct(prev => prev ? { ...prev, category: val } : null)}
                       >
-                        <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={t('category_label')} /></SelectTrigger>
                         <SelectContent>
                           {MIXED_SHOP_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label>Model (optional)</Label>
+                      <Label>{t('model_label')} ({t('optional')})</Label>
                       <Input
                         value={currentProduct.model || ''}
                         onChange={e => setCurrentProduct(prev => prev ? { ...prev, model: e.target.value || null } : null)}
@@ -1377,7 +1377,7 @@ const ProductsStorePage: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
-                      <Label>Quantity *</Label>
+                      <Label>{t('quantity_label')} *</Label>
                       <Input
                         type="number"
                         min="0"
@@ -1386,27 +1386,27 @@ const ProductsStorePage: React.FC = () => {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label>Unit *</Label>
+                      <Label>{t('unit')} *</Label>
                       <Select
                         value={currentProduct.unit}
                         onValueChange={(val) => setCurrentProduct(prev => prev ? { ...prev, unit: val } : null)}
                       >
-                        <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={t('unit')} /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pcs">Pieces (pcs)</SelectItem>
-                          <SelectItem value="bag">Bag</SelectItem>
-                          <SelectItem value="crate">Crate</SelectItem>
-                          <SelectItem value="liter">Liter</SelectItem>
-                          <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                          <SelectItem value="sack">Sack</SelectItem>
-                          <SelectItem value="bottle">Bottle</SelectItem>
-                          <SelectItem value="pack">Pack</SelectItem>
+                          <SelectItem value="pcs">{t('pieces')}</SelectItem>
+                          <SelectItem value="bag">{t('bag')}</SelectItem>
+                          <SelectItem value="crate">{t('crate')}</SelectItem>
+                          <SelectItem value="liter">{t('liter')}</SelectItem>
+                          <SelectItem value="kg">{t('kilograms')}</SelectItem>
+                          <SelectItem value="sack">{t('sack')}</SelectItem>
+                          <SelectItem value="bottle">{t('bottle')}</SelectItem>
+                          <SelectItem value="pack">{t('pack')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Cost Configuration *</Label>
+                    <Label>{t('cost_configuration')} *</Label>
                     <div className="flex bg-muted p-1 rounded-lg">
                       <Button
                         type="button"
@@ -1414,7 +1414,7 @@ const ProductsStorePage: React.FC = () => {
                         className={`flex-1 text-xs h-8 ${currentProduct.costType === 'costPerUnit' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
                         onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'costPerUnit' } : null)}
                       >
-                        Cost Per Unit
+                        {t('cost_per_unit')}
                       </Button>
                       <Button
                         type="button"
@@ -1422,7 +1422,7 @@ const ProductsStorePage: React.FC = () => {
                         className={`flex-1 text-xs h-8 ${currentProduct.costType === 'bulkCost' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
                         onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'bulkCost' } : null)}
                       >
-                        Total Bulk Cost
+                        {t('total_bulk_cost')}
                       </Button>
                     </div>
                   </div>
@@ -1439,32 +1439,32 @@ const ProductsStorePage: React.FC = () => {
                 <div className="space-y-4">
                   <div className="bg-muted/30 p-6 rounded-xl border h-full space-y-4">
                     <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-xs uppercase tracking-wider mb-2">
-                      <Eye className="h-3 w-3" /> Live Preview
+                      <Eye className="h-3 w-3" /> {t('live_preview')}
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase font-semibold">Product Identity</p>
+                        <p className="text-xs text-muted-foreground uppercase font-semibold">{t('product_identity')}</p>
                         <p className="font-bold text-lg leading-tight">
-                          {currentProduct.productName || <span className="text-muted-foreground/30 italic">No Name</span>}
+                          {currentProduct.productName || <span className="text-muted-foreground/30 italic">{t('no_name')}</span>}
                           {currentProduct.model && <span className="text-muted-foreground font-medium text-sm ml-2">({currentProduct.model})</span>}
                         </p>
-                        <Badge variant="secondary" className="mt-1">{currentProduct.category || 'No Category'}</Badge>
+                        <Badge variant="secondary" className="mt-1">{currentProduct.category || t('no_category')}</Badge>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase font-semibold">Quantity</p>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">{t('quantity_label')}</p>
                           <p className="font-bold text-lg text-gray-900 dark:text-gray-100">{currentProduct.quantity || 0} <span className="text-sm font-medium">{currentProduct.unit}</span></p>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase font-semibold">Entered Amount</p>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">{t('entered_amount')}</p>
                           <p className="font-bold text-lg">{Number(currentProduct.costPrice || 0).toLocaleString()} RWF</p>
                         </div>
                       </div>
 
                       {currentProduct.costType === 'bulkCost' && currentProduct.quantity > 0 && (
                         <div className="flex justify-between items-center text-sm p-2 bg-gray-900 dark:bg-gray-100/5 rounded border border-gray-300 dark:border-gray-700/10">
-                          <span className="text-muted-foreground font-medium">Calculated Unit Cost:</span>
+                          <span className="text-muted-foreground font-medium">{t('calculated_unit_cost')}:</span>
                           <span className="font-bold text-gray-900 dark:text-gray-100">
                             {(Number(currentProduct.costPrice || 0) / currentProduct.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })} RWF
                           </span>
@@ -1472,7 +1472,7 @@ const ProductsStorePage: React.FC = () => {
                       )}
 
                       <div className="pt-4 border-t flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground font-medium">Total Value</span>
+                        <span className="text-muted-foreground font-medium">{t('total_value')}</span>
                         <span className="font-black text-xl text-amber-600">
                           {currentProduct.costType === 'bulkCost'
                             ? Number(currentProduct.costPrice || 0).toLocaleString()
@@ -1484,7 +1484,7 @@ const ProductsStorePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="py-8 text-center text-muted-foreground">Loading product details...</div>
+              <div className="py-8 text-center text-muted-foreground">{t('loading')}</div>
             )}
 
             <DialogFooter className="mt-4">

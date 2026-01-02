@@ -135,10 +135,10 @@ const Header: React.FC = () => {
                   {user && (
                     <div className="hidden md:block text-left">
                       <p className="text-sm font-medium text-gray-900 dark:text-white leading-tight">
-                        {fullName || 'User'}
+                        {fullName || t('user')}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                        {user.role || 'Role'}
+                        {user.role || t('role')}
                       </p>
                     </div>
                   )}

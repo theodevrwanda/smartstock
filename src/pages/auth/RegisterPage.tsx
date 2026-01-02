@@ -19,6 +19,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { uploadToCloudinary } from '@/lib/uploadToCloudinary';
 import { toast } from 'sonner';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -62,6 +63,7 @@ export default function RegisterPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { register: registerUser, isAuthenticated, user, loading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -131,7 +133,7 @@ export default function RegisterPage() {
       setStep1Data(data);
       setCurrentStep(2);
     } catch (error) {
-      toast.error('Error checking business name. Please try again.');
+      toast.error(t('error'));
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +171,7 @@ export default function RegisterPage() {
         try {
           profileImageUrl = await uploadToCloudinary(selectedFile);
         } catch (error) {
-          toast.error('Failed to upload profile image. Please try again.');
+          toast.error('Failed to upload profile image.');
           setIsLoading(false);
           return;
         }
@@ -224,12 +226,12 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="space-y-2">
           <h1 className="text-3xl font-medium text-slate-900 tracking-tight">
-            Create an account
+            {t('create_account_title')}
           </h1>
           <p className="text-slate-500 font-medium text-sm">
             {currentStep === 1
-              ? 'Enter your business details to get started.'
-              : 'Complete your personal information.'
+              ? t('business_details_step')
+              : t('personal_details_step')
             }
           </p>
         </div>
@@ -270,19 +272,19 @@ export default function RegisterPage() {
                   onChange={handleImageSelect}
                   className="hidden"
                 />
-                <p className="text-[10px] text-slate-400 font-medium text-center mt-2 uppercase tracking-wide">Upload Logo</p>
+                <p className="text-[10px] text-slate-400 font-medium text-center mt-2 uppercase tracking-wide">{t('upload_logo')}</p>
               </div>
             </div>
 
             {/* Business Name */}
             <div className="space-y-2">
               <Label htmlFor="businessName" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                Business Name
+                {t('business_name')}
               </Label>
               <div className="relative">
                 <Input
                   id="businessName"
-                  placeholder="Enter your business name"
+                  placeholder={t('business_name')}
                   className="pl-4 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('businessName')}
                 />
@@ -295,12 +297,12 @@ export default function RegisterPage() {
             {/* District */}
             <div className="space-y-2">
               <Label htmlFor="district" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                District
+                {t('district')}
               </Label>
               <div className="relative">
                 <Input
                   id="district"
-                  placeholder="Enter district"
+                  placeholder={t('district')}
                   className="pl-4 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('district')}
                 />
@@ -314,11 +316,11 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="sector" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  Sector
+                  {t('sector')}
                 </Label>
                 <Input
                   id="sector"
-                  placeholder="Enter sector"
+                  placeholder={t('sector')}
                   className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('sector')}
                 />
@@ -329,11 +331,11 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="cell" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  Cell
+                  {t('cell')}
                 </Label>
                 <Input
                   id="cell"
-                  placeholder="Enter cell"
+                  placeholder={t('cell')}
                   className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('cell')}
                 />
@@ -346,11 +348,11 @@ export default function RegisterPage() {
             {/* Village */}
             <div className="space-y-2">
               <Label htmlFor="village" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                Village
+                {t('village')}
               </Label>
               <Input
                 id="village"
-                placeholder="Enter village"
+                placeholder={t('village')}
                 className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                 {...step1Form.register('village')}
               />
@@ -368,7 +370,7 @@ export default function RegisterPage() {
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
                 <>
-                  Next Step
+                  {t('next_step')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}
@@ -376,9 +378,9 @@ export default function RegisterPage() {
 
             <div className="text-center">
               <p className="text-slate-500 text-sm">
-                Already have an account?{' '}
+                {t('already_have_account')}{' '}
                 <Link to="/login" className="font-bold text-slate-900 hover:underline">
-                  Sign in
+                  {t('sign_in_button')}
                 </Link>
               </p>
             </div>
@@ -392,11 +394,11 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  First Name
+                  {t('first_name')}
                 </Label>
                 <Input
                   id="firstName"
-                  placeholder="First name"
+                  placeholder={t('first_name')}
                   className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step2Form.register('firstName')}
                 />
@@ -407,11 +409,11 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="lastName" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  Last Name
+                  {t('last_name')}
                 </Label>
                 <Input
                   id="lastName"
-                  placeholder="Last name"
+                  placeholder={t('last_name')}
                   className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step2Form.register('lastName')}
                 />
@@ -424,12 +426,12 @@ export default function RegisterPage() {
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                Email Address
+                {t('email_label')}
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder={t('email_placeholder')}
                 className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                 {...step2Form.register('email')}
               />
@@ -441,7 +443,7 @@ export default function RegisterPage() {
             {/* Gender & Phone */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">Gender</Label>
+                <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">{t('gender')}</Label>
                 <Select onValueChange={(value) => step2Form.setValue('gender', value)}>
                   <SelectTrigger className="h-11 bg-white border-slate-200 rounded-xl shadow-sm text-slate-800 focus:ring-[#FCD34D]">
                     <SelectValue placeholder="Select" />
@@ -459,11 +461,11 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  Phone
+                  {t('phone')}
                 </Label>
                 <Input
                   id="phoneNumber"
-                  placeholder="07X XXX XXXX"
+                  placeholder={t('phone_placeholder')}
                   className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step2Form.register('phoneNumber')}
                 />
@@ -477,13 +479,13 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  Password
+                  {t('password_label')}
                 </Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Create"
+                    placeholder={t('password_placeholder')}
                     className="pr-8 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                     {...step2Form.register('password')}
                   />
@@ -502,13 +504,13 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
-                  Confirm
+                  {t('confirm_password')}
                 </Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="Repeat"
+                    placeholder={t('password_placeholder')}
                     className="pr-8 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                     {...step2Form.register('confirmPassword')}
                   />
@@ -536,7 +538,7 @@ export default function RegisterPage() {
                 className="flex-[0.4] h-12 border-slate-200 rounded-2xl hover:bg-slate-50"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('back_button')}
               </Button>
               <Button
                 type="submit"
@@ -546,16 +548,16 @@ export default function RegisterPage() {
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  'Create Account'
+                  t('create_account_button')
                 )}
               </Button>
             </div>
 
             <div className="text-center">
               <p className="text-slate-500 text-sm">
-                Already have an account?{' '}
+                {t('already_have_account')}{' '}
                 <Link to="/login" className="font-bold text-slate-900 hover:underline">
-                  Sign in
+                  {t('sign_in_button')}
                 </Link>
               </p>
             </div>

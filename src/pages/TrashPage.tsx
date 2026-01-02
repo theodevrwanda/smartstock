@@ -1,5 +1,3 @@
-// src/pages/ProductsDeletedPage.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -24,9 +22,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getDeletedProducts,
   restoreDeletedProduct,
@@ -40,6 +38,7 @@ import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 const ProductsDeletedPage: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const isAdmin = user?.role === 'admin';
   const userBranch = typeof user?.branch === 'string' ? user.branch : null;
@@ -92,14 +91,14 @@ const ProductsDeletedPage: React.FC = () => {
         branchList.forEach(b => map.set(b.id!, b.branchName));
         setBranchMap(map);
       } catch {
-        toast({ title: 'Error', description: 'Failed to load deleted products', variant: 'destructive' });
+        toast({ title: t('error'), description: 'Failed to load deleted products', variant: 'destructive' });
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [businessId, user?.role, userBranch]);
+  }, [businessId, user?.role, userBranch, t, toast]);
 
   const getBranchName = (id: string | undefined | null) => branchMap.get(id || '') || 'Unknown';
 
@@ -149,15 +148,15 @@ const ProductsDeletedPage: React.FC = () => {
 
   // Export functionality
   const deletedExportColumns: ExportColumn[] = [
-    { header: 'Product Name', key: 'productName', width: 25 },
-    { header: 'Category', key: 'category', width: 15 },
-    { header: 'Model', key: 'model', width: 15 },
-    { header: 'Quantity', key: 'quantity', width: 10 },
-    { header: 'Branch', key: 'branchName', width: 20 },
-    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
-    { header: 'Total Loss', key: 'totalLoss', width: 15 },
-    { header: 'Deleted Date', key: 'deletedDateFormatted', width: 15 },
-    { header: 'Reason', key: 'restoreComment', width: 25 },
+    { header: t('product_name'), key: 'productName', width: 25 },
+    { header: t('category_label'), key: 'category', width: 15 },
+    { header: t('model_label'), key: 'model', width: 15 },
+    { header: t('quantity_label'), key: 'quantity', width: 10 },
+    { header: t('branch'), key: 'branchName', width: 20 },
+    { header: t('cost_price'), key: 'costPriceFormatted', width: 15 },
+    { header: t('total_loss'), key: 'totalLoss', width: 15 },
+    { header: t('deleted_date'), key: 'deletedDateFormatted', width: 15 },
+    { header: t('delete_reason'), key: 'restoreComment', width: 25 },
   ];
 
   const getDeletedExportData = () => {
@@ -176,20 +175,20 @@ const ProductsDeletedPage: React.FC = () => {
 
   const handleExportExcel = () => {
     exportToExcel(getDeletedExportData(), deletedExportColumns, 'deleted-products');
-    toast({ title: 'Success', description: 'Exported to Excel' });
+    toast({ title: t('success'), description: t('export_excel') });
   };
 
   const handleExportPDF = () => {
     exportToPDF(getDeletedExportData(), deletedExportColumns, 'deleted-products', 'Deleted Products Report (Trash)');
-    toast({ title: 'Success', description: 'Exported to PDF' });
+    toast({ title: t('success'), description: t('export_pdf') });
   };
 
   const getPriceColor = (price: number) => {
     if (price < 100000) return 'text-gray-900 dark:text-gray-100 font-bold';
-    if (price < 500000) return 'text-green-600 font-bold';
-    if (price < 1000000) return 'text-yellow-600 font-bold';
-    if (price < 2000000) return 'text-orange-600 font-bold';
-    return 'text-red-600 font-bold';
+    if (price < 500000) return 'text-green-600 dark:text-green-400 font-bold';
+    if (price < 1000000) return 'text-yellow-600 dark:text-yellow-400 font-bold';
+    if (price < 2000000) return 'text-orange-600 dark:text-orange-400 font-bold';
+    return 'text-red-600 dark:text-red-400 font-bold';
   };
 
   // Selection handlers
@@ -279,14 +278,14 @@ const ProductsDeletedPage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Deleted Products (Trash)" description="View and manage deleted products" />
+      <SEOHelmet title={t('deleted_products')} description={t('deleted_products_desc')} />
       <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Deleted Products (Trash)</h1>
+            <h1 className="text-3xl font-bold">{t('deleted_products')}</h1>
             <p className="text-muted-foreground">
-              {isAdmin ? 'All deleted products across branches' : userBranch ? `Deleted products from ${getBranchName(userBranch)}` : 'No branch assigned'}
+              {isAdmin ? t('all_deleted_products_admin') : userBranch ? `${t('deleted_products_from')} ${getBranchName(userBranch)}` : t('no_branch_assigned')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -295,23 +294,23 @@ const ProductsDeletedPage: React.FC = () => {
               disabled={selectedProducts.length === 0 || actionLoading}
             >
               <Undo className="mr-2 h-4 w-4" />
-              Restore Selected ({selectedProducts.length})
+              {t('restore_selected')} ({selectedProducts.length})
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Download className="mr-2 h-4 w-4" />
-                  Export
+                  {t('export')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={handleExportExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Export to Excel
+                  {t('export_excel')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportPDF}>
                   <FileText className="mr-2 h-4 w-4" />
-                  Export to PDF
+                  {t('export_pdf')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -323,7 +322,7 @@ const ProductsDeletedPage: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
-              placeholder="Search deleted products..."
+              placeholder={t('search_deleted_products')}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -335,7 +334,7 @@ const ProductsDeletedPage: React.FC = () => {
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="All">All Categories</SelectItem>
+              <SelectItem value="All">{t('all_categories')}</SelectItem>
               {categories.map(cat => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
@@ -348,7 +347,7 @@ const ProductsDeletedPage: React.FC = () => {
                 <SelectValue placeholder="All Branches" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
+                <SelectItem value="All">{t('all_branches')}</SelectItem>
                 {branches.map(b => (
                   <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
                 ))}
@@ -370,43 +369,43 @@ const ProductsDeletedPage: React.FC = () => {
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
                   <div className="flex items-center gap-1">
-                    Product Name
+                    {t('product_name')}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
                   <div className="flex items-center gap-1">
-                    Category
+                    {t('category_label')}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Model</TableHead>
+                <TableHead>{t('model_label')}</TableHead>
                 <TableHead className="cursor-pointer text-center" onClick={() => handleSort('quantity')}>
                   <div className="flex items-center gap-1 justify-center">
-                    Quantity
+                    {t('quantity_label')}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer text-center" onClick={() => handleSort('branchName')}>
                   <div className="flex items-center gap-1 justify-center">
-                    Branch
+                    {t('branch')}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('costPrice')}>
                   <div className="flex items-center gap-1">
-                    Cost Price
+                    {t('cost_price')}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('deletedDate')}>
                   <div className="flex items-center gap-1">
-                    Deleted Date
+                    {t('deleted_date')}
                     <ArrowUpDown className="h-4 w-4" />
                   </div>
                 </TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('comment')}</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -415,7 +414,7 @@ const ProductsDeletedPage: React.FC = () => {
                   <TableCell colSpan={isAdmin ? 10 : 9} className="h-64 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <Package className="h-12 w-12 opacity-20" />
-                      <p className="text-lg font-medium">No deleted products found.</p>
+                      <p className="text-lg font-medium">{t('no_deleted_products_found')}</p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -472,28 +471,28 @@ const ProductsDeletedPage: React.FC = () => {
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Deleted Product Details</DialogTitle>
+              <DialogTitle>{t('deleted_product_details')}</DialogTitle>
             </DialogHeader>
             {currentProduct && (
               <div className="space-y-3">
-                <p><strong>Name:</strong> {currentProduct.productName}</p>
-                <p><strong>Category:</strong> {currentProduct.category}</p>
-                <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
-                <p><strong>Quantity:</strong> {currentProduct.quantity}</p>
-                <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
-                <p><strong>Cost Price:</strong> {(currentProduct.costPricePerUnit || currentProduct.costPrice).toLocaleString()} RWF</p>
-                <p><strong>Selling Price:</strong> {(currentProduct.sellingPrice || (currentProduct.costPricePerUnit || currentProduct.costPrice)).toLocaleString()} RWF</p>
-                <p><strong>Deleted Date:</strong> {new Date(currentProduct.deletedDate).toLocaleDateString()}</p>
+                <p><strong>{t('name')}:</strong> {currentProduct.productName}</p>
+                <p><strong>{t('category_label')}:</strong> {currentProduct.category}</p>
+                <p><strong>{t('model_label')}:</strong> {currentProduct.model || '-'}</p>
+                <p><strong>{t('quantity_label')}:</strong> {currentProduct.quantity}</p>
+                <p><strong>{t('branch')}:</strong> {getBranchName(currentProduct.branch)}</p>
+                <p><strong>{t('cost_price')}:</strong> {(currentProduct.costPricePerUnit || currentProduct.costPrice).toLocaleString()} RWF</p>
+                <p><strong>{t('selling_price')}:</strong> {(currentProduct.sellingPrice || (currentProduct.costPricePerUnit || currentProduct.costPrice)).toLocaleString()} RWF</p>
+                <p><strong>{t('deleted_date')}:</strong> {new Date(currentProduct.deletedDate).toLocaleDateString()}</p>
                 {currentProduct.restoreComment && (
                   <div>
-                    <p><strong>Delete Reason:</strong></p>
+                    <p><strong>{t('delete_reason')}:</strong></p>
                     <p className="p-2 bg-gray-100 dark:bg-gray-700 rounded">{currentProduct.restoreComment}</p>
                   </div>
                 )}
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>{t('close')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -502,15 +501,15 @@ const ProductsDeletedPage: React.FC = () => {
         <Dialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Restore Product?</DialogTitle>
+              <DialogTitle>{t('restore_product_q')}</DialogTitle>
               <DialogDescription>
-                Restore "{currentProduct?.productName}" back to store inventory?
+                {t('restore_confirm_msg')} "{currentProduct?.productName}"?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setRestoreConfirmOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setRestoreConfirmOpen(false)}>{t('cancel')}</Button>
               <Button onClick={handleSingleRestore} disabled={actionLoading}>
-                {actionLoading ? 'Restoring...' : 'Restore'}
+                {actionLoading ? t('restoring') : t('restore')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -520,15 +519,15 @@ const ProductsDeletedPage: React.FC = () => {
         <Dialog open={bulkRestoreConfirmOpen} onOpenChange={setBulkRestoreConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Restore Selected Products?</DialogTitle>
+              <DialogTitle>{t('restore_selected_products_q')}</DialogTitle>
               <DialogDescription>
-                Restore {selectedProducts.length} selected product(s) back to store inventory?
+                {t('restore_selected_confirm_msg')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setBulkRestoreConfirmOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setBulkRestoreConfirmOpen(false)}>{t('cancel')}</Button>
               <Button onClick={handleBulkRestore} disabled={actionLoading}>
-                {actionLoading ? 'Restoring...' : 'Restore Selected'}
+                {actionLoading ? t('restoring') : t('restore_selected')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -538,15 +537,15 @@ const ProductsDeletedPage: React.FC = () => {
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Permanently Delete Product?</DialogTitle>
+              <DialogTitle>{t('permanently_delete_product_q')}</DialogTitle>
               <DialogDescription>
-                This action cannot be undone. "{currentProduct?.productName}" will be permanently removed.
+                {t('permanent_delete_warning')} "{currentProduct?.productName}"?
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>{t('cancel')}</Button>
               <Button variant="destructive" onClick={handlePermanentDelete} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete Permanently'}
+                {actionLoading ? t('deleting') : t('delete_permanently')}
               </Button>
             </DialogFooter>
           </DialogContent>

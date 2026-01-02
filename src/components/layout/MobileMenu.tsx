@@ -1,16 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Bell,
+  BarChart2,
+  Package,
+  ShoppingCart,
+  ArchiveRestore,
   User,
-  Calendar,
   FileText,
-  LogOut,
+  Trash2,
+  Store,
   Users,
-  X,
-  Folder,
-  Handshake,
-  Home
+  LogOut,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,15 +30,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
 
   const sidebarItems = [
-    { icon: Bell, label: t('dashboard_label'), path: '/dashboard' },
-    { icon: Users, label: t('store_label'), path: '/products' },
-    { icon: Calendar, label: t('sold_label'), path: '/products-sold' },
-    { icon: FileText, label: t('restored_label'), path: '/products-restored' },
+    { icon: BarChart2, label: t('dashboard_label'), path: '/dashboard' },
+    { icon: Package, label: t('store_label'), path: '/products' },
+    { icon: ShoppingCart, label: t('sold_label'), path: '/products-sold' },
+    { icon: ArchiveRestore, label: t('restored_label'), path: '/products-restored' },
     { icon: User, label: t('profile_title'), path: '/profile' },
     { icon: FileText, label: t('reports_label'), path: '/reports' },
-    { icon: Folder, label: t('trash_label'), path: '/trash' },
-    { icon: Handshake, label: t('branches_label'), path: '/manage-branch' },
-    { icon: Home, label: t('employees_label'), path: '/manage-employees' },
+    { icon: Trash2, label: t('trash_label'), path: '/trash' },
+    { icon: Store, label: t('branches_label'), path: '/manage-branch' },
+    { icon: Users, label: t('employees_label'), path: '/manage-employees' },
   ];
 
   // Dynamic user and business data
@@ -140,7 +141,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
             className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold justify-start space-x-3 px-3 h-11 rounded-lg transition-colors"
           >
             <LogOut size={18} />
-            <span>{t('logout')}</span>
+            <span>{t('sign_out')}</span>
           </Button>
         </div>
       </div>

@@ -1,35 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { WifiOff, CloudOff, Upload, Languages, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOffline } from '@/contexts/OfflineContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-
-type Language = 'en' | 'rw';
-
-const messages = {
-  en: {
-    offline: 'You are offline. All changes are saved locally and will sync when online.',
-    pending: (count: number) => `${count} pending change${count !== 1 ? 's' : ''} waiting to sync`,
-    sync: 'Sync Now',
-    syncing: 'Syncing...',
-  },
-  rw: {
-    offline: 'Uri gukora utari kuri interineti. Impinduka zose zibitswe kuri telefoni.',
-    pending: (count: number) => `Hari impinduka ${count} zitegereje kubikwa`,
-    sync: 'Ohereza',
-    syncing: 'Kohereza...',
-  },
-};
 
 const OfflineStatusBar: React.FC = () => {
   const { isOnline, pendingCount, syncPendingChanges, isSyncing } = useOffline();
-  const [language, setLanguage] = useState<Language>('en');
+  const { language, setLanguage, t } = useLanguage();
 
   // Only show when online and there are pending changes.
   // We do not show the "You are offline" banner anymore, as pages handle this via header icons.
   if (!isOnline || pendingCount === 0) return null;
 
-  const t = messages[language];
+  const pendingMsg = t('pending_changes_msg')
+    .replace('{count}', pendingCount.toString())
+    .replace('{s}', pendingCount !== 1 ? 's' : '');
 
   return (
     <div
@@ -42,12 +28,12 @@ const OfflineStatusBar: React.FC = () => {
         {isOnline ? (
           <>
             <CloudOff className="h-4 w-4 mt-0.5" />
-            <span>{t.pending(pendingCount)}</span>
+            <span>{pendingMsg}</span>
           </>
         ) : (
           <>
             <WifiOff className="h-4 w-4 mt-0.5" />
-            <span>{t.offline}</span>
+            <span>{t('offline_status')}</span>
           </>
         )}
       </div>
@@ -76,7 +62,7 @@ const OfflineStatusBar: React.FC = () => {
             ) : (
               <Upload className="h-3 w-3 mr-1" />
             )}
-            {isSyncing ? t.syncing : t.sync}
+            {isSyncing ? t('syncing') : t('sync_now')}
           </Button>
         )}
       </div>

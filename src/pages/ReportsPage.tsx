@@ -1,5 +1,3 @@
-// src/pages/ReportsPage.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -30,6 +28,7 @@ import {
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getReportData } from '@/functions/report';
 import { getBranches } from '@/functions/branch';
 import { ProductReport, ReportSummary, Branch } from '@/types/interface';
@@ -39,6 +38,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 const ReportsPage: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const isAdmin = user?.role === 'admin';
   const userBranch = user?.branch;
@@ -93,14 +93,14 @@ const ReportsPage: React.FC = () => {
           setBranchMap(map);
         }
       } catch (err) {
-        toast({ title: 'Error', description: 'Failed to load report data', variant: 'destructive' });
+        toast({ title: t('error'), description: 'Failed to load report data', variant: 'destructive' });
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [businessId, user?.role, userBranch, isAdmin, toast]);
+  }, [businessId, user?.role, userBranch, isAdmin, toast, t]);
 
   const getBranchName = (id: string) => branchMap.get(id) || 'Unknown Branch';
 
@@ -203,23 +203,23 @@ const ReportsPage: React.FC = () => {
   };
 
   const getProfitColor = (profit: number | null) => {
-    if (!profit || profit === 0) return 'text-gray-600';
-    return profit > 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+    if (!profit || profit === 0) return 'text-gray-600 dark:text-gray-400';
+    return profit > 0 ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400 font-bold';
   };
 
   // Export
   const reportExportColumns: ExportColumn[] = [
-    { header: 'Product Name', key: 'productName', width: 30 },
-    { header: 'Category', key: 'category', width: 15 },
-    { header: 'Model', key: 'model', width: 20 },
-    { header: 'Quantity', key: 'quantityFormatted', width: 15 },
-    ...(isAdmin ? [{ header: 'Branch', key: 'branchName', width: 20 }] : []),
-    { header: 'Status', key: 'status', width: 12 },
-    { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
-    { header: 'Total Value', key: 'totalValueFormatted', width: 15 },
-    { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
+    { header: t('product_name'), key: 'productName', width: 30 },
+    { header: t('category_label'), key: 'category', width: 15 },
+    { header: t('model_label'), key: 'model', width: 20 },
+    { header: t('quantity_label'), key: 'quantityFormatted', width: 15 },
+    ...(isAdmin ? [{ header: t('branch'), key: 'branchName', width: 20 }] : []),
+    { header: t('status_label'), key: 'status', width: 12 },
+    { header: t('cost_price'), key: 'costPriceFormatted', width: 15 },
+    { header: t('total_value'), key: 'totalValueFormatted', width: 15 },
+    { header: t('selling_price'), key: 'sellingPriceFormatted', width: 15 },
     { header: 'Profit/Loss', key: 'profitLossFormatted', width: 15 },
-    { header: 'Added Date', key: 'addedDateFormatted', width: 15 },
+    { header: t('added_date'), key: 'addedDateFormatted', width: 15 },
     { header: 'Sold/Deleted Date', key: 'soldDeletedDate', width: 15 },
     { header: 'Comment', key: 'restoreComment', width: 25 },
   ];
@@ -244,16 +244,16 @@ const ReportsPage: React.FC = () => {
 
   const handleExportExcel = () => {
     if (sortedProducts.length === 0) {
-      toast({ title: 'No Data', description: 'No products to export', variant: 'destructive' });
+      toast({ title: t('error'), description: t('no_data_available'), variant: 'destructive' });
       return;
     }
     exportToExcel(getReportExportData(), reportExportColumns, 'business-report');
-    toast({ title: 'Success', description: 'Report exported to Excel' });
+    toast({ title: t('success'), description: 'Report exported to Excel' });
   };
 
   const handleExportPDF = () => {
     if (sortedProducts.length === 0) {
-      toast({ title: 'No Data', description: 'No products to export', variant: 'destructive' });
+      toast({ title: t('error'), description: t('no_data_available'), variant: 'destructive' });
       return;
     }
     const netProfit = summary?.netProfit?.toLocaleString() || '0';
@@ -263,7 +263,7 @@ const ReportsPage: React.FC = () => {
       'business-report',
       `Business Report - Net Profit: ${netProfit} RWF`
     );
-    toast({ title: 'Success', description: 'Report exported to PDF' });
+    toast({ title: t('success'), description: 'Report exported to PDF' });
   };
 
   if (loading) {
@@ -277,38 +277,38 @@ const ReportsPage: React.FC = () => {
   if (!summary) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        No report data available.
+        {t('no_data_available')}
       </div>
     );
   }
 
   return (
     <>
-      <SEOHelmet title="Business Report" description="Complete inventory report with profit/loss" />
+      <SEOHelmet title={t('business_report_title')} description={t('business_report_desc')} />
       <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Business Report</h1>
+            <h1 className="text-3xl font-bold">{t('business_report_title')}</h1>
             <p className="text-muted-foreground">
-              Complete overview of store, sold, restored, and deleted products
+              {t('business_report_desc')}
             </p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Download className="mr-2 h-4 w-4" />
-                Export Report
+                {t('export_report')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleExportExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
+                {t('export_excel')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPDF}>
                 <FileText className="mr-2 h-4 w-4" />
-                Export to PDF
+                {t('export_pdf')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -318,7 +318,7 @@ const ReportsPage: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
             <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">Report context:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('report_context')}:</span>
             <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
         </div>
@@ -327,7 +327,7 @@ const ReportsPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Activity Value</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_activity')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -343,7 +343,7 @@ const ReportsPage: React.FC = () => {
 
           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Activity Value</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_activity')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -361,16 +361,16 @@ const ReportsPage: React.FC = () => {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <Award size={14} className="text-orange-500" />
-                Yearly Activity Value
+                {t('yearly_activity')}
               </CardTitle>
               <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')} Yearly
+                {format(selectedDate, 'yyyy')}
               </Badge>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Value Processed</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('total_value_processed')}</p>
                   <div className="text-3xl font-bold">{activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
                 </div>
               </div>
@@ -401,7 +401,7 @@ const ReportsPage: React.FC = () => {
               >
                 {isToday && !isSelected && (
                   <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    Today
+                    {t('today')}
                   </div>
                 )}
                 <div className="flex flex-col items-center text-center gap-2">
@@ -422,7 +422,7 @@ const ReportsPage: React.FC = () => {
                       text-[9px] uppercase font-medium opacity-60
                       ${isSelected ? "text-amber-200" : "text-gray-500"}
                     `}>
-                      value
+                      {t('value')}
                     </span>
                   </div>
                 </div>
@@ -435,39 +435,39 @@ const ReportsPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Existing summary cards */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Total Products</p>
+            <p className="text-sm text-muted-foreground">{t('total_products')}</p>
             <p className="text-2xl font-bold">{summary.totalProducts}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">In Store</p>
+            <p className="text-sm text-muted-foreground">{t('in_stock')}</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.storeCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Sold</p>
+            <p className="text-sm text-muted-foreground">{t('sold')}</p>
             <p className="text-2xl font-bold text-green-600">{summary.soldCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Restored</p>
+            <p className="text-sm text-muted-foreground">{t('restored')}</p>
             <p className="text-2xl font-bold text-purple-600">{summary.restoredCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Deleted</p>
+            <p className="text-sm text-muted-foreground">{t('deleted')}</p>
             <p className="text-2xl font-bold text-red-600">{summary.deletedCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Store Value</p>
+            <p className="text-sm text-muted-foreground">{t('total_store_value')}</p>
             <p className="text-2xl font-bold">{summary.totalStoreValue.toLocaleString()} RWF</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Gross Profit</p>
+            <p className="text-sm text-muted-foreground">{t('gross_profit')}</p>
             <p className="text-2xl font-bold text-green-600">{summary.grossProfit.toLocaleString()} RWF</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <p className="text-sm text-muted-foreground">Total Loss</p>
+            <p className="text-sm text-muted-foreground">{t('total_loss')}</p>
             <p className="text-2xl font-bold text-red-600">{summary.totalLoss.toLocaleString()} RWF</p>
           </div>
           <div className="col-span-1 sm:col-span-2 lg:col-span-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-xl shadow-lg">
-            <p className="text-lg font-semibold">Net Profit</p>
+            <p className="text-lg font-semibold">{t('net_profit')}</p>
             <p className="text-4xl font-black mt-2">
               {summary.netProfit.toLocaleString()} RWF
             </p>
@@ -479,7 +479,7 @@ const ReportsPage: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
-              placeholder="Search products..."
+              placeholder={t('search_products')}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -489,18 +489,18 @@ const ReportsPage: React.FC = () => {
           <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as any)}>
             <SelectTrigger><SelectValue placeholder="All Status" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Products</SelectItem>
-              <SelectItem value="store">In Store</SelectItem>
-              <SelectItem value="sold">Sold</SelectItem>
-              <SelectItem value="restored">Restored</SelectItem>
-              <SelectItem value="deleted">Deleted</SelectItem>
+              <SelectItem value="all">{t('all')}</SelectItem>
+              <SelectItem value="store">{t('in_stock')}</SelectItem>
+              <SelectItem value="sold">{t('sold')}</SelectItem>
+              <SelectItem value="restored">{t('restored')}</SelectItem>
+              <SelectItem value="deleted">{t('deleted')}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="All">All Categories</SelectItem>
+              <SelectItem value="All">{t('all')}</SelectItem>
               {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -509,7 +509,7 @@ const ReportsPage: React.FC = () => {
             <Select value={branchFilter} onValueChange={setBranchFilter}>
               <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
+                <SelectItem value="All">{t('all')}</SelectItem>
                 {branches.map(b => (
                   <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>
                 ))}
@@ -524,28 +524,28 @@ const ReportsPage: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('product_name')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('category_label')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Stock <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">{t('quantity_label')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('branchName')}>
-                  <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">{t('branch')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center">Confirm</TableHead>
-                <TableHead>Unit Cost</TableHead>
-                <TableHead>Total Value</TableHead>
-                <TableHead>Selling Price</TableHead>
-                <TableHead>Profit</TableHead>
+                <TableHead>{t('status_label')}</TableHead>
+                <TableHead className="text-center">{t('confirmation')}</TableHead>
+                <TableHead>{t('unit_cost_label')}</TableHead>
+                <TableHead>{t('total_value')}</TableHead>
+                <TableHead>{t('selling_price')}</TableHead>
+                <TableHead>{t('profit_label')}</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
-                  <div className="flex items-center gap-1">Added Date <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('added_date')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Sold/Deleted Date</TableHead>
-                <TableHead>Comment</TableHead>
+                <TableHead>{t('sold_deleted_date_label')}</TableHead>
+                <TableHead>{t('comment')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -556,11 +556,11 @@ const ReportsPage: React.FC = () => {
                       <Package className="h-12 w-12 opacity-20" />
                       {!isAdmin && !userBranch ? (
                         <div>
-                          <p className="font-semibold">You are not assigned to any branch.</p>
-                          <p className="text-sm mt-2">Contact your admin to get access.</p>
+                          <p className="font-semibold">{t('no_branch_assigned_msg')}</p>
+                          <p className="text-sm mt-2">{t('contact_admin_access')}</p>
                         </div>
                       ) : (
-                        <p className="text-lg font-medium">No products found matching your filters.</p>
+                        <p className="text-lg font-medium">{t('no_products_found')} ({t('no_data_match')})</p>
                       )}
                     </div>
                   </TableCell>
@@ -594,8 +594,8 @@ const ReportsPage: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={p.confirm ? 'default' : 'outline'} className={p.confirm ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-100 text-gray-600'}>
-                        {p.confirm ? '✓ Confirmed' : 'Pending'}
+                      <Badge variant={p.confirm ? 'default' : 'outline'} className={p.confirm ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}>
+                        {p.confirm ? `✓ ${t('confirmed')}` : t('pending')}
                       </Badge>
                     </TableCell>
                     <TableCell className={getProfitColor(p.costPrice)}>

@@ -45,12 +45,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
 
   // Dynamic user data
   const businessName = user?.businessName || 'Smart Manager';
-  const fullName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User';
+  const fullName = user?.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || t('user');
   const initials = fullName ? fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : 'U';
   const profileImage = user?.profileImage || '';
 
   // WhatsApp link with pre-filled message
-  const whatsappLink = `https://wa.me/250792734752?text=${encodeURIComponent('I need help for ')}`;
+  const whatsappLink = `https://wa.me/250792734752?text=${encodeURIComponent(t('need_help_for'))}`;
 
   return (
     <div className={cn(

@@ -1,5 +1,3 @@
-// src/pages/ProductsRestoredPage.tsx
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -58,6 +56,7 @@ import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getRestoredProducts,
   deleteRestoredProduct,
@@ -72,6 +71,7 @@ import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsRestoredPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const isAdmin = user?.role === 'admin';
   const userBranch = typeof user?.branch === 'string' ? user.branch : null;
@@ -250,15 +250,15 @@ const ProductsRestoredPage: React.FC = () => {
 
   // Export
   const restoredExportColumns: ExportColumn[] = [
-    { header: 'Product Name', key: 'productName', width: 25 },
-    { header: 'Category', key: 'category', width: 15 },
-    { header: 'Model', key: 'model', width: 15 },
-    { header: 'Quantity', key: 'quantityFormatted', width: 15 },
-    { header: 'Branch', key: 'branchName', width: 20 },
-    { header: 'Actual Unit Cost', key: 'unitCostActual', width: 18 },
-    { header: 'Total Cost Value', key: 'totalCostValue', width: 18 },
-    { header: 'Restored Date', key: 'restoredDateFormatted', width: 15 },
-    { header: 'Comment', key: 'restoreComment', width: 25 },
+    { header: t('product_name'), key: 'productName', width: 25 },
+    { header: t('category_label'), key: 'category', width: 15 },
+    { header: t('model_label'), key: 'model', width: 15 },
+    { header: t('quantity_label'), key: 'quantityFormatted', width: 15 },
+    { header: t('branch'), key: 'branchName', width: 20 },
+    { header: t('actual_unit_cost'), key: 'unitCostActual', width: 18 },
+    { header: t('total_cost_value'), key: 'totalCostValue', width: 18 },
+    { header: t('restored_date'), key: 'restoredDateFormatted', width: 15 },
+    { header: t('comment'), key: 'restoreComment', width: 25 },
   ];
 
   const getRestoredExportData = () => {
@@ -277,12 +277,12 @@ const ProductsRestoredPage: React.FC = () => {
 
   const handleExportExcel = () => {
     exportToExcel(getRestoredExportData(), restoredExportColumns, 'restored-products');
-    toast.success('Exported to Excel');
+    toast.success(t('success'));
   };
 
   const handleExportPDF = () => {
     exportToPDF(getRestoredExportData(), restoredExportColumns, 'restored-products', 'Restored Products Report');
-    toast.success('Exported to PDF');
+    toast.success(t('success'));
   };
 
   const handleSell = async () => {
@@ -292,7 +292,7 @@ const ProductsRestoredPage: React.FC = () => {
     const price = Number(sellForm.sellingPrice);
 
     if (qty > currentProduct.quantity || price <= 0 || qty <= 0) {
-      toast.error('Invalid quantity or price');
+      toast.error(t('error'));
       return;
     }
 
@@ -307,13 +307,13 @@ const ProductsRestoredPage: React.FC = () => {
       );
 
       if (success) {
-        toast.success(`Successfully re-sold ${qty} unit(s)`);
+        toast.success(t('success'));
         setSellDialogOpen(false);
         setCurrentProduct(null);
         setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
       }
     } catch {
-      toast.error('Sale failed');
+      toast.error(t('error'));
     } finally {
       setActionLoading(false);
     }
@@ -325,7 +325,7 @@ const ProductsRestoredPage: React.FC = () => {
     try {
       const success = await deleteRestoredProduct(currentProduct.id);
       if (success) {
-        toast.success('Restored product deleted permanently');
+        toast.success(t('success'));
         setDeleteConfirmOpen(false);
         setCurrentProduct(null);
       }
@@ -365,31 +365,31 @@ const ProductsRestoredPage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Restored Products" description="View and sell restored products" />
+      <SEOHelmet title={t('restored_products')} description={t('restored_products_desc')} />
       <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Restored Products</h1>
+            <h1 className="text-3xl font-bold">{t('restored_products')}</h1>
             <p className="text-muted-foreground">
-              {isAdmin ? 'All restored products across branches' : userBranch ? `Restored products in ${getBranchName(userBranch)}` : 'No branch assigned'}
+              {isAdmin ? t('all_restored_products_admin') : userBranch ? `${t('restored_products_in')} ${getBranchName(userBranch)}` : t('no_branch_assigned')}
             </p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                {t('export')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={handleExportExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
+                {t('export_excel')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPDF}>
                 <FileText className="mr-2 h-4 w-4" />
-                Export to PDF
+                {t('export_pdf')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -399,7 +399,7 @@ const ProductsRestoredPage: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
             <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">Showing restored products for:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('showing_restored_products_for')}:</span>
             <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
 
@@ -407,7 +407,7 @@ const ProductsRestoredPage: React.FC = () => {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-background shadow-sm">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
+                {selectedDate ? format(selectedDate, 'PPP') : <span>{t('pick_date')}</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -425,7 +425,7 @@ const ProductsRestoredPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Restored Value</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_restored_value')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -441,7 +441,7 @@ const ProductsRestoredPage: React.FC = () => {
 
           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Restored Value</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_restored_value')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -459,16 +459,16 @@ const ProductsRestoredPage: React.FC = () => {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <Award size={14} className="text-orange-500" />
-                Yearly Restored Value
+                {t('yearly_restored_value')}
               </CardTitle>
               <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')} Yearly
+                {format(selectedDate, 'yyyy')}
               </Badge>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Cost Value</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('total_cost_value')}</p>
                   <div className="text-3xl font-bold">{restoredStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
                 </div>
               </div>
@@ -498,7 +498,7 @@ const ProductsRestoredPage: React.FC = () => {
               >
                 {isToday && !isSelected && (
                   <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    Today
+                    {t('today')}
                   </div>
                 )}
                 <div className="flex flex-col items-center text-center gap-2">
@@ -519,7 +519,7 @@ const ProductsRestoredPage: React.FC = () => {
                       "text-[9px] uppercase font-medium opacity-60",
                       isSelected ? "text-amber-200" : "text-gray-500"
                     )}>
-                      value
+                      {t('value')}
                     </span>
                   </div>
                 </div>
@@ -533,7 +533,7 @@ const ProductsRestoredPage: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
-              placeholder="Search restored products..."
+              placeholder={t('search_restored_products')}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -543,7 +543,7 @@ const ProductsRestoredPage: React.FC = () => {
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="All">All Categories</SelectItem>
+              <SelectItem value="All">{t('all_categories')}</SelectItem>
               {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -552,7 +552,7 @@ const ProductsRestoredPage: React.FC = () => {
             <Select value={branchFilter} onValueChange={setBranchFilter}>
               <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
+                <SelectItem value="All">{t('all_branches')}</SelectItem>
                 {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -576,24 +576,24 @@ const ProductsRestoredPage: React.FC = () => {
               <TableRow>
                 <TableHead className="w-[50px]">#</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('product_name')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('category_label')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('branchName')}>
-                  <div className="flex items-center gap-1">Branch <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('branch')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Restored Qty <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">{t('restored_qty')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Actual Unit Cost</TableHead>
-                <TableHead>Total Cost Value</TableHead>
+                <TableHead>{t('actual_unit_cost')}</TableHead>
+                <TableHead>{t('total_cost_value')}</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('restoredDate')}>
-                  <div className="flex items-center gap-1">Restored Date <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('restored_date')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('comment')}</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -603,7 +603,7 @@ const ProductsRestoredPage: React.FC = () => {
                     <TableCell colSpan={10} className="h-64 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="h-12 w-12 opacity-20" />
-                        <p className="text-lg font-medium">No restored products found for this date.</p>
+                        <p className="text-lg font-medium">{t('no_restored_products_date')}</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -643,12 +643,12 @@ const ProductsRestoredPage: React.FC = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-semibold text-purple-600">
+                        <span className="font-semibold text-purple-600 dark:text-purple-400">
                           {getActualUnitCost(product).toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-black text-amber-600">
+                        <span className="font-black text-amber-600 dark:text-amber-400">
                           {(product.quantity * getActualUnitCost(product)).toLocaleString()} RWF
                         </span>
                       </TableCell>
@@ -699,54 +699,54 @@ const ProductsRestoredPage: React.FC = () => {
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Restored Product Details</DialogTitle>
+              <DialogTitle>{t('restored_product_details')}</DialogTitle>
             </DialogHeader>
             {currentProduct && (
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="text-sm text-muted-foreground">{t('name')}</p>
                     <p className="font-medium">{currentProduct.productName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Category</p>
+                    <p className="text-sm text-muted-foreground">{t('category_label')}</p>
                     <p className="font-medium">{currentProduct.category}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Model</p>
+                    <p className="text-sm text-muted-foreground">{t('model_label')}</p>
                     <p className="font-medium">{currentProduct.model || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Restored Qty</p>
+                    <p className="text-sm text-muted-foreground">{t('restored_qty')}</p>
                     <p className="font-medium">{currentProduct.quantity} {currentProduct.unit || 'pcs'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Branch</p>
+                    <p className="text-sm text-muted-foreground">{t('branch')}</p>
                     <p className="font-medium">{getBranchName(currentProduct.branch)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Cost Price (Base)</p>
+                    <p className="text-sm text-muted-foreground">{t('cost_price_base')}</p>
                     <p className="font-medium">{currentProduct.costPrice.toLocaleString()} RWF</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Selling Price (Base)</p>
+                    <p className="text-sm text-muted-foreground">{t('selling_price_base')}</p>
                     <p className="font-medium">{(currentProduct.sellingPrice || currentProduct.costPrice).toLocaleString()} RWF</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Value</p>
-                    <p className="font-medium text-lg text-amber-600">
+                    <p className="text-sm text-muted-foreground">{t('total_value')}</p>
+                    <p className="font-medium text-lg text-amber-600 dark:text-amber-400">
                       {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF
                     </p>
                   </div>
                   <div className="col-span-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                    <p className="text-sm text-muted-foreground">Restored Date</p>
+                    <p className="text-sm text-muted-foreground">{t('restored_date')}</p>
                     <p className="font-medium">{new Date(currentProduct.restoredDate).toLocaleDateString()} {new Date(currentProduct.restoredDate).toLocaleTimeString()}</p>
                   </div>
                 </div>
 
                 {currentProduct.restoreComment && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Restore Reason</p>
+                    <p className="text-sm text-muted-foreground mb-2">{t('restore_reason')}</p>
                     <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
                       <p className="whitespace-pre-wrap">{currentProduct.restoreComment}</p>
                     </div>
@@ -755,7 +755,7 @@ const ProductsRestoredPage: React.FC = () => {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>{t('close')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -763,11 +763,11 @@ const ProductsRestoredPage: React.FC = () => {
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Sell Restored Product</DialogTitle>
+              <DialogTitle>{t('sell_restored_product')}</DialogTitle>
               <DialogDescription>
                 {currentProduct?.productName} {currentProduct?.model && `(${currentProduct.model})`}
                 <br />
-                Available in restored stock: {currentProduct?.quantity} {currentProduct?.unit || 'pcs'}
+                {t('available_restored_stock')}: {currentProduct?.quantity} {currentProduct?.unit || 'pcs'}
               </DialogDescription>
             </DialogHeader>
 
@@ -775,12 +775,12 @@ const ProductsRestoredPage: React.FC = () => {
               <div className="space-y-6 py-4">
                 <div className="grid gap-4">
                   <div className="grid gap-2">
-                    <Label>Quantity to Sell *</Label>
+                    <Label>{t('quantity_sell')}</Label>
                     <Input
                       type="number"
                       min="1"
                       max={currentProduct.quantity}
-                      placeholder="How many units?"
+                      placeholder={t('quantity_placeholder')}
                       value={sellForm.quantity}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -792,11 +792,11 @@ const ProductsRestoredPage: React.FC = () => {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Selling Price per Unit (RWF) *</Label>
+                    <Label>{t('selling_price_per_unit')}</Label>
                     <Input
                       type="number"
                       min="1"
-                      placeholder="Enter selling price"
+                      placeholder={t('selling_price_placeholder')}
                       value={sellForm.sellingPrice}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -806,7 +806,7 @@ const ProductsRestoredPage: React.FC = () => {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Return Deadline (optional)</Label>
+                    <Label>{t('return_deadline_optional')}</Label>
                     <Input
                       type="date"
                       value={sellForm.deadline}
@@ -820,7 +820,7 @@ const ProductsRestoredPage: React.FC = () => {
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Quantity exceeds available restored stock ({currentProduct.quantity} units).
+                      {t('qty_exceeds_stock')} ({currentProduct.quantity} units).
                     </AlertDescription>
                   </Alert>
                 )}
@@ -834,19 +834,19 @@ const ProductsRestoredPage: React.FC = () => {
                     <Card className="bg-secondary dark:bg-card border-border">
                       <CardContent className="pt-6 space-y-4">
                         <div className="flex justify-between text-lg">
-                          <span>Total Revenue:</span>
+                          <span>{t('total_revenue')}:</span>
                           <span className="font-bold text-green-600">
                             {(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF
                           </span>
                         </div>
                         <div className="flex justify-between text-lg">
-                          <span>Cost of Goods (Actual):</span>
+                          <span>{t('cost_of_goods_actual')}:</span>
                           <span className="font-medium text-purple-600">
                             {(Number(sellForm.quantity) * getActualUnitCost(currentProduct)).toLocaleString()} RWF
                           </span>
                         </div>
                         <div className="flex justify-between text-xl font-bold pt-3 border-t">
-                          <span>Profit / Loss:</span>
+                          <span>{t('profit_loss')}:</span>
                           <span className={cn(
                             Number(sellForm.sellingPrice) >= getActualUnitCost(currentProduct)
                               ? 'text-green-600'
@@ -871,7 +871,7 @@ const ProductsRestoredPage: React.FC = () => {
                   setSellForm({ quantity: '', sellingPrice: '', deadline: '' });
                 }}
               >
-                Cancel
+                {t('cancel')}
               </Button>
               <Button
                 onClick={handleSell}
@@ -884,7 +884,7 @@ const ProductsRestoredPage: React.FC = () => {
                   Number(sellForm.sellingPrice) <= 0
                 }
               >
-                {actionLoading ? 'Selling...' : 'Confirm Sale'}
+                {actionLoading ? 'Selling...' : t('confirm_sale')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -893,15 +893,15 @@ const ProductsRestoredPage: React.FC = () => {
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Restored Product?</DialogTitle>
+              <DialogTitle>{t('delete_restored_product')}</DialogTitle>
               <DialogDescription>
-                This action is permanent and cannot be undone. The restored product record will be deleted.
+                {t('delete_restored_warning')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>{t('cancel')}</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete Permanently'}
+                {actionLoading ? 'Deleting...' : t('delete_permanently')}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -1,4 +1,3 @@
-// src/pages/DashboardPage.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -43,10 +42,10 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      toast({ title: 'Authentication Required', description: 'Please log in.', variant: 'destructive' });
+      toast({ title: t('error'), description: t('enter_details_login'), variant: 'destructive' });
       navigate('/login');
     }
-  }, [authLoading, user, toast, navigate]);
+  }, [authLoading, user, toast, navigate, t]);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -57,14 +56,14 @@ const DashboardPage: React.FC = () => {
         const data = await getDashboardStats(user.businessId, user.role, branchId);
         setStats(data);
       } catch (err) {
-        toast({ title: 'Error', description: 'Failed to load dashboard data', variant: 'destructive' });
+        toast({ title: t('error'), description: 'Failed to load dashboard data', variant: 'destructive' });
       } finally {
         setLoading(false);
       }
     };
 
     if (user) loadStats();
-  }, [user]);
+  }, [user, t, toast]);
 
   // Activity stats (week, month, year) - using current stock value as proxy
   const activityStats = useMemo(() => {
@@ -72,9 +71,6 @@ const DashboardPage: React.FC = () => {
 
     const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
-    const monthStart = startOfMonth(selectedDate);
-    const monthEnd = endOfMonth(selectedDate);
-    const yearStart = startOfYear(selectedDate);
 
     const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
@@ -154,7 +150,6 @@ const DashboardPage: React.FC = () => {
                   <div className="text-3xl font-bold">
                     {activityStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
                   </div>
-                  {/* <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p> */}
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-white" />
@@ -175,7 +170,6 @@ const DashboardPage: React.FC = () => {
                   <div className="text-3xl font-bold">
                     {activityStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
                   </div>
-                  {/* <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p> */}
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <DollarSign className="h-6 w-6 text-white" />
@@ -197,11 +191,10 @@ const DashboardPage: React.FC = () => {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Current Value</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('current_stock_value')}</p>
                   <div className="text-3xl font-bold">
                     {activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
                   </div>
-                  {/* <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p> */}
                 </div>
               </div>
             </CardContent>
@@ -270,23 +263,23 @@ const DashboardPage: React.FC = () => {
         {/* Financial Cards - Updated subtitles to reflect correct calculation method */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <BigProCard
-            title="Net Profit"
+            title={t('total_net_profit')}
             value={stats.totalNetProfit.toLocaleString()}
-            subtitle="Profit from all sold products after calculated loss"
+            subtitle={t('net_profit_subtitle')}
             icon={<DollarSign />}
             color={stats.totalNetProfit >= 0 ? "green" : "red"}
           />
           <BigProCard
-            title="Current Stock Value"
+            title={t('current_stock_value')}
             value={stats.totalStockValue.toLocaleString()}
-            subtitle="Total value of all products in stock"
+            subtitle={t('total_stock_value_subtitle')}
             icon={<Package />}
             color="emerald"
           />
           <BigProCard
-            title="Total Loss"
+            title={t('total_loss')}
             value={stats.totalLoss.toLocaleString()}
-            subtitle="Total loss from all sold products"
+            subtitle={t('total_loss_subtitle')}
             icon={<TrendingDown />}
             color="red"
           />
@@ -300,21 +293,21 @@ const DashboardPage: React.FC = () => {
           <SmallProCard title={t('updated_today')} value={stats.productsUpdatedToday} subtitle={t('updated_at')} icon={<RefreshCw className="text-orange-600" />} />
 
           <SmallProCard title={t('never_updated')} value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
-          <SmallProCard title={t('in_stock')} value={stats.activeProducts} subtitle="Confirmed stock" icon={<CheckCircle className="text-emerald-600" />} />
+          <SmallProCard title={t('in_stock')} value={stats.activeProducts} subtitle={t('min_qty')} icon={<CheckCircle className="text-emerald-600" />} />
           <SmallProCard
             title={t('pending_actions')}
             value={stats.pendingConfirmationCount}
-            subtitle="Awaiting approval"
+            subtitle={t('pending')}
             icon={<Hourglass className="text-amber-600" />}
             danger={stats.pendingConfirmationCount > 0}
           />
-          <SmallProCard title={t('sold')} value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-600" />} />
+          <SmallProCard title={t('sold')} value={stats.soldProducts} subtitle={t('total_products')} icon={<TrendingUp className="text-emerald-600" />} />
 
-          <SmallProCard title={t('restored')} value={stats.restoredProducts} subtitle="Returned" icon={<Archive className="text-indigo-600" />} />
-          <SmallProCard title={t('deleted')} value={stats.deletedProducts} subtitle="In trash" icon={<XCircle className="text-rose-600" />} />
+          <SmallProCard title={t('restored')} value={stats.restoredProducts} subtitle={t('restored_label')} icon={<Archive className="text-indigo-600" />} />
+          <SmallProCard title={t('deleted')} value={stats.deletedProducts} subtitle={t('trash_label')} icon={<XCircle className="text-rose-600" />} />
           <SmallProCard title={t('low_stock')} value={stats.lowStockProducts} subtitle="≤10 units" icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
           <SmallProCard title={t('out_of_stock')} value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
-          <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle="Per product" icon={<Package className="text-cyan-600" />} />
+          <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle={t('per_product')} icon={<Package className="text-cyan-600" />} /> {/* per_product might be missing, using '' if so */}
         </div>
 
         {/* Stock Highlights */}

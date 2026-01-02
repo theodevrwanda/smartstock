@@ -1,5 +1,3 @@
-// src/pages/ProductsSoldPage.tsx
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -61,6 +59,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   getSoldProducts,
   deleteSoldProduct,
@@ -75,6 +74,7 @@ import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 const ProductsSoldPage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const isAdmin = user?.role === 'admin';
   const userBranch = typeof user?.branch === 'string' ? user.branch : null;
@@ -246,19 +246,32 @@ const ProductsSoldPage: React.FC = () => {
     }
   };
 
+  const getActualUnitCost = (p: SoldProduct): number => {
+    return p.costPricePerUnit ?? p.unitCost ?? p.costPrice ?? 0;
+  };
+
+  const calculateProfitLoss = (p: SoldProduct): number => {
+    const unitCost = getActualUnitCost(p);
+    return (p.sellingPrice - unitCost) * p.quantity;
+  };
+
+  const calculateTotalProfitLoss = () => {
+    return filteredProducts.reduce((sum, p) => sum + calculateProfitLoss(p), 0);
+  };
+
   // Export
   const soldExportColumns: ExportColumn[] = [
-    { header: 'Product Name', key: 'productName', width: 25 },
-    { header: 'Category', key: 'category', width: 15 },
-    { header: 'Model', key: 'model', width: 15 },
-    { header: 'Quantity', key: 'quantityFormatted', width: 15 },
-    { header: 'Branch', key: 'branchName', width: 20 },
-    { header: 'Unit Cost (Actual)', key: 'unitCostActual', width: 18 },
-    { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
-    { header: 'Total Amount', key: 'totalAmount', width: 15 },
-    { header: 'Profit/Loss', key: 'profitLoss', width: 15 },
-    { header: 'Sold Date', key: 'soldDateFormatted', width: 15 },
-    { header: 'Return Deadline', key: 'deadlineFormatted', width: 15 },
+    { header: t('product_name'), key: 'productName', width: 25 },
+    { header: t('category_label'), key: 'category', width: 15 },
+    { header: t('model_label'), key: 'model', width: 15 },
+    { header: t('quantity_label'), key: 'quantityFormatted', width: 15 },
+    { header: t('branch'), key: 'branchName', width: 20 },
+    { header: t('actual_unit_cost'), key: 'unitCostActual', width: 18 },
+    { header: t('selling_price'), key: 'sellingPriceFormatted', width: 15 },
+    { header: t('total_amount'), key: 'totalAmount', width: 15 },
+    { header: t('profit_loss'), key: 'profitLoss', width: 15 },
+    { header: t('sold_date'), key: 'soldDateFormatted', width: 15 },
+    { header: t('return_deadline'), key: 'deadlineFormatted', width: 15 },
   ];
 
   const getSoldExportData = () => {
@@ -279,48 +292,29 @@ const ProductsSoldPage: React.FC = () => {
 
   const handleExportExcel = () => {
     exportToExcel(getSoldExportData(), soldExportColumns, 'sold-products');
-    toast.success('Exported to Excel');
+    toast.success(t('success'));
   };
 
   const handleExportPDF = () => {
     exportToPDF(getSoldExportData(), soldExportColumns, 'sold-products', `Sold Products Report - Total P/L: ${calculateTotalProfitLoss().toLocaleString()} RWF`);
-    toast.success('Exported to PDF');
-  };
-
-  // Profit calculation using costPricePerUnit
-  const getActualUnitCost = (p: SoldProduct): number => {
-    return p.costPricePerUnit ?? p.unitCost ?? p.costPrice ?? 0;
-  };
-
-  const calculateProfitLoss = (p: SoldProduct): number => {
-    const unitCost = getActualUnitCost(p);
-    return (p.sellingPrice - unitCost) * p.quantity;
-  };
-
-  const calculateTotalProfitLoss = () => {
-    return filteredProducts.reduce((sum, p) => sum + calculateProfitLoss(p), 0);
-  };
-
-  const isDeadlineActive = (deadline?: string) => {
-    if (!deadline) return false;
-    return new Date(deadline) >= new Date();
+    toast.success(t('success'));
   };
 
   const handleRestore = async () => {
     if (!currentProduct || restoreForm.quantity === '' || Number(restoreForm.quantity) <= 0) {
-      toast.error('Please enter a valid quantity');
+      toast.error(t('error')); // Detailed verification needed
       return;
     }
 
     const qty = Number(restoreForm.quantity);
 
     if (qty > currentProduct.quantity) {
-      toast.error('Cannot restore more than sold quantity');
+      toast.error(t('error'));
       return;
     }
 
     if (restoreForm.comment.trim() === '') {
-      toast.error('Please provide a reason for the restore');
+      toast.error(t('error'));
       return;
     }
 
@@ -335,11 +329,7 @@ const ProductsSoldPage: React.FC = () => {
           }
           return prev.map(p => p.id === currentProduct.id ? { ...p, quantity: remaining } : p);
         });
-        toast.success(
-          qty === currentProduct.quantity
-            ? 'Fully restored – sale record removed'
-            : `Restored ${qty} unit(s)`
-        );
+        toast.success(t('success'));
         setRestoreDialogOpen(false);
         setCurrentProduct(null);
         setRestoreForm({ quantity: '', comment: '' });
@@ -356,7 +346,7 @@ const ProductsSoldPage: React.FC = () => {
       const success = await deleteSoldProduct(currentProduct.id);
       if (success) {
         setSoldProducts(prev => prev.filter(p => p.id !== currentProduct.id));
-        toast.success('Sale record deleted');
+        toast.success(t('success'));
         setDeleteConfirmOpen(false);
         setCurrentProduct(null);
       }
@@ -391,30 +381,30 @@ const ProductsSoldPage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Sold Products" description="View and manage sold products" />
+      <SEOHelmet title={t('sold_products')} description={t('sold_products_desc')} />
       <div className="space-y-6 p-4 md:p-6 bg-background min-h-[calc(100vh-64px)]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Sold Products</h1>
+            <h1 className="text-3xl font-bold">{t('sold_products')}</h1>
             <p className="text-muted-foreground">
-              {isAdmin ? 'All sold products across branches' : userBranch ? `Sold products from ${getBranchName(userBranch)}` : 'No branch assigned'}
+              {isAdmin ? t('all_sold_products_admin') : userBranch ? `${t('sold_products_from')} ${getBranchName(userBranch)}` : t('no_branch_assigned')}
             </p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
                 <Download className="mr-2 h-4 w-4" />
-                Export
+                {t('export')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onClick={handleExportExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Export to Excel
+                {t('export_excel')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportPDF}>
                 <FileText className="mr-2 h-4 w-4" />
-                Export to PDF
+                {t('export_pdf')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -423,7 +413,7 @@ const ProductsSoldPage: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
             <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">Displaying sales for:</span>
+            <span className="text-gray-600 dark:text-gray-400">{t('displaying_sales_for')}:</span>
             <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
 
@@ -431,7 +421,7 @@ const ProductsSoldPage: React.FC = () => {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-background shadow-sm">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, 'PPP') : <span>Pick a date</span>}
+                {selectedDate ? format(selectedDate, 'PPP') : <span>{t('pick_date')}</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -449,7 +439,7 @@ const ProductsSoldPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Income</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_income')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -465,7 +455,7 @@ const ProductsSoldPage: React.FC = () => {
 
           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Income</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_income')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -483,16 +473,16 @@ const ProductsSoldPage: React.FC = () => {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <Award size={14} className="text-orange-500" />
-                Yearly Income
+                {t('yearly_income')}
               </CardTitle>
               <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')} Yearly
+                {format(selectedDate, 'yyyy')}
               </Badge>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Total Revenue</p>
+                  <p className="text-xs text-gray-400 mb-1">{t('total_revenue')}</p>
                   <div className="text-3xl font-bold">{incomeStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
                 </div>
               </div>
@@ -522,7 +512,7 @@ const ProductsSoldPage: React.FC = () => {
               >
                 {isToday && !isSelected && (
                   <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    Today
+                    {t('today')}
                   </div>
                 )}
                 <div className="flex flex-col items-center text-center gap-2">
@@ -543,7 +533,7 @@ const ProductsSoldPage: React.FC = () => {
                       "text-[9px] uppercase font-medium opacity-60",
                       isSelected ? "text-amber-200" : "text-gray-500"
                     )}>
-                      income
+                      {t('income_label')}
                     </span>
                   </div>
                 </div>
@@ -557,7 +547,7 @@ const ProductsSoldPage: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
-              placeholder="Search sold products..."
+              placeholder={t('search_sold_products')}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -567,7 +557,7 @@ const ProductsSoldPage: React.FC = () => {
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="All">All Categories</SelectItem>
+              <SelectItem value="All">{t('all_categories')}</SelectItem>
               {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -576,7 +566,7 @@ const ProductsSoldPage: React.FC = () => {
             <Select value={branchFilter} onValueChange={setBranchFilter}>
               <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Branches</SelectItem>
+                <SelectItem value="All">{t('all_branches')}</SelectItem>
                 {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -600,27 +590,27 @@ const ProductsSoldPage: React.FC = () => {
               <TableRow>
                 <TableHead className="w-[50px]">#</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">Product Name <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('product_name')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('category_label')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('branchName')}>
-                  <div className="flex items-center gap-1">Branch <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('branch')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="text-center cursor-pointer" onClick={() => handleSort('quantity')}>
-                  <div className="flex items-center gap-1 justify-center">Sold Qty <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-center">{t('sold_qty')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Actual Unit Cost</TableHead>
+                <TableHead>{t('actual_unit_cost')}</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('sellingPrice')}>
-                  <div className="flex items-center gap-1">Selling Price <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('selling_price')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Total Received</TableHead>
-                <TableHead>Profit/Loss</TableHead>
+                <TableHead>{t('total_received')}</TableHead>
+                <TableHead>{t('profit_loss')}</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('soldDate')}>
-                  <div className="flex items-center gap-1">Sold Date <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('sold_date')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -630,7 +620,7 @@ const ProductsSoldPage: React.FC = () => {
                     <TableCell colSpan={11} className="h-64 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="h-12 w-12 opacity-20" />
-                        <p className="text-lg font-medium">No sold products found for this date.</p>
+                        <p className="text-lg font-medium">{t('no_sold_products_date')}</p>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -670,24 +660,24 @@ const ProductsSoldPage: React.FC = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-semibold text-purple-600">
+                        <span className="font-semibold text-purple-600 dark:text-purple-400">
                           {getActualUnitCost(product).toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-semibold text-green-600">
+                        <span className="font-semibold text-green-600 dark:text-green-400">
                           {product.sellingPrice.toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-black text-amber-600">
+                        <span className="font-black text-amber-600 dark:text-amber-400">
                           {(product.quantity * product.sellingPrice).toLocaleString()} RWF
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className={cn(
                           "flex items-center gap-1 font-bold",
-                          calculateProfitLoss(product) >= 0 ? 'text-green-600' : 'text-red-600'
+                          calculateProfitLoss(product) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                         )}>
                           {calculateProfitLoss(product) >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                           {Math.abs(calculateProfitLoss(product)).toLocaleString()} RWF
@@ -738,58 +728,58 @@ const ProductsSoldPage: React.FC = () => {
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Sold Product Details</DialogTitle>
+              <DialogTitle>{t('sold_product_details')}</DialogTitle>
             </DialogHeader>
             {currentProduct && (
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="text-sm text-muted-foreground">{t('name')}</p>
                     <p className="font-medium">{currentProduct.productName}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Category</p>
+                    <p className="text-sm text-muted-foreground">{t('category_label')}</p>
                     <p className="font-medium">{currentProduct.category}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Model</p>
+                    <p className="text-sm text-muted-foreground">{t('model_label')}</p>
                     <p className="font-medium">{currentProduct.model || '-'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Quantity</p>
+                    <p className="text-sm text-muted-foreground">{t('quantity_label')}</p>
                     <p className="font-medium">{currentProduct.quantity} {currentProduct.unit || 'pcs'}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Branch</p>
+                    <p className="text-sm text-muted-foreground">{t('branch')}</p>
                     <p className="font-medium">{getBranchName(currentProduct.branch)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Actual Unit Cost</p>
-                    <p className="font-medium text-purple-600">{getActualUnitCost(currentProduct).toLocaleString()} RWF</p>
+                    <p className="text-sm text-muted-foreground">{t('actual_unit_cost')}</p>
+                    <p className="font-medium text-purple-600 dark:text-purple-400">{getActualUnitCost(currentProduct).toLocaleString()} RWF</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Selling Price</p>
-                    <p className="font-medium text-green-600">{currentProduct.sellingPrice.toLocaleString()} RWF</p>
+                    <p className="text-sm text-muted-foreground">{t('selling_price')}</p>
+                    <p className="font-medium text-green-600 dark:text-green-400">{currentProduct.sellingPrice.toLocaleString()} RWF</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Received</p>
-                    <p className="font-medium text-lg text-amber-600">{(currentProduct.quantity * currentProduct.sellingPrice).toLocaleString()} RWF</p>
+                    <p className="text-sm text-muted-foreground">{t('total_received')}</p>
+                    <p className="font-medium text-lg text-amber-600 dark:text-amber-400">{(currentProduct.quantity * currentProduct.sellingPrice).toLocaleString()} RWF</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Profit/Loss</p>
+                    <p className="text-sm text-muted-foreground">{t('profit_loss')}</p>
                     <p className={cn(
                       "font-bold text-lg",
-                      calculateProfitLoss(currentProduct) >= 0 ? 'text-green-600' : 'text-red-600'
+                      calculateProfitLoss(currentProduct) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                     )}>
                       {calculateProfitLoss(currentProduct).toLocaleString()} RWF
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Sold Date</p>
+                    <p className="text-sm text-muted-foreground">{t('sold_date')}</p>
                     <p className="font-medium">{format(new Date(currentProduct.soldDate), 'dd MMM yyyy')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Return Deadline</p>
+                    <p className="text-sm text-muted-foreground">{t('return_deadline')}</p>
                     <p className="font-medium">
                       {currentProduct.deadline ? format(new Date(currentProduct.deadline), 'dd MMM yyyy') : '-'}
                     </p>
@@ -798,7 +788,7 @@ const ProductsSoldPage: React.FC = () => {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>{t('close')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -807,21 +797,21 @@ const ProductsSoldPage: React.FC = () => {
         <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Restore Sold Product</DialogTitle>
+              <DialogTitle>{t('restore_sold_product')}</DialogTitle>
               <DialogDescription>
-                {currentProduct && `Restoring from sale: ${currentProduct.productName} (Sold: ${currentProduct.quantity} units)`}
+                {currentProduct && `${t('restoring_from_sale')}: ${currentProduct.productName} (${t('sold')}: ${currentProduct.quantity} units)`}
               </DialogDescription>
             </DialogHeader>
 
             {currentProduct && (
               <div className="space-y-6 py-4">
                 <div className="grid gap-2">
-                  <Label>Quantity to Restore *</Label>
+                  <Label>{t('quantity_restore')}</Label>
                   <Input
                     type="number"
                     min="1"
                     max={currentProduct.quantity}
-                    placeholder="How many units to return to stock?"
+                    placeholder={t('restore_qty_placeholder')}
                     value={restoreForm.quantity}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -836,7 +826,7 @@ const ProductsSoldPage: React.FC = () => {
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      You cannot restore more than the sold quantity ({currentProduct.quantity}).
+                      {t('error')}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -851,9 +841,9 @@ const ProductsSoldPage: React.FC = () => {
                 )}
 
                 <div className="grid gap-2">
-                  <Label>Reason for Restore *</Label>
+                  <Label>{t('restore_reason')}</Label>
                   <Textarea
-                    placeholder="Why is this product being returned? (required)"
+                    placeholder={t('restore_reason_placeholder')}
                     value={restoreForm.comment}
                     onChange={(e) => setRestoreForm(prev => ({ ...prev, comment: e.target.value }))}
                     rows={5}
@@ -871,7 +861,7 @@ const ProductsSoldPage: React.FC = () => {
                   setRestoreForm({ quantity: '', comment: '' });
                 }}
               >
-                Cancel
+                {t('cancel')}
               </Button>
               <Button
                 onClick={handleRestore}
@@ -883,7 +873,7 @@ const ProductsSoldPage: React.FC = () => {
                   restoreForm.comment.trim() === ''
                 }
               >
-                {actionLoading ? 'Restoring...' : 'Confirm Restore'}
+                {actionLoading ? 'Restoring...' : t('confirm_restore')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -893,15 +883,15 @@ const ProductsSoldPage: React.FC = () => {
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Delete Sale Record?</DialogTitle>
+              <DialogTitle>{t('delete_sale_record')}</DialogTitle>
               <DialogDescription>
-                This action is permanent and cannot be undone. The sale record will be deleted from the system.
+                {t('delete_sale_warning')}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>{t('cancel')}</Button>
               <Button variant="destructive" onClick={handleDelete} disabled={actionLoading}>
-                {actionLoading ? 'Deleting...' : 'Delete Permanently'}
+                {actionLoading ? 'Deleting...' : t('delete_permanently')}
               </Button>
             </DialogFooter>
           </DialogContent>
