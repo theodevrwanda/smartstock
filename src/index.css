@@ -25,12 +25,12 @@ All colors MUST be HSL.
     --primary-foreground: 0 0% 10%;
     /* Black text on yellow */
 
-    --secondary: 48 100% 96%;
-    /* Very light yellow */
+    --secondary: 0 0% 96%;
+    /* Light gray - neutral for tables */
     --secondary-foreground: 0 0% 10%;
 
-    --muted: 48 100% 95%;
-    /* Light yellow tint */
+    --muted: 0 0% 95%;
+    /* Light gray - neutral backgrounds */
     --muted-foreground: 0 0% 40%;
 
     --accent: 48 96% 88%;
@@ -85,11 +85,11 @@ All colors MUST be HSL.
     /* Dark background on yellow */
 
     --secondary: 0 0% 15%;
-    /* Dark gray */
+    /* Dark gray - neutral */
     --secondary-foreground: 0 0% 98%;
 
-    --muted: 48 20% 15%;
-    /* Dark yellow tint */
+    --muted: 0 0% 18%;
+    /* Dark gray - neutral backgrounds */
     --muted-foreground: 0 0% 70%;
 
     --accent: 48 30% 20%;
