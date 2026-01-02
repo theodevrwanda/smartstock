@@ -330,75 +330,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
     setAuthState((prev) => ({ ...prev, loading: true }));
-    setErrorMessage(null); // Clear previous errors
+    setErrorMessage(null);
 
     try {
-      if (!identifier.includes('@')) {
-        setErrorMessage('invalid_credentials'); // Use key
+      // Validate email format
+      if (!identifier.includes('@') || !identifier.trim()) {
+        setErrorMessage('invalid_email');
         setAuthState((prev) => ({ ...prev, loading: false }));
         return false;
       }
 
-      // 0. Pre-check: Verify if user exists in Firestore by email
-      try {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('email', '==', identifier), limit(1));
-        const querySnapshot = await getDocs(q);
+      const email = identifier.toLowerCase().trim();
 
-        if (querySnapshot.empty) {
-          setErrorMessage('user_not_found_create');
-          setAuthState((prev) => ({ ...prev, loading: false }));
-          return false;
-        }
-      } catch (firestoreError) {
-        // console.warn("Firestore pre-check failed. Proceeding to standard auth.", firestoreError);
-      }
+      // 1. Check if user document exists in Firestore
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email), limit(1));
+      const querySnapshot = await getDocs(q);
 
-      // 1. Authenticate with Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, identifier, password);
-
-      // 2. Fetch User Data to check active status
-      // Note: The onAuthStateChanged listener will also trigger, but we want immediate feedback here
-      // to prevent a "flash" of logged-in state if they are actually inactive.
-      const userData = await getUserFromFirestore(userCredential.user);
-
-      if (!userData) {
-        // Should not happen if auth succeeded, but handle it
-        await signOut(auth);
+      if (querySnapshot.empty) {
+        // User document does NOT exist
         setErrorMessage('user_not_found_create');
         setAuthState((prev) => ({ ...prev, loading: false }));
         return false;
       }
 
-      // 3. User Active Check
-      if (!userData.isActive) {
-        await signOut(auth);
-        setErrorMessage('user_inactive_error');
+      // User exists in Firestore → Get the document to check status
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+
+      // Check user active status
+      if (userData.isActive === false) {
+        setErrorMessage('user_inactive_wait_admin');
         setAuthState((prev) => ({ ...prev, loading: false }));
         return false;
       }
 
-      // 4. Business Active Check
-      if (!userData.businessActive) {
-        await signOut(auth);
-        setErrorMessage('business_inactive_error');
-        setAuthState((prev) => ({ ...prev, loading: false }));
-        return false;
+      // Check business active status (if businessId exists)
+      if (userData.businessId) {
+        const businessDoc = await getDoc(doc(db, 'businesses', userData.businessId));
+        if (businessDoc.exists()) {
+          const businessData = businessDoc.data();
+          if (businessData.isActive === false) {
+            setErrorMessage('business_inactive_wait_central');
+            setAuthState((prev) => ({ ...prev, loading: false }));
+            return false;
+          }
+        }
       }
 
-      // Login Successful - State will be updated by onAuthStateChanged
+      // All checks passed → Now try Firebase Authentication
+      await signInWithEmailAndPassword(auth, email, password);
+
+      // Success! onAuthStateChanged will handle the rest
       return true;
 
     } catch (error: any) {
-      console.error("Login Error:", error.code);
-      let messageKey = 'error';
+      console.error('Login error:', error.code, error.message);
 
-      if (error.code === 'auth/user-not-found') messageKey = 'user_not_found_create';
-      else if (error.code === 'auth/wrong-password') messageKey = 'invalid_credentials';
-      else if (error.code === 'auth/invalid-email') messageKey = 'invalid_credentials';
-      else if (error.code === 'auth/too-many-requests') messageKey = 'auth/too-many-requests'; // Needs key or fallback
-      // Note: 'auth/too-many-requests' usually doesn't have a simple key, might want a specific one or generic 'error'
-      else if (error.code === 'auth/invalid-credential') messageKey = 'invalid_credentials';
+      let messageKey = error.message || 'An error occurred';
+
+      // Remove "Firebase: " prefix if present
+      if (messageKey.includes('Firebase: ')) {
+        messageKey = messageKey.replace('Firebase: ', '');
+      }
+
+      // Only possible Firebase error now is wrong password (since user exists and is active)
+      if (
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-login-credentials'
+      ) {
+        messageKey = 'wrong_password'; // Key for "Wrong password"
+      } else if (error.code === 'auth/too-many-requests') {
+        messageKey = 'too_many_attempts';
+      } else if (error.code === 'auth/network-request-failed') {
+        messageKey = 'network_error';
+      }
 
       setErrorMessage(messageKey);
       setAuthState((prev) => ({ ...prev, loading: false }));

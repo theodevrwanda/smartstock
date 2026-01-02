@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from 'react';
 
 type Language = 'en' | 'rw';
@@ -304,7 +303,7 @@ const translations: Translations = {
         'cannot_set_past_date': 'Cannot set a past date',
         'cannot_sell_unconfirmed': 'You cannot sell an unconfirmed product.',
 
-        // Auth
+        // Auth - UPDATED & IMPROVED MESSAGES
         'welcome_back_login': 'Welcome back',
         'enter_details_login': 'Please enter your details to sign in.',
         'email_label': 'Email Address',
@@ -326,6 +325,20 @@ const translations: Translations = {
         'email_placeholder': 'Enter your email',
         'phone_placeholder': '07X XXX XXXX',
 
+        // NEW AUTH ERROR MESSAGES (used in updated AuthContext)
+        'wrong_password': 'Wrong password.',
+        'invalid_email': 'Please enter a valid email address.',
+        'too_many_attempts': 'Too many failed attempts. Please try again later.',
+        'network_error': 'Network error. Please check your connection.',
+        'user_not_found_create': 'User not found. You can create an account for free (first month in test mode).',
+        'user_inactive_wait_admin': 'Your account is pending approval. Please wait for your business admin to approve.',
+        'business_inactive_wait_central': 'Your business is not activated yet. Please wait for central admin approval.',
+
+        // Keep old keys for backward compatibility (optional)
+        'invalid_credentials': 'Incorrect email or password.',
+        'business_inactive_error': 'Your business is not active. Please wait for central admin to approve your business.',
+        'user_inactive_error': 'Your account is not active. Please wait for business admin to approve your account.',
+
         // Reports
         'business_report_title': 'Business Report',
         'business_report_desc': 'Complete overview of store, sold, restored, and deleted products',
@@ -344,7 +357,6 @@ const translations: Translations = {
         'unit_cost_label': 'Unit Cost',
         'profit_label': 'Profit',
         'sold_deleted_date_label': 'Sold/Deleted Date',
-
 
         // Inventory (Sold/Restored/Deleted)
         'sold_products_title': 'Sold Products',
@@ -412,7 +424,6 @@ const translations: Translations = {
         'quantity_sell': 'Quantity to Sell',
         'quantity_placeholder': 'Enter quantity...',
         'selling_price_placeholder': 'Enter price...',
-
 
         // Admin (Employees/Branches)
         'manage_employees_title': 'Manage Employees',
@@ -497,13 +508,8 @@ const translations: Translations = {
         'theme': 'Theme',
         'english': 'English',
         'kinyarwanda': 'Kinyarwanda',
-        'user_not_found_create': 'User not found. You can create an account for free.',
-        'invalid_credentials': 'Incorrect email or password.',
-        'business_inactive_error': 'Your business is not active. Please wait for central admin to approve your business.',
-        'user_inactive_error': 'Your account is not active. Please wait for business admin to approve your account.',
         'access_denied': 'Access Denied',
         'checking_details': 'Checking details...',
-
     },
     rw: {
         // Header
@@ -799,7 +805,7 @@ const translations: Translations = {
         'cannot_set_past_date': 'Ntiwashyiraho itariki yashize',
         'cannot_sell_unconfirmed': 'Nshobora kugurisha igicuruzwa kitaremezwa.',
 
-        // Auth
+        // Auth - UPDATED & IMPROVED MESSAGES (Kinyarwanda)
         'welcome_back_login': 'Murakaza neza',
         'enter_details_login': 'Injiza imyirondoro yawe kugirango winjire.',
         'email_label': 'Imeri',
@@ -821,6 +827,20 @@ const translations: Translations = {
         'email_placeholder': 'Shyiramo imeri yawe',
         'phone_placeholder': '07X XXX XXXX',
 
+        // NEW AUTH ERROR MESSAGES (Kinyarwanda)
+        'wrong_password': 'Ijambo ry\'ibanga siko.',
+        'invalid_email': 'Shyiramo imeri yizewe.',
+        'too_many_attempts': 'Wagerageje kenshi cyane. Subira ugerageze nyuma y\'igihe gito.',
+        'network_error': 'Habaye ikibazo ry\'internet. Wongere ugenzure uhuza ryawe.',
+        'user_not_found_create': 'Konti ntiyabonetse. Ushobora gufungura konti nshya ku buntu (ukwezi kwa mbere ni ubwoko bw\'igerageza).',
+        'user_inactive_wait_admin': 'Konti yawe iracyategereje kwemezwa. Tegereza umuyobozi w\'ubucuruzi bwawe akayemeze.',
+        'business_inactive_wait_central': 'Ubucuruzi bwawe ntiburakora. Tegereza umuyobozi wa sisitemu akabwemere.',
+
+        // Keep old keys for backward compatibility
+        'invalid_credentials': 'Imeri cyangwa ijambo ry\'ibanga siko biri.',
+        'business_inactive_error': 'Business yanyu ntirakora. Tegereza admin abayemere.',
+        'user_inactive_error': 'Konti yanyu ntirakora. Tegereza admin wanyu abayemere.',
+
         // Reports
         'business_report_title': 'Raporo y\'Ubucuruzi',
         'business_report_desc': 'Incamake yuzuye y\'ububiko, ibyagurishijwe, ibyasubijwe, n\'ibyahanaguwe',
@@ -840,7 +860,6 @@ const translations: Translations = {
         'profit_label': 'Inyungu',
         'sold_deleted_date_label': 'Itariki Byagurishijwe/Byasibwe',
 
-
         // Inventory (Sold/Restored/Deleted)
         'sold_products_title': 'Ibicuruzwa Byagurishijwe',
         'sold_products_desc': 'Reba kandi ucunge ibicuruzwa byagurishijwe',
@@ -848,25 +867,6 @@ const translations: Translations = {
         'restored_products': 'Ibicuruzwa Byasubijwe',
         'restored_products_desc': 'Reba kandi ugurishe ibicuruzwa byasubijwe',
         'deleted_products_title': 'Ibicuruzwa Byasibwe (Trash)',
-        'no_deleted_products_found': 'Nta bicuruzwa byasibwe byabonetse.',
-        'deleted_product_details': 'Ibiranga Igicuruzwa Cyasibwe',
-        'restore_confirm_msg': 'Urashaka kugarura',
-        'restore_selected_products_q': 'Kugarura Ibicuruzwa Byahiswemo?',
-        'restore_selected_confirm_msg': 'Urashaka kugarura ibicuruzwa byahiswemo?',
-        'permanently_delete_product_q': 'Gusiba Igicuruzwa Burundu?',
-        'permanent_delete_warning': 'Urashaka gusiba burundu',
-        'no_sold_products_date': 'Nta bicuruzwa byagurishijwe kuri iyi tariki.',
-        'sold_product_details': 'Ibiranga Igicuruzwa Cyagurishijwe',
-        'restore_sold_product': 'Garura Igicuruzwa Cyagurishijwe',
-        'no_restored_products_date': 'Nta bicuruzwa byasubijwe kuri iyi tariki.',
-        'restored_product_details': 'Ibiranga Igicuruzwa Cyasubijwe',
-        'cost_price_base': 'Igiciro Cyaguze (Fatizo)',
-        'selling_price_base': 'Igiciro Cyagurishijwe (Fatizo)',
-        'sell_restored_product': 'Gurisha Igicuruzwa Cyasubijwe',
-        'available_restored_stock': 'Bihari mu bubiko bwasubijwe',
-        'quantity_sell': 'Ingano yo kugurisha',
-        'quantity_placeholder': 'Shyiramo ingano...',
-        'selling_price_placeholder': 'Shyiramo igiciro...',
         'deleted_products': 'Ibicuruzwa Byasibwe (Trash)',
         'deleted_products_desc': 'Reba kandi ucunge ibicuruzwa byasibwe',
         'weekly_income': 'Ayinjiye mu Cyumweru',
@@ -907,6 +907,25 @@ const translations: Translations = {
         'all_restored_products_admin': 'Ibicuruzwa byose byasubijwe mu mashami yose',
         'deleted_products_from': 'Ibicuruzwa byasibwe muri',
         'all_deleted_products_admin': 'Ibicuruzwa byose byasibwe mu mashami yose',
+        'no_deleted_products_found': 'Nta bicuruzwa byasibwe byabonetse.',
+        'deleted_product_details': 'Ibiranga Igicuruzwa Cyasibwe',
+        'restore_confirm_msg': 'Urashaka kugarura',
+        'restore_selected_products_q': 'Kugarura Ibicuruzwa Byahiswemo?',
+        'restore_selected_confirm_msg': 'Urashaka kugarura ibicuruzwa byahiswemo?',
+        'permanently_delete_product_q': 'Gusiba Igicuruzwa Burundu?',
+        'permanent_delete_warning': 'Urashaka gusiba burundu',
+        'no_sold_products_date': 'Nta bicuruzwa byagurishijwe kuri iyi tariki.',
+        'sold_product_details': 'Ibiranga Igicuruzwa Cyagurishijwe',
+        'restore_sold_product': 'Garura Igicuruzwa Cyagurishijwe',
+        'no_restored_products_date': 'Nta bicuruzwa byasubijwe kuri iyi tariki.',
+        'restored_product_details': 'Ibiranga Igicuruzwa Cyasubijwe',
+        'cost_price_base': 'Igiciro Cyaguze (Fatizo)',
+        'selling_price_base': 'Igiciro Cyagurishijwe (Fatizo)',
+        'sell_restored_product': 'Gurisha Igicuruzwa Cyasubijwe',
+        'available_restored_stock': 'Bihari mu bubiko bwasubijwe',
+        'quantity_sell': 'Ingano yo kugurisha',
+        'quantity_placeholder': 'Shyiramo ingano...',
+        'selling_price_placeholder': 'Shyiramo igiciro...',
 
         // Admin (Employees/Branches)
         'manage_employees_title': 'Cunga Abakozi',
@@ -991,10 +1010,6 @@ const translations: Translations = {
         'theme': 'Insanganyamatsiko',
         'english': 'Icyongereza',
         'kinyarwanda': 'Ikinyarwanda',
-        'user_not_found_create': 'Konti ntiyabonetse. Fungura konti nshya ku buntu.',
-        'invalid_credentials': 'Imeri cyangwa ijambo ry\'ibanga siko biri.',
-        'business_inactive_error': 'Business yanyu ntirakora. Tegereza admin abayemere.',
-        'user_inactive_error': 'Konti yanyu ntirakora. Tegereza admin wanyu abayemere.',
         'access_denied': 'Ntimwemerewe kwinjira',
         'checking_details': 'Biragenzurwa...',
     }

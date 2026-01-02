@@ -4,13 +4,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Mail,
-  Lock,
   Eye,
   EyeOff,
   Loader2,
-  AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Info,
+  CheckCircle,
 } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
@@ -19,84 +18,135 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import PWAInstallButton from '@/components/PWAInstallButton';
 import SEOHelmet from '@/components/SEOHelmet';
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+type LoginFormData = {
+  email: string;
+  password: string;
+};
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
 
-  const { login, loginWithGoogle, user, isAuthenticated, logout, errorMessage, clearError, loading } = useAuth();
+  const {
+    login,
+    loginWithGoogle,
+    user,
+    isAuthenticated,
+    logout,
+    errorMessage,
+    clearError,
+    loading: authLoading,
+  } = useAuth();
+
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const loginSchema = z.object({
+    email: z
+      .string()
+      .min(1, t('invalid_email') || 'Email is required')
+      .email(t('invalid_email') || 'Please enter a valid email address'),
+    password: z
+      .string()
+      .min(6, t('password_min_length') || 'Password must be at least 6 characters'),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated and active
   useEffect(() => {
-    if (!loading && isAuthenticated && user) {
+    if (!authLoading && isAuthenticated && user) {
       if (user.businessActive === false) {
-        setLoginError().then(() => 'Your business is not active. Please wait for central admin to approve your business.');
         logout();
-        setIsLoading(false);
-        setIsGoogleLoading(false);
         return;
       }
-
-      if (!user.isActive) {
-        setLoginError('Your account is not active. Please wait for business admin to approve your account.');
+      if (user.isActive === false) {
         logout();
-        setIsLoading(false);
-        setIsGoogleLoading(false);
         return;
       }
-
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, user, navigate, logout, loading]);
+  }, [isAuthenticated, user, authLoading, navigate, logout]);
+
+  // Determine which message to show and its type
+  const getCurrentErrorMessage = () => {
+    if (!errorMessage) return null;
+
+    const translated = t(errorMessage);
+
+    // Special case: user not found → informative suggestion to register
+    if (errorMessage === 'user_not_found_create') {
+      return {
+        message: translated,
+        variant: 'default' as const,
+        icon: Info,
+        title: t('dont_have_account') || "Don't have an account?",
+      };
+    }
+
+    // Critical errors (inactive account/business, wrong password, etc.)
+    return {
+      message: translated,
+      variant: 'destructive' as const,
+      icon: AlertTriangle,
+      title: t('error') || 'Error',
+    };
+  };
+
+  const currentError = getCurrentErrorMessage();
 
   const handleEmailLogin = async (data: LoginFormData) => {
     setIsLoading(true);
-    setLoginError(null);
+    clearError(); // Clear any previous error
     toast.dismiss();
 
-    const success = await login(data.email.trim(), data.password);
+    const success = await login(data.email.trim().toLowerCase(), data.password);
 
     if (!success) {
-      setLoginError(t(errorMessage || 'error'));
-      clearError();
-      setIsLoading(false);
+      const errorInfo = getCurrentErrorMessage();
+      if (errorInfo) {
+        // Show toast for feedback
+        if (errorInfo.variant === 'destructive') {
+          toast.error(errorInfo.message);
+        } else {
+          toast.info(errorInfo.message);
+        }
+      }
     } else {
-      toast.success(t('success'));
+      toast.success(t('success') || 'Welcome back!');
     }
+
+    setIsLoading(false);
   };
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
-    setLoginError(null);
+    clearError();
     toast.dismiss();
 
     const success = await loginWithGoogle();
 
     if (!success) {
-      setLoginError(t(errorMessage || 'error'));
-      clearError();
-      setIsGoogleLoading(false);
+      const errorInfo = getCurrentErrorMessage();
+      if (errorInfo) {
+        toast.error(errorInfo.message);
+      }
     } else {
-      toast.success(t('success'));
+      toast.success(t('success') || 'Signed in with Google!');
     }
+
+    setIsGoogleLoading(false);
   };
 
   return (
@@ -112,11 +162,32 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {loginError && (
-          <Alert variant="destructive" className="bg-red-50 border-red-200 rounded-2xl">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-red-700">
-              {loginError}
+        {/* Prominent Alert for important messages */}
+        {currentError && (
+          <Alert
+            variant={currentError.variant}
+            className={`
+              rounded-2xl border-2
+              ${currentError.variant === 'default'
+                ? 'bg-blue-50/80 border-blue-300 dark:bg-blue-950/50 dark:border-blue-800'
+                : 'bg-red-50/80 border-red-300 dark:bg-red-950/50 dark:border-red-800'
+              }
+            `}
+          >
+            <currentError.icon className="h-5 w-5" />
+            <AlertTitle className="text-lg font-semibold">
+              {currentError.title}
+            </AlertTitle>
+            <AlertDescription className="text-base mt-1">
+              {currentError.message}
+              {currentError.variant === 'default' && (
+                <Link
+                  to="/register"
+                  className="ml-2 font-bold underline hover:text-blue-700 dark:hover:text-blue-300"
+                >
+                  {t('sign_up_link')}
+                </Link>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -124,7 +195,10 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(handleEmailLogin)} className="space-y-5">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label
+                htmlFor="email"
+                className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1"
+              >
                 {t('email_label')}
               </Label>
               <div className="relative">
@@ -132,6 +206,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder={t('email_placeholder')}
+                  autoComplete="email"
                   className="pl-4 h-12 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-2xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...register('email')}
                 />
@@ -142,7 +217,10 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label
+                htmlFor="password"
+                className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1"
+              >
                 {t('password_label')}
               </Label>
               <div className="relative">
@@ -150,6 +228,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder={t('password_placeholder')}
+                  autoComplete="current-password"
                   className="pl-4 pr-10 h-12 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-2xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...register('password')}
                 />
@@ -194,7 +273,9 @@ export default function LoginPage() {
                 <div className="w-full border-t border-slate-200 dark:border-slate-800" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#F8F7F2] dark:bg-slate-950 px-2 text-slate-400 font-medium">{t('or_divider')}</span>
+                <span className="bg-[#F8F7F2] dark:bg-slate-950 px-2 text-slate-400 font-medium">
+                  {t('or_divider')}
+                </span>
               </div>
             </div>
 
@@ -234,7 +315,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <PWAInstallButton variant="secondary" className="bg-transparent hover:bg-slate-200 text-slate-500 w-full rounded-xl" />
+        <PWAInstallButton
+          variant="secondary"
+          className="bg-transparent hover:bg-slate-200 text-slate-500 w-full rounded-xl"
+        />
       </div>
     </AuthLayout>
   );

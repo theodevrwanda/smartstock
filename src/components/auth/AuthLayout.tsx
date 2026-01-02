@@ -64,11 +64,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           {/* Logo Badge & Settings */}
           <div className="absolute top-8 right-8 lg:top-12 lg:right-12 flex items-center gap-2 z-50">
             <AuthSettings />
-            <div className="flex items-center gap-2 group cursor-pointer">
-              <div className="px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-colors">
-                SmartStock
-              </div>
-            </div>
           </div>
 
           <motion.div
