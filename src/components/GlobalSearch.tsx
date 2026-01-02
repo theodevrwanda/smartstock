@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useSearch } from '@/contexts/SearchContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const GlobalSearch: React.FC = () => {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const { searchQuery, setSearchQuery, searchResults, isSearching, clearSearch } = useSearch();
   const navigate = useNavigate();
@@ -50,7 +52,7 @@ const GlobalSearch: React.FC = () => {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
         <Input
-          placeholder="Search any page"
+          placeholder={t('search_placeholder')}
           className="pl-10 pr-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
           value={searchQuery}
           onChange={(e) => {
@@ -81,7 +83,7 @@ const GlobalSearch: React.FC = () => {
             {isSearching && (
               <div className="flex items-center justify-center py-4">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="ml-2 text-sm text-gray-600">Searching...</span>
+                <span className="ml-2 text-sm text-gray-600">{t('loading')}</span>
               </div>
             )}
 

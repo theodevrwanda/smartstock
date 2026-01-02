@@ -12,6 +12,7 @@ import SEOHelmet from '@/components/SEOHelmet';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getDashboardStats } from '@/functions/dashboard';
 import { DashboardStats } from '@/types/interface';
 import {
@@ -33,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 const DashboardPage: React.FC = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -105,17 +107,17 @@ const DashboardPage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Dashboard - SmartStock" description="Inventory Management" />
+      <SEOHelmet title={`${t('dashboard_title')} - SmartStock`} description="Inventory Management" />
 
       <div className="min-h-screen bg-background p-6 md:p-8 space-y-8 transition-colors duration-300">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-              Inventory Console <Zap className="h-6 w-6 text-primary" />
+              {t('inventory_console')} <Zap className="h-6 w-6 text-primary" />
             </h1>
             <p className="text-muted-foreground mt-1 font-medium text-sm">
-              Real-time Stock Value & Profit Analytics
+              {t('real_time_analytics')}
             </p>
           </div>
           <div className="flex items-center gap-3 bg-secondary p-3 rounded-2xl shadow-sm border border-border">
@@ -123,8 +125,8 @@ const DashboardPage: React.FC = () => {
               <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
             <div className="pr-2">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">System Status</p>
-              <p className="text-sm font-bold text-primary">Live Connection</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{t('system_status')}</p>
+              <p className="text-sm font-bold text-primary">{t('live_connection')}</p>
             </div>
           </div>
         </div>
@@ -133,7 +135,7 @@ const DashboardPage: React.FC = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
             <CalendarIcon size={14} className="text-muted-foreground" />
-            <span className="text-muted-foreground">Dashboard context:</span>
+            <span className="text-muted-foreground">{t('dashboard_context')}</span>
             <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
         </div>
@@ -143,7 +145,7 @@ const DashboardPage: React.FC = () => {
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">
-                Weekly Stock Value
+                {t('weekly_stock_value')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -164,7 +166,7 @@ const DashboardPage: React.FC = () => {
           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">
-                Monthly Stock Value
+                {t('monthly_stock_value')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -186,10 +188,10 @@ const DashboardPage: React.FC = () => {
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
                 <Award size={14} className="text-orange-500" />
-                Yearly Stock Value
+                {t('yearly_stock_value')}
               </CardTitle>
               <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')} Yearly
+                {format(selectedDate, 'yyyy')} {t('yearly_activity')}
               </Badge>
             </CardHeader>
             <CardContent>
@@ -228,7 +230,7 @@ const DashboardPage: React.FC = () => {
               >
                 {isToday && !isSelected && (
                   <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    Today
+                    {t('today')}
                   </div>
                 )}
                 <div className="flex flex-col items-center text-center gap-2">
@@ -260,9 +262,9 @@ const DashboardPage: React.FC = () => {
 
         {/* Primary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <BigProCard title="Total Products" value={stats.totalProducts} subtitle="All products" icon={<Package />} color="indigo" />
-          <BigProCard title="Categories" value={stats.totalCategories} subtitle="Unique categories" icon={<Layers />} color="blue" />
-          <BigProCard title="Models" value={stats.totalModels} subtitle="Unique models" icon={<Box />} color="violet" />
+          <BigProCard title={t('total_products')} value={stats.totalProducts} subtitle={t('all_products')} icon={<Package />} color="indigo" />
+          <BigProCard title={t('categories')} value={stats.totalCategories} subtitle={t('unique_categories')} icon={<Layers />} color="blue" />
+          <BigProCard title={t('models')} value={stats.totalModels} subtitle={t('unique_models')} icon={<Box />} color="violet" />
         </div>
 
         {/* Financial Cards - Updated subtitles to reflect correct calculation method */}
@@ -292,33 +294,33 @@ const DashboardPage: React.FC = () => {
 
         {/* Secondary Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          <SmallProCard title="Added Today" value={stats.productsAddedToday} subtitle="New today" icon={<PlusCircle className="text-emerald-600" />} highlight />
-          <SmallProCard title="Added This Week" value={stats.productsAddedThisWeek} subtitle="This week" icon={<TrendingUp className="text-gray-900 dark:text-gray-100" />} />
-          <SmallProCard title="Added This Month" value={stats.productsAddedThisMonth} subtitle="This month" icon={<TrendingUp className="text-violet-600" />} />
-          <SmallProCard title="Updated Today" value={stats.productsUpdatedToday} subtitle="Updated today" icon={<RefreshCw className="text-orange-600" />} />
+          <SmallProCard title={t('added_today')} value={stats.productsAddedToday} subtitle={t('new_today')} icon={<PlusCircle className="text-emerald-600" />} highlight />
+          <SmallProCard title={t('added_this_week')} value={stats.productsAddedThisWeek} subtitle={t('this_week')} icon={<TrendingUp className="text-gray-900 dark:text-gray-100" />} />
+          <SmallProCard title={t('added_this_month')} value={stats.productsAddedThisMonth} subtitle={t('this_month')} icon={<TrendingUp className="text-violet-600" />} />
+          <SmallProCard title={t('updated_today')} value={stats.productsUpdatedToday} subtitle={t('updated_at')} icon={<RefreshCw className="text-orange-600" />} />
 
-          <SmallProCard title="Never Updated" value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
-          <SmallProCard title="In Stock" value={stats.activeProducts} subtitle="Confirmed stock" icon={<CheckCircle className="text-emerald-600" />} />
+          <SmallProCard title={t('never_updated')} value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
+          <SmallProCard title={t('in_stock')} value={stats.activeProducts} subtitle="Confirmed stock" icon={<CheckCircle className="text-emerald-600" />} />
           <SmallProCard
-            title="Pending Actions"
+            title={t('pending_actions')}
             value={stats.pendingConfirmationCount}
             subtitle="Awaiting approval"
             icon={<Hourglass className="text-amber-600" />}
             danger={stats.pendingConfirmationCount > 0}
           />
-          <SmallProCard title="Sold" value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-600" />} />
+          <SmallProCard title={t('sold')} value={stats.soldProducts} subtitle="Total sold" icon={<TrendingUp className="text-emerald-600" />} />
 
-          <SmallProCard title="Restored" value={stats.restoredProducts} subtitle="Returned" icon={<Archive className="text-indigo-600" />} />
-          <SmallProCard title="Deleted" value={stats.deletedProducts} subtitle="In trash" icon={<XCircle className="text-rose-600" />} />
-          <SmallProCard title="Low Stock" value={stats.lowStockProducts} subtitle="≤10 units" icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
-          <SmallProCard title="Out of Stock" value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
-          <SmallProCard title="Avg Stock" value={stats.averageStockPerProduct.toFixed(1)} subtitle="Per product" icon={<Package className="text-cyan-600" />} />
+          <SmallProCard title={t('restored')} value={stats.restoredProducts} subtitle="Returned" icon={<Archive className="text-indigo-600" />} />
+          <SmallProCard title={t('deleted')} value={stats.deletedProducts} subtitle="In trash" icon={<XCircle className="text-rose-600" />} />
+          <SmallProCard title={t('low_stock')} value={stats.lowStockProducts} subtitle="≤10 units" icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
+          <SmallProCard title={t('out_of_stock')} value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
+          <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle="Per product" icon={<Package className="text-cyan-600" />} />
         </div>
 
         {/* Stock Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <HighlightCard
-            type="MOST STOCKED PRODUCT"
+            type={t('most_stocked')}
             name={stats.mostStockedProduct.name}
             quantity={stats.mostStockedProduct.quantity}
             value={stats.mostStockedProduct.value}
@@ -326,7 +328,7 @@ const DashboardPage: React.FC = () => {
             color="emerald"
           />
           <HighlightCard
-            type="LEAST STOCKED PRODUCT"
+            type={t('least_stocked')}
             name={stats.leastStockedProduct.name}
             quantity={stats.leastStockedProduct.quantity}
             value={stats.leastStockedProduct.value}

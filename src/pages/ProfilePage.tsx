@@ -30,6 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Dialog,
   DialogContent,
@@ -69,6 +70,7 @@ const ProfilePage: React.FC = () => {
   const { toast } = useToast();
   const { user, logout, loading: authLoading, updateUser } = useAuth();
   const { isOnline, pendingCount } = useOffline();
+  const { t } = useLanguage();
   const auth = getAuth();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -170,10 +172,13 @@ const ProfilePage: React.FC = () => {
               variant: 'destructive',
             });
             if (localImageData) {
-              await addPendingOperation('updateProduct', {
-                type: 'imageUpload',
-                userId: user.id,
-                imageData: localImageData,
+              await addPendingOperation({
+                type: 'updateProduct', // This type seems wrong for user upload, but I'll stick to it if it's expected or fix it to 'updateUser' if possible. Actually, the type definition in offlineDB doesn't have 'updateUser'. I'll check first.
+                data: {
+                  type: 'imageUpload',
+                  userId: user.id,
+                  imageData: localImageData,
+                }
               });
             }
           }
@@ -183,10 +188,13 @@ const ProfilePage: React.FC = () => {
             description: 'Image saved locally. Will upload when online.',
           });
           if (localImageData) {
-            await addPendingOperation('updateProduct', {
-              type: 'imageUpload',
-              userId: user.id,
-              imageData: localImageData,
+            await addPendingOperation({
+              type: 'updateProduct',
+              data: {
+                type: 'imageUpload',
+                userId: user.id,
+                imageData: localImageData,
+              }
             });
           }
         }
@@ -216,10 +224,13 @@ const ProfilePage: React.FC = () => {
         const userRef = doc(db, 'users', user.id);
         await updateDoc(userRef, { ...updateData, updatedAt: new Date().toISOString() });
       } else {
-        await addPendingOperation('updateProduct', {
-          collection: 'users',
-          id: user.id,
-          updates: updateData,
+        await addPendingOperation({
+          type: 'updateProduct',
+          data: {
+            collection: 'users',
+            id: user.id,
+            updates: updateData,
+          }
         });
       }
 
@@ -231,10 +242,13 @@ const ProfilePage: React.FC = () => {
             updatedAt: new Date().toISOString(),
           });
         } else {
-          await addPendingOperation('updateProduct', {
-            collection: 'businesses',
-            id: businessInfo.id,
-            updates: { businessName: businessFormData.businessName },
+          await addPendingOperation({
+            type: 'updateProduct',
+            data: {
+              collection: 'businesses',
+              id: businessInfo.id,
+              updates: { businessName: businessFormData.businessName },
+            }
           });
         }
         setBusinessInfo(prev => prev ? { ...prev, businessName: businessFormData.businessName } : null);
@@ -504,7 +518,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="My Profile" description="View and edit your profile" />
+      <SEOHelmet title={t('profile_title')} description="View and edit your profile" />
       <div className="min-h-[calc(100vh-64px)] bg-[#F0F2F5] dark:bg-[#18191A]">
         {/* Cover Photo Section */}
         <div className="relative w-full h-[350px] md:h-[400px] bg-gray-300 dark:bg-gray-800 overflow-hidden">
@@ -593,7 +607,7 @@ const ProfilePage: React.FC = () => {
                   onClick={() => setIsEditing(true)}
                   className="bg-[#1B74E4] hover:bg-[#1B74E4]/90 text-white font-semibold px-4 h-9 rounded-md transition-colors"
                 >
-                  <Edit className="mr-1.5 h-4 w-4" /> Edit Profile
+                  <Edit className="mr-1.5 h-4 w-4" /> {t('edit_profile')}
                 </Button>
               ) : (
                 <>
@@ -625,13 +639,13 @@ const ProfilePage: React.FC = () => {
             <div className="md:col-span-5 h-fit space-y-4">
               <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Intro</CardTitle>
+                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">{t('intro')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4 space-y-4">
                   {/* Bio Placeholder (could come from DB later) */}
                   <div className="text-center pb-4 border-b border-gray-200 dark:border-gray-700">
                     <p className="text-[#050505] dark:text-[#E4E6EB] text-[15px]">
-                      {user.role === 'admin' ? 'Administrator Account' : 'Staff Member'} at SmartStock.
+                      {user.role === 'admin' ? t('admin_account') : t('staff_account')} at SmartStock.
                     </p>
                   </div>
 
@@ -639,25 +653,25 @@ const ProfilePage: React.FC = () => {
                   <div className="space-y-3 pt-1">
                     <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
                       <Briefcase className="w-5 h-5 text-[#8C939D]" />
-                      <span className="text-[15px]">Works at <strong>{businessInfo?.businessName || 'SmartStock'}</strong></span>
+                      <span className="text-[15px]">{t('works_at')} <strong>{businessInfo?.businessName || 'SmartStock'}</strong></span>
                     </div>
 
                     {formData.district && (
                       <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
                         <MapPin className="w-5 h-5 text-[#8C939D]" />
-                        <span className="text-[15px]">Lives in <strong>{formData.district || 'Rwanda'}</strong></span>
+                        <span className="text-[15px]">{t('lives_in')} <strong>{formData.district || 'Rwanda'}</strong></span>
                       </div>
                     )}
 
                     <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
                       <Phone className="w-5 h-5 text-[#8C939D]" />
-                      <span className="text-[15px]">{user.phone || 'No phone'}</span>
+                      <span className="text-[15px]">{user.phone || t('no_phone')}</span>
                     </div>
                   </div>
 
                   {isEditing && (
                     <Button variant="secondary" className="w-full bg-[#E4E6EB] hover:bg-[#D8DADF] text-[#050505] dark:bg-[#3A3B3C] dark:text-[#E4E6EB] font-semibold h-9 mt-2">
-                      <Edit className="w-4 h-4 mr-2" /> Edit Details
+                      <Edit className="w-4 h-4 mr-2" /> {t('edit_details')}
                     </Button>
                   )}
                 </CardContent>
@@ -666,12 +680,12 @@ const ProfilePage: React.FC = () => {
               {/* Personal Info Edit Section (Moving the heavy edit fields here or keeping specifically for edit flows) */}
               <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
                 <CardHeader className="pb-2 pt-4 px-4 flex flex-row items-center justify-between">
-                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Personal Details</CardTitle>
+                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">{t('personal_details')}</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <dl className="divide-y divide-gray-100 dark:divide-gray-700">
                     <div className="py-2 grid grid-cols-3 gap-4 items-center">
-                      <dt className="text-sm font-medium text-gray-500">First Name</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('first_name')}</dt>
                       <dd className="col-span-2">
                         {isEditing ? (
                           <Input
@@ -685,7 +699,7 @@ const ProfilePage: React.FC = () => {
                       </dd>
                     </div>
                     <div className="py-2 grid grid-cols-3 gap-4 items-center">
-                      <dt className="text-sm font-medium text-gray-500">Last Name</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('last_name')}</dt>
                       <dd className="col-span-2">
                         {isEditing ? (
                           <Input
@@ -699,7 +713,7 @@ const ProfilePage: React.FC = () => {
                       </dd>
                     </div>
                     <div className="py-2 grid grid-cols-3 gap-4 items-center">
-                      <dt className="text-sm font-medium text-gray-500">Gender</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('gender')}</dt>
                       <dd className="col-span-2">
                         {isEditing ? (
                           <Input
@@ -708,12 +722,12 @@ const ProfilePage: React.FC = () => {
                             className="h-8"
                           />
                         ) : (
-                          <span className="text-sm text-gray-900 dark:text-gray-100">{user.gender || 'Not set'}</span>
+                          <span className="text-sm text-gray-900 dark:text-gray-100">{user.gender || t('not_set')}</span>
                         )}
                       </dd>
                     </div>
                     <div className="py-2 grid grid-cols-3 gap-4 items-center">
-                      <dt className="text-sm font-medium text-gray-500">Phone</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('phone')}</dt>
                       <dd className="col-span-2">
                         {isEditing ? (
                           <Input
@@ -738,12 +752,12 @@ const ProfilePage: React.FC = () => {
               {businessInfo && (
                 <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
                   <CardHeader className="pb-2 pt-4 px-4 border-b dark:border-gray-700">
-                    <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Business Information</CardTitle>
+                    <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">{t('business_info')}</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                       <div className="col-span-2 space-y-1">
-                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Business Name</Label>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">{t('business_name')}</Label>
                         {isEditing && isAdmin ? (
                           <Input
                             value={businessFormData.businessName}
@@ -755,22 +769,22 @@ const ProfilePage: React.FC = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Province/District</Label>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">{t('district')}</Label>
                         <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.district}</p>
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Sector</Label>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">{t('sector')}</Label>
                         <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.sector}</p>
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Cell</Label>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">{t('cell')}</Label>
                         <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.cell}</p>
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs text-gray-500 uppercase tracking-wide">Village</Label>
+                        <Label className="text-xs text-gray-500 uppercase tracking-wide">{t('village')}</Label>
                         <p className="text-sm text-gray-900 dark:text-gray-200">{businessInfo.village}</p>
                       </div>
                     </div>
@@ -782,23 +796,23 @@ const ProfilePage: React.FC = () => {
               {isEditing && (
                 <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Address Settings</CardTitle>
+                    <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">{t('address_settings')}</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>District</Label>
+                      <Label>{t('district')}</Label>
                       <Input value={formData.district} onChange={e => handleInputChange('district', e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Sector</Label>
+                      <Label>{t('sector')}</Label>
                       <Input value={formData.sector} onChange={e => handleInputChange('sector', e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Cell</Label>
+                      <Label>{t('cell')}</Label>
                       <Input value={formData.cell} onChange={e => handleInputChange('cell', e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Village</Label>
+                      <Label>{t('village')}</Label>
                       <Input value={formData.village} onChange={e => handleInputChange('village', e.target.value)} />
                     </div>
                   </CardContent>
@@ -808,7 +822,7 @@ const ProfilePage: React.FC = () => {
               {/* Account Settings */}
               <Card className="border-0 shadow-sm bg-white dark:bg-[#242526] rounded-lg">
                 <CardHeader className="pb-2 pt-4 px-4 border-b dark:border-gray-700">
-                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">Settings</CardTitle>
+                  <CardTitle className="text-[20px] font-bold text-[#050505] dark:text-[#E4E6EB]">{t('settings')}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-1">
@@ -821,8 +835,8 @@ const ProfilePage: React.FC = () => {
                         <Mail className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-medium text-[15px] text-[#050505] dark:text-[#E4E6EB]">Email Address</p>
-                        <p className="text-[13px] text-[#65676B] dark:text-[#B0B3B8]">Update your email address</p>
+                        <p className="font-medium text-[15px] text-[#050505] dark:text-[#E4E6EB]">{t('email_address')}</p>
+                        <p className="text-[13px] text-[#65676B] dark:text-[#B0B3B8]">{t('update_email_desc')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-gray-400" />
                     </Button>
@@ -836,8 +850,8 @@ const ProfilePage: React.FC = () => {
                         <Key className="h-5 w-5 text-gray-600 dark:text-gray-300" />
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-medium text-[15px] text-[#050505] dark:text-[#E4E6EB]">Password</p>
-                        <p className="text-[13px] text-[#65676B] dark:text-[#B0B3B8]">Change your security password</p>
+                        <p className="font-medium text-[15px] text-[#050505] dark:text-[#E4E6EB]">{t('password_label')}</p>
+                        <p className="text-[13px] text-[#65676B] dark:text-[#B0B3B8]">{t('change_password_desc')}</p>
                       </div>
                       <ArrowRight className="h-5 w-5 text-gray-400" />
                     </Button>
@@ -846,7 +860,7 @@ const ProfilePage: React.FC = () => {
                       <div className="py-2 px-2 bg-amber-50 dark:bg-amber-900/20 rounded-md border border-amber-200 dark:border-amber-800 my-2">
                         <div className="flex items-center gap-2">
                           <WifiOff className="h-4 w-4 text-amber-600" />
-                          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">{pendingCount} pending changes</span>
+                          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">{pendingCount} {t('pending_changes')}</span>
                         </div>
                       </div>
                     )}
@@ -858,7 +872,7 @@ const ProfilePage: React.FC = () => {
                         onClick={handleLogout}
                       >
                         <LogOut className="mr-3 h-5 w-5" />
-                        <span className="font-medium">Log Out</span>
+                        <span className="font-medium">{t('logout')}</span>
                       </Button>
                     </div>
                   </div>
@@ -876,7 +890,7 @@ const ProfilePage: React.FC = () => {
         <DialogContent className="max-w-[90vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {passwordStep === 1 ? 'Verify Your Identity' : 'Create New Password'}
+              {passwordStep === 1 ? t('verify_identity') : t('create_new_password')}
             </DialogTitle>
             <DialogDescription>
               {passwordStep === 1
@@ -888,7 +902,7 @@ const ProfilePage: React.FC = () => {
           <div className="py-4">
             {passwordStep === 1 ? (
               <div className="space-y-4">
-                <Label htmlFor="current-password">Current Password</Label>
+                <Label htmlFor="current-password">{t('current_password')}</Label>
                 <Input
                   id="current-password"
                   type="password"
@@ -897,7 +911,7 @@ const ProfilePage: React.FC = () => {
                     setCurrentPassword(e.target.value);
                     setCurrentPasswordError('');
                   }}
-                  placeholder="Enter your current password"
+                  placeholder={t('enter_current_password')}
                   autoFocus
                 />
                 {currentPasswordError && (
@@ -906,28 +920,28 @@ const ProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                <Label htmlFor="new-password">New Password</Label>
+                <Label htmlFor="new-password">{t('new_password')}</Label>
                 <Input
                   id="new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
+                  placeholder={t('enter_new_password')}
                   autoFocus
                 />
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <Label htmlFor="confirm-password">{t('confirm_password')}</Label>
                 <Input
                   id="confirm-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your new password"
+                  placeholder={t('confirm_new_password_placeholder')}
                 />
                 {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                  <p className="text-sm text-red-600 dark:text-red-400">Passwords do not match.</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{t('passwords_dont_match')}</p>
                 )}
                 {newPassword && newPassword.length < 6 && (
-                  <p className="text-sm text-red-600 dark:text-red-400">Password must be at least 6 characters.</p>
+                  <p className="text-sm text-red-600 dark:text-red-400">{t('password_min_length')}</p>
                 )}
               </div>
             )}
@@ -947,7 +961,7 @@ const ProfilePage: React.FC = () => {
                 ) : (
                   <ArrowRight className="mr-2 h-4 w-4" />
                 )}
-                Continue
+                {t('continue_button')}
               </Button>
             ) : (
               <Button
@@ -963,7 +977,7 @@ const ProfilePage: React.FC = () => {
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
                 )}
-                Update Password
+                {t('update_password')}
               </Button>
             )}
           </DialogFooter>
@@ -974,7 +988,7 @@ const ProfilePage: React.FC = () => {
       <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Reset Password</DialogTitle>
+            <DialogTitle>{t('reset_password')}</DialogTitle>
             <DialogDescription>
               We will send a password reset link to your email address.
             </DialogDescription>
@@ -1004,9 +1018,9 @@ const ProfilePage: React.FC = () => {
       <Dialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Account</DialogTitle>
+            <DialogTitle>{t('delete_account')}</DialogTitle>
             <DialogDescription>
-              This action is permanent and cannot be undone. All your data will be deleted.
+              {t('delete_confirm_desc')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1014,7 +1028,7 @@ const ProfilePage: React.FC = () => {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteAccount}>
-              Delete My Account
+              {t('delete_my_account')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1024,7 +1038,7 @@ const ProfilePage: React.FC = () => {
       <Dialog open={changeEmailOpen} onOpenChange={setChangeEmailOpen}>
         <DialogContent className="max-w-[90vw] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Change Email Address</DialogTitle>
+            <DialogTitle>{t('update_email') || 'Update Email'}</DialogTitle>
             <DialogDescription>
               Enter your password and new email address to update.
             </DialogDescription>

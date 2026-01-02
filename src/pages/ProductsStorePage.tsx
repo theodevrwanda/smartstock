@@ -60,6 +60,7 @@ import {
   getDay,
 } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import {
   getProducts,
@@ -95,6 +96,7 @@ const MIXED_SHOP_CATEGORIES = [
 
 const ProductsStorePage: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const userBranch = typeof user?.branch === 'string' ? user.branch : null;
   const businessId = user?.businessId;
@@ -652,12 +654,12 @@ const ProductsStorePage: React.FC = () => {
 
   return (
     <>
-      <SEOHelmet title="Store Products" description="Manage store inventory" />
+      <SEOHelmet title={t('products_store')} description="Manage store inventory" />
 
       <div className="space-y-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 min-h-[calc(100vh-64px)]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Store Products</h1>
+            <h1 className="text-3xl font-bold">{t('products_store')}</h1>
             <p className="text-muted-foreground">
               {isAdmin ? 'All branches' : (canAddProduct ? `Products in ${currentBranchName}` : 'No branch assigned')}
             </p>
@@ -667,14 +669,14 @@ const ProductsStorePage: React.FC = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className={selectedDate ? 'border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100' : ''}>
                   <CalendarDays className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
+                  {selectedDate ? format(selectedDate, 'PPP') : t('pick_date') || 'Pick a date'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
                 {selectedDate && (
                   <div className="p-2 border-t">
-                    <Button variant="ghost" className="w-full text-xs" onClick={() => setSelectedDate(undefined)}>Clear Date</Button>
+                    <Button variant="ghost" className="w-full text-xs" onClick={() => setSelectedDate(undefined)}>{t('clear_date') || 'Clear Date'}</Button>
                   </div>
                 )}
               </PopoverContent>
@@ -684,7 +686,7 @@ const ProductsStorePage: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Download className="mr-2 h-4 w-4" />
-                  Export
+                  {t('export')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
@@ -700,7 +702,7 @@ const ProductsStorePage: React.FC = () => {
             {(isAdmin || canAddProduct) && (
               <Button onClick={() => setAddDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
+                {t('add_product')}
               </Button>
             )}
           </div>
@@ -710,7 +712,7 @@ const ProductsStorePage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">Weekly Investment</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_stats')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -727,7 +729,7 @@ const ProductsStorePage: React.FC = () => {
 
           <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">Monthly Investment</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_stats')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
@@ -850,22 +852,22 @@ const ProductsStorePage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder="Min Value" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-            <Input type="number" placeholder="Max Value" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+            <Input type="number" placeholder={t('min_value')} value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+            <Input type="number" placeholder={t('max_value')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder="Min Qty" value={minQty} onChange={e => setMinQty(e.target.value)} />
-            <Input type="number" placeholder="Max Qty" value={maxQty} onChange={e => setMaxQty(e.target.value)} />
+            <Input type="number" placeholder={t('min_qty')} value={minQty} onChange={e => setMinQty(e.target.value)} />
+            <Input type="number" placeholder={t('max_qty')} value={maxQty} onChange={e => setMaxQty(e.target.value)} />
           </div>
 
           {canConfirm && (
             <Select value={confirmFilter} onValueChange={setConfirmFilter}>
-              <SelectTrigger><SelectValue placeholder="Confirmation" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('confirmation')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Confirmed">Confirmed Only</SelectItem>
-                <SelectItem value="Unconfirmed">Unconfirmed Only</SelectItem>
+                <SelectItem value="All">{t('all')}</SelectItem>
+                <SelectItem value="Confirmed">{t('confirmed_only')}</SelectItem>
+                <SelectItem value="Unconfirmed">{t('unconfirmed_only')}</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -876,21 +878,21 @@ const ProductsStorePage: React.FC = () => {
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[50px]">#</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('productName')}>
-                  <div className="flex items-center gap-1">Name <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('product_name')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('category')}>
-                  <div className="flex items-center gap-1">Category <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1">{t('category_label')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead className="text-center">Quantity</TableHead>
-                {isAdmin && <TableHead>Branch</TableHead>}
-                <TableHead>Unit Cost</TableHead>
+                <TableHead>{t('model_label')}</TableHead>
+                <TableHead className="text-center">{t('quantity_label')}</TableHead>
+                {isAdmin && <TableHead>{t('branch')}</TableHead>}
+                <TableHead>{t('cost_price')}</TableHead>
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort('costPrice')}>
-                  <div className="flex items-center gap-1 justify-end">Total Value <ArrowUpDown className="h-4 w-4" /></div>
+                  <div className="flex items-center gap-1 justify-end">{t('total_value')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
-                <TableHead>Added Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('added_date')}</TableHead>
+                <TableHead>{t('status_label')}</TableHead>
+                <TableHead className="text-right">{t('actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1139,7 +1141,7 @@ const ProductsStorePage: React.FC = () => {
                             }}
                           >
                             <ShoppingCart className="mr-2 h-3.5 w-3.5" />
-                            Sell
+                            {t('sell')}
                           </Button>
                         </div>
                       </div>
@@ -1155,16 +1157,16 @@ const ProductsStorePage: React.FC = () => {
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New Product</DialogTitle>
+              <DialogTitle>{t('add_new_product')}</DialogTitle>
               <DialogDescription>
-                {isAdmin ? 'Auto-confirmed' : 'Requires admin confirmation'}
+                {isAdmin ? t('auto_confirmed') : t('requires_admin_confirm')}
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
               <div className="space-y-4">
                 <div className="grid gap-2">
-                  <Label>Product Name *</Label>
+                  <Label>{t('product_name')} *</Label>
                   <Input
                     value={newProduct.productName}
                     onChange={e => setNewProduct(p => ({ ...p, productName: e.target.value }))}
@@ -1173,16 +1175,16 @@ const ProductsStorePage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label>Category *</Label>
+                    <Label>{t('category_label')} *</Label>
                     <Select value={newProduct.category} onValueChange={(val) => setNewProduct(p => ({ ...p, category: val }))}>
-                      <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('category_label')} /></SelectTrigger>
                       <SelectContent>
                         {MIXED_SHOP_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Model (optional)</Label>
+                    <Label>{t('model_label')} ({t('optional') || 'optional'})</Label>
                     <Input value={newProduct.model} onChange={e => setNewProduct(p => ({ ...p, model: e.target.value }))} placeholder="e.g. kigori" />
                   </div>
                 </div>
@@ -1197,24 +1199,24 @@ const ProductsStorePage: React.FC = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Unit *</Label>
+                    <Label>{t('unit')} *</Label>
                     <Select value={newProduct.unit} onValueChange={(val) => setNewProduct(p => ({ ...p, unit: val }))}>
-                      <SelectTrigger><SelectValue placeholder="Unit" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('unit')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pcs">Pieces (pcs)</SelectItem>
-                        <SelectItem value="bag">Bag</SelectItem>
-                        <SelectItem value="crate">Crate</SelectItem>
-                        <SelectItem value="liter">Liter</SelectItem>
-                        <SelectItem value="kg">Kilograms (kg)</SelectItem>
-                        <SelectItem value="sack">Sack</SelectItem>
-                        <SelectItem value="bottle">Bottle</SelectItem>
-                        <SelectItem value="pack">Pack</SelectItem>
+                        <SelectItem value="pcs">{t('pieces')}</SelectItem>
+                        <SelectItem value="bag">{t('bag')}</SelectItem>
+                        <SelectItem value="crate">{t('crate')}</SelectItem>
+                        <SelectItem value="liter">{t('liter')}</SelectItem>
+                        <SelectItem value="kg">{t('kilograms')}</SelectItem>
+                        <SelectItem value="sack">{t('sack')}</SelectItem>
+                        <SelectItem value="bottle">{t('bottle')}</SelectItem>
+                        <SelectItem value="pack">{t('pack')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Cost Configuration *</Label>
+                  <Label>{t('cost_configuration')} *</Label>
                   <div className="flex bg-muted p-1 rounded-lg">
                     <Button
                       type="button"
@@ -1222,7 +1224,7 @@ const ProductsStorePage: React.FC = () => {
                       className={`flex-1 text-xs h-8 ${newProduct.costType === 'costPerUnit' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
                       onClick={() => setNewProduct(p => ({ ...p, costType: 'costPerUnit' }))}
                     >
-                      Cost Per Unit
+                      {t('cost_per_unit')}
                     </Button>
                     <Button
                       type="button"
@@ -1230,12 +1232,12 @@ const ProductsStorePage: React.FC = () => {
                       className={`flex-1 text-xs h-8 ${newProduct.costType === 'bulkCost' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
                       onClick={() => setNewProduct(p => ({ ...p, costType: 'bulkCost' }))}
                     >
-                      Total Bulk Cost
+                      {t('total_bulk_cost')}
                     </Button>
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label>{newProduct.costType === 'costPerUnit' ? 'Cost Price per Unit *' : 'Total Cost Amount *'}</Label>
+                  <Label>{newProduct.costType === 'costPerUnit' ? t('cost_per_unit') + ' *' : t('total_bulk_cost') + ' *'}</Label>
                   <Input
                     type="number"
                     value={newProduct.costPrice}
@@ -1245,9 +1247,9 @@ const ProductsStorePage: React.FC = () => {
                 </div>
                 {isAdmin && (
                   <div className="grid gap-2">
-                    <Label>Branch *</Label>
+                    <Label>{t('branch')} *</Label>
                     <Select value={newProduct.branch || userBranch || ''} onValueChange={(val) => setNewProduct(p => ({ ...p, branch: val }))}>
-                      <SelectTrigger><SelectValue placeholder="Select Branch" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t('select_branch')} /></SelectTrigger>
                       <SelectContent>
                         {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
                       </SelectContent>
@@ -1259,25 +1261,25 @@ const ProductsStorePage: React.FC = () => {
               <div className="space-y-4">
                 <div className="bg-muted/30 p-6 rounded-xl border h-full space-y-4">
                   <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-xs uppercase tracking-wider mb-2">
-                    <Eye className="h-3 w-3" /> Live Preview
+                    <Eye className="h-3 w-3" /> {t('live_preview')}
                   </div>
                   <div className="space-y-4">
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground uppercase font-semibold">Product Identity</p>
+                      <p className="text-xs text-muted-foreground uppercase font-semibold">{t('product_identity')}</p>
                       <p className="font-bold text-lg leading-tight">
-                        {newProduct.productName || <span className="text-muted-foreground/30 italic">No Name</span>}
+                        {newProduct.productName || <span className="text-muted-foreground/30 italic">{t('no_name')}</span>}
                         {newProduct.model && <span className="text-muted-foreground font-medium text-sm ml-2">({newProduct.model})</span>}
                       </p>
-                      <Badge variant="secondary" className="mt-1">{newProduct.category || 'No Category'}</Badge>
+                      <Badge variant="secondary" className="mt-1">{newProduct.category || t('no_category')}</Badge>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase font-semibold">Quantity</p>
+                        <p className="text-xs text-muted-foreground uppercase font-semibold">{t('quantity_label')}</p>
                         <p className="font-bold text-lg text-gray-900 dark:text-gray-100">{newProduct.quantity || 0} <span className="text-sm font-medium">{newProduct.unit}</span></p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground uppercase font-semibold">Entered Amount</p>
+                        <p className="text-xs text-muted-foreground uppercase font-semibold">{t('entered_amount')}</p>
                         <p className="font-bold text-lg">{Number(newProduct.costPrice || 0).toLocaleString()} RWF</p>
                       </div>
                     </div>
@@ -1285,14 +1287,14 @@ const ProductsStorePage: React.FC = () => {
                     <div className="pt-4 border-t space-y-2">
                       {newProduct.costType === 'bulkCost' && Number(newProduct.quantity) > 0 && (
                         <div className="flex justify-between items-center text-sm p-2 bg-gray-900 dark:bg-gray-100/5 rounded border border-gray-300 dark:border-gray-700/10">
-                          <span className="text-muted-foreground font-medium">Calculated Unit Cost:</span>
+                          <span className="text-muted-foreground font-medium">{t('calculated_unit_cost')}:</span>
                           <span className="font-bold text-gray-900 dark:text-gray-100">
                             {(Number(newProduct.costPrice || 0) / Number(newProduct.quantity || 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })} RWF
                           </span>
                         </div>
                       )}
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground font-medium">Total Investment Value</span>
+                        <span className="text-muted-foreground font-medium">{t('total_investment_value')}</span>
                         <span className="font-black text-xl text-amber-600">
                           {newProduct.costType === 'bulkCost'
                             ? Number(newProduct.costPrice || 0).toLocaleString()
@@ -1306,14 +1308,14 @@ const ProductsStorePage: React.FC = () => {
                     <Alert className="bg-amber-50 border-amber-200 mt-4">
                       <AlertCircle className="h-3 w-3 text-amber-600" />
                       <AlertDescription className="text-amber-700 text-[10px]">
-                        Please fill all required fields to record.
+                        {t('fill_all_required')}
                       </AlertDescription>
                     </Alert>
                   ) : (
                     <Alert className="bg-secondary border-border mt-4">
                       <Info className="h-3 w-3 text-gray-900 dark:text-gray-100" />
                       <AlertDescription className="text-gray-900 dark:text-gray-100 text-[10px]">
-                        Product ready for recording to inventory.
+                        {t('ready_for_recording')}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -1322,13 +1324,13 @@ const ProductsStorePage: React.FC = () => {
             </div>
 
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setAddDialogOpen(false)}>{t('cancel')}</Button>
               <Button
                 onClick={handleAddProduct}
                 disabled={actionLoading || !newProduct.productName || !newProduct.category || !newProduct.costPrice || !newProduct.quantity}
                 className="bg-green-600 hover:bg-green-700 text-white min-w-[140px]"
               >
-                {actionLoading ? 'Recording...' : 'Record Product'}
+                {actionLoading ? t('recording') : t('record_product')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1338,15 +1340,15 @@ const ProductsStorePage: React.FC = () => {
         <Dialog open={editDialogOpen} onOpenChange={(val) => { setEditDialogOpen(val); if (!val) setCurrentProduct(null); }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Product</DialogTitle>
-              <DialogDescription>Update product details and see changes in real-time</DialogDescription>
+              <DialogTitle>{t('edit_product_title')}</DialogTitle>
+              <DialogDescription>{t('update_product_desc')}</DialogDescription>
             </DialogHeader>
 
             {currentProduct ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label>Product Name *</Label>
+                    <Label>{t('product_name')} *</Label>
                     <Input
                       value={currentProduct.productName}
                       onChange={e => setCurrentProduct(prev => prev ? { ...prev, productName: e.target.value } : null)}
@@ -1425,7 +1427,7 @@ const ProductsStorePage: React.FC = () => {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label>{currentProduct.costType === 'costPerUnit' ? 'Cost Price per Unit *' : 'Total Cost Amount *'}</Label>
+                    <Label>{currentProduct.costType === 'costPerUnit' ? t('cost_per_unit') + ' *' : t('total_bulk_cost') + ' *'}</Label>
                     <Input
                       type="number"
                       value={currentProduct.costPrice}
@@ -1486,14 +1488,14 @@ const ProductsStorePage: React.FC = () => {
             )}
 
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => { setEditDialogOpen(false); setCurrentProduct(null); }}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setEditDialogOpen(false); setCurrentProduct(null); }}>{t('cancel')}</Button>
               <Button
                 onClick={handleUpdateProduct}
                 disabled={actionLoading || !currentProduct}
                 className="bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90 text-white min-w-[140px]"
               >
                 {actionLoading ? <LoadingSpinner size="sm" className="mr-2" /> : <Edit className="mr-2 h-4 w-4" />}
-                Update Product
+                {t('update_product')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1503,38 +1505,38 @@ const ProductsStorePage: React.FC = () => {
         <Dialog open={sellDialogOpen} onOpenChange={setSellDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Sell Product</DialogTitle>
+              <DialogTitle>{t('sell_product')}</DialogTitle>
               <DialogDescription>
-                {currentProduct?.productName} (Available: {currentProduct ? formatQuantityWithUnit(currentProduct) : '0'})
+                {currentProduct?.productName} ({t('available')}: {currentProduct ? formatQuantityWithUnit(currentProduct) : '0'})
               </DialogDescription>
             </DialogHeader>
             {currentProduct && (
               <div className="space-y-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label>Quantity to Sell *</Label>
+                    <Label>{t('quantity_to_sell')} *</Label>
                     <Input
                       type="number"
                       value={sellForm.quantity}
                       onChange={e => setSellForm(s => ({ ...s, quantity: e.target.value === '' ? '' : Number(e.target.value) }))}
-                      placeholder={`Max ${currentProduct.quantity}`}
+                      placeholder={`${t('max_qty')} ${currentProduct.quantity}`}
                       min="1"
                       max={currentProduct.quantity}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Selling Price (per unit) *</Label>
+                    <Label>{t('selling_price_per_unit')} *</Label>
                     <Input
                       type="number"
                       value={sellForm.sellingPrice}
                       onChange={e => setSellForm(s => ({ ...s, sellingPrice: e.target.value === '' ? '' : Number(e.target.value) }))}
-                      placeholder="Price per unit"
+                      placeholder={t('selling_price')}
                     />
                   </div>
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Return Deadline (optional)</Label>
+                  <Label>{t('return_deadline')}</Label>
                   <Input
                     type="date"
                     value={sellForm.deadline}
@@ -1545,16 +1547,16 @@ const ProductsStorePage: React.FC = () => {
                 {(Number(sellForm.quantity) > 0 && Number(sellForm.sellingPrice) > 0) && (
                   <div className="bg-muted/50 p-4 rounded-xl border space-y-4">
                     <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                      Profit & Loss Preview
+                      {t('profit_loss_preview')}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-muted-foreground">Unit Cost</p>
+                        <p className="text-xs text-muted-foreground">{t('cost_price')}</p>
                         <p className="text-lg font-bold">{getUnitCost(currentProduct).toLocaleString()} RWF</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Profit per Unit</p>
+                        <p className="text-xs text-muted-foreground">{t('profit_per_unit')}</p>
                         <p className={`text-lg font-bold ${Number(sellForm.sellingPrice) >= getUnitCost(currentProduct) ? 'text-green-600' : 'text-red-600'}`}>
                           {(Number(sellForm.sellingPrice) - getUnitCost(currentProduct)).toLocaleString()} RWF
                         </p>
@@ -1564,11 +1566,11 @@ const ProductsStorePage: React.FC = () => {
                     <div className="pt-3 border-t">
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-xs text-muted-foreground uppercase">Total Revenue</p>
+                          <p className="text-xs text-muted-foreground uppercase">{t('total_revenue')}</p>
                           <p className="text-xl font-bold">{(Number(sellForm.sellingPrice) * Number(sellForm.quantity)).toLocaleString()} RWF</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground uppercase">Total Profit/Loss</p>
+                          <p className="text-xs text-muted-foreground uppercase">{t('total_profit_loss')}</p>
                           <p className={`text-2xl font-black ${(Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {((Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity)).toLocaleString()} RWF
                           </p>
@@ -1581,7 +1583,7 @@ const ProductsStorePage: React.FC = () => {
             )}
             <DialogFooter>
               <Button variant="outline" onClick={() => { setSellDialogOpen(false); setSellForm({ quantity: '', sellingPrice: '', deadline: '', sellInBaseUnit: true }); }}>
-                Cancel
+                {t('cancel')}
               </Button>
               <Button
                 onClick={openConfirmSale}
@@ -1593,7 +1595,7 @@ const ProductsStorePage: React.FC = () => {
                 }
               >
                 {actionLoading ? <LoadingSpinner size="sm" className="mr-2" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-                Complete Sale
+                {t('complete_sale')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1602,24 +1604,24 @@ const ProductsStorePage: React.FC = () => {
         {/* CONFIRM SALE DIALOG */}
         <Dialog open={confirmSaleDialogOpen} onOpenChange={setConfirmSaleDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Confirm Sale</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('confirm_sale')}</DialogTitle></DialogHeader>
             <DialogDescription className="space-y-3">
-              <p>Are you sure you want to confirm this sale?</p>
+              <p>{t('confirm_sale_desc')}</p>
               <div className="font-medium space-y-1">
-                <p>Product: <strong>{currentProduct?.productName}</strong></p>
-                <p>Quantity: <strong>{sellForm.quantity} {currentProduct?.unit}</strong></p>
-                <p>Unit Price: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
-                <p className="text-lg pt-2">Total Amount: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
+                <p>{t('product_name')}: <strong>{currentProduct?.productName}</strong></p>
+                <p>{t('quantity_label')}: <strong>{sellForm.quantity} {currentProduct?.unit}</strong></p>
+                <p>{t('selling_price_per_unit')}: <strong>{Number(sellForm.sellingPrice).toLocaleString()} RWF</strong></p>
+                <p className="text-lg pt-2">{t('total_revenue')}: <strong>{(Number(sellForm.quantity) * Number(sellForm.sellingPrice)).toLocaleString()} RWF</strong></p>
                 {currentProduct && (
                   <p className={`text-lg font-bold ${(Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    Expected Profit: {((Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity)).toLocaleString()} RWF
+                    {t('expected_profit')}: {((Number(sellForm.sellingPrice) - getUnitCost(currentProduct)) * Number(sellForm.quantity)).toLocaleString()} RWF
                   </p>
                 )}
               </div>
             </DialogDescription>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmSaleDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSellConfirm} disabled={actionLoading}>Yes, Confirm Sale</Button>
+              <Button variant="outline" onClick={() => setConfirmSaleDialogOpen(false)}>{t('cancel')}</Button>
+              <Button onClick={handleSellConfirm} disabled={actionLoading}>{t('yes_confirm_sale')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1627,13 +1629,13 @@ const ProductsStorePage: React.FC = () => {
         {/* CONFIRM PRODUCT DIALOG */}
         <Dialog open={confirmProductDialogOpen} onOpenChange={setConfirmProductDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Change Confirmation Status</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('change_confirmation_status')}</DialogTitle></DialogHeader>
             <DialogDescription>
-              Are you sure you want to <strong>{productToConfirm && !productToConfirm.current ? 'confirm' : 'unconfirm'}</strong> this product?
+              {productToConfirm && !productToConfirm.current ? t('confirm_product_question') : t('unconfirm_product_question')}
             </DialogDescription>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmProductDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleConfirmProduct} disabled={actionLoading}>Confirm Change</Button>
+              <Button variant="outline" onClick={() => setConfirmProductDialogOpen(false)}>{t('cancel')}</Button>
+              <Button onClick={handleConfirmProduct} disabled={actionLoading}>{t('confirm_change')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1641,23 +1643,23 @@ const ProductsStorePage: React.FC = () => {
         {/* DETAILS DIALOG */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Product Details</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('product_details')}</DialogTitle></DialogHeader>
             {currentProduct && (
               <div className="space-y-3 py-4">
-                <p><strong>Name:</strong> {currentProduct.productName}</p>
-                <p><strong>Category:</strong> {currentProduct.category}</p>
-                <p><strong>Model:</strong> {currentProduct.model || '-'}</p>
-                <p><strong>Quantity:</strong> {formatQuantityWithUnit(currentProduct)}</p>
-                <p><strong>Unit Cost:</strong> {getUnitCost(currentProduct).toLocaleString()} RWF</p>
-                <p><strong>Total Value:</strong> {getTotalValue(currentProduct).toLocaleString()} RWF</p>
-                <p><strong>Cost Type:</strong> {currentProduct.costType === 'bulkCost' ? 'Bulk Cost' : 'Cost Per Unit'}</p>
-                <p><strong>Branch:</strong> {getBranchName(currentProduct.branch)}</p>
-                <p><strong>Confirmed:</strong> {currentProduct.confirm ? 'Yes' : 'No'}</p>
-                <p><strong>Added:</strong> {currentProduct.addedDate ? format(new Date(currentProduct.addedDate), 'dd MMM yyyy') : '-'}</p>
+                <p><strong>{t('product_name')}:</strong> {currentProduct.productName}</p>
+                <p><strong>{t('category_label')}:</strong> {currentProduct.category}</p>
+                <p><strong>{t('model_label')}:</strong> {currentProduct.model || '-'}</p>
+                <p><strong>{t('quantity_label')}:</strong> {formatQuantityWithUnit(currentProduct)}</p>
+                <p><strong>{t('cost_price')}:</strong> {getUnitCost(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>{t('total_value')}:</strong> {getTotalValue(currentProduct).toLocaleString()} RWF</p>
+                <p><strong>{t('cost_configuration')}:</strong> {currentProduct.costType === 'bulkCost' ? t('total_bulk_cost') : t('cost_per_unit')}</p>
+                <p><strong>{t('branch')}:</strong> {getBranchName(currentProduct.branch)}</p>
+                <p><strong>{t('confirmed')}:</strong> {currentProduct.confirm ? t('yes') : t('no')}</p>
+                <p><strong>{t('added_date')}:</strong> {currentProduct.addedDate ? format(new Date(currentProduct.addedDate), 'dd MMM yyyy') : '-'}</p>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>{t('close')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1665,11 +1667,11 @@ const ProductsStorePage: React.FC = () => {
         {/* DELETE CONFIRM DIALOG */}
         <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Delete Product?</DialogTitle></DialogHeader>
-            <DialogDescription>This action cannot be undone.</DialogDescription>
+            <DialogHeader><DialogTitle>{t('delete_product_confirm')}</DialogTitle></DialogHeader>
+            <DialogDescription>{t('permanent_action_desc')}</DialogDescription>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>Delete</Button>
+              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>{t('cancel')}</Button>
+              <Button variant="destructive" onClick={handleDeleteProduct} disabled={actionLoading}>{t('delete')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

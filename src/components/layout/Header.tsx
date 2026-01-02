@@ -1,19 +1,31 @@
 import React, { useState } from 'react';
-import { Bell, Moon, Sun, Menu, CloudOff, Wifi, Link2 } from 'lucide-react';
+import { Bell, Moon, Sun, Menu, CloudOff, Wifi, Link2, Languages, User as UserIcon, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOffline } from '@/contexts/OfflineContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link, useNavigate } from 'react-router-dom';
 import GlobalSearch from '@/components/GlobalSearch';
 import MobileMenu from './MobileMenu';
 import BlockchainLedger from '@/components/BlockchainLedger';
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isOnline, pendingCount } = useOffline();
+  const { language, setLanguage, t } = useLanguage();
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [blockchainOpen, setBlockchainOpen] = useState(false);
 
@@ -67,8 +79,27 @@ const Header: React.FC = () => {
               className="hidden sm:flex items-center gap-2 text-xs"
             >
               <Link2 className="h-4 w-4" />
-              <span className="hidden md:inline">Blockchain</span>
+              <span className="hidden md:inline">{t('blockchain')}</span>
             </Button>
+
+            {/* Language Switcher */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-2">
+                  <Languages size={20} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{t('switch_language')}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLanguage('en')} className={language === 'en' ? 'bg-accent' : ''}>
+                  English
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLanguage('rw')} className={language === 'rw' ? 'bg-accent' : ''}>
+                  Kinyarwanda
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Theme Toggle */}
             <Button
@@ -84,8 +115,8 @@ const Header: React.FC = () => {
             <Button variant="ghost" size="sm" className="p-2 relative">
               <Bell size={20} />
               {pendingCount > 0 && (
-                <Badge 
-                  variant="destructive" 
+                <Badge
+                  variant="destructive"
                   className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
                 >
                   {pendingCount > 99 ? '99+' : pendingCount}
@@ -94,22 +125,43 @@ const Header: React.FC = () => {
             </Button>
 
             {/* User Menu */}
-            <div className="flex items-center space-x-3">
-              <Avatar className="w-8 h-8 overflow-hidden">
-                <AvatarImage src={profileImage} className="object-cover w-full h-full" />
-                <AvatarFallback>{initials}</AvatarFallback>
-              </Avatar>
-              {user && (
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {fullName || 'User'}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user.role || 'Role'}
-                  </p>
-                </div>
-              )}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center space-x-3 hover:opacity-80 transition-opacity focus:outline-none">
+                  <Avatar className="w-8 h-8 overflow-hidden">
+                    <AvatarImage src={profileImage} className="object-cover w-full h-full" />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  {user && (
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white leading-tight">
+                        {fullName || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                        {user.role || 'Role'}
+                      </p>
+                    </div>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>{t('account')}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  <span>{t('profile_title')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>{t('personal_details')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-600 focus:text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>{t('logout')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
