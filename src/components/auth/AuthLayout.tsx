@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { AuthSettings } from './AuthSettings';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -7,7 +8,7 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-white">
+    <div className="h-screen w-full flex overflow-hidden bg-white dark:bg-slate-950">
       {/* Left Side - Image/Feature Area */}
       <div className="hidden lg:block lg:w-[55%] h-full relative overflow-hidden bg-slate-900">
         <img
@@ -60,9 +61,11 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       <div className="w-full lg:w-[45%] h-full flex flex-col relative overflow-y-auto">
         <div className="flex-1 flex flex-col justify-center p-8 lg:p-12 min-h-0">
           {/* Logo Badge */}
-          <div className="absolute top-8 right-8 lg:top-12 lg:right-12">
+          {/* Logo Badge & Settings */}
+          <div className="absolute top-8 right-8 lg:top-12 lg:right-12 flex items-center gap-2 z-50">
+            <AuthSettings />
             <div className="flex items-center gap-2 group cursor-pointer">
-              <div className="px-4 py-1.5 rounded-full border border-slate-200 text-sm font-semibold text-slate-800 bg-slate-50/50 backdrop-blur-sm group-hover:bg-slate-100 transition-colors">
+              <div className="px-4 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 text-sm font-semibold text-slate-800 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-colors">
                 SmartStock
               </div>
             </div>

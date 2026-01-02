@@ -225,10 +225,10 @@ export default function RegisterPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="space-y-2">
-          <h1 className="text-3xl font-medium text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-medium text-slate-900 dark:text-white tracking-tight">
             {t('create_account_title')}
           </h1>
-          <p className="text-slate-500 font-medium text-sm">
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
             {currentStep === 1
               ? t('business_details_step')
               : t('personal_details_step')
@@ -238,12 +238,12 @@ export default function RegisterPage() {
 
         {/* Step Indicator */}
         <div className="flex items-center gap-3 py-2">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all duration-300 ${currentStep >= 1 ? 'bg-[#FCD34D] text-slate-900 shadow-sm' : 'bg-slate-100 text-slate-400'
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all duration-300 ${currentStep >= 1 ? 'bg-[#FCD34D] text-slate-900 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
             }`}>
             {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
           </div>
-          <div className={`flex-1 h-0.5 rounded transition-all duration-500 ${currentStep > 1 ? 'bg-[#FCD34D]' : 'bg-slate-100'}`} />
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all duration-300 ${currentStep >= 2 ? 'bg-[#FCD34D] text-slate-900 shadow-sm' : 'bg-slate-100 text-slate-400'
+          <div className={`flex-1 h-0.5 rounded transition-all duration-500 ${currentStep > 1 ? 'bg-[#FCD34D]' : 'bg-slate-100 dark:bg-slate-800'}`} />
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-all duration-300 ${currentStep >= 2 ? 'bg-[#FCD34D] text-slate-900 shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
             }`}>
             2
           </div>
@@ -257,12 +257,12 @@ export default function RegisterPage() {
               <div className="relative group">
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-24 h-24 rounded-full bg-slate-50 border-2 border-dashed border-slate-300 group-hover:border-[#FCD34D] flex items-center justify-center cursor-pointer transition-all overflow-hidden"
+                  className="w-24 h-24 rounded-full bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 group-hover:border-[#FCD34D] flex items-center justify-center cursor-pointer transition-all overflow-hidden"
                 >
                   {previewImage ? (
                     <img src={previewImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <Camera className="h-6 w-6 text-slate-400 group-hover:text-slate-600" />
+                    <Camera className="h-6 w-6 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300" />
                   )}
                 </div>
                 <input
@@ -278,14 +278,14 @@ export default function RegisterPage() {
 
             {/* Business Name */}
             <div className="space-y-2">
-              <Label htmlFor="businessName" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label htmlFor="businessName" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                 {t('business_name')}
               </Label>
               <div className="relative">
                 <Input
                   id="businessName"
                   placeholder={t('business_name')}
-                  className="pl-4 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="pl-4 h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('businessName')}
                 />
               </div>
@@ -296,14 +296,14 @@ export default function RegisterPage() {
 
             {/* District */}
             <div className="space-y-2">
-              <Label htmlFor="district" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label htmlFor="district" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                 {t('district')}
               </Label>
               <div className="relative">
                 <Input
                   id="district"
                   placeholder={t('district')}
-                  className="pl-4 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="pl-4 h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('district')}
                 />
               </div>
@@ -315,13 +315,13 @@ export default function RegisterPage() {
             {/* Sector & Cell */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="sector" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="sector" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('sector')}
                 </Label>
                 <Input
                   id="sector"
                   placeholder={t('sector')}
-                  className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('sector')}
                 />
                 {step1Form.formState.errors.sector && (
@@ -330,13 +330,13 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cell" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="cell" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('cell')}
                 </Label>
                 <Input
                   id="cell"
                   placeholder={t('cell')}
-                  className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step1Form.register('cell')}
                 />
                 {step1Form.formState.errors.cell && (
@@ -347,13 +347,13 @@ export default function RegisterPage() {
 
             {/* Village */}
             <div className="space-y-2">
-              <Label htmlFor="village" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label htmlFor="village" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                 {t('village')}
               </Label>
               <Input
                 id="village"
                 placeholder={t('village')}
-                className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                 {...step1Form.register('village')}
               />
               {step1Form.formState.errors.village && (
@@ -393,13 +393,13 @@ export default function RegisterPage() {
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="firstName" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('first_name')}
                 </Label>
                 <Input
                   id="firstName"
                   placeholder={t('first_name')}
-                  className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step2Form.register('firstName')}
                 />
                 {step2Form.formState.errors.firstName && (
@@ -408,13 +408,13 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="lastName" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="lastName" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('last_name')}
                 </Label>
                 <Input
                   id="lastName"
                   placeholder={t('last_name')}
-                  className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step2Form.register('lastName')}
                 />
                 {step2Form.formState.errors.lastName && (
@@ -425,14 +425,14 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label htmlFor="email" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                 {t('email_label')}
               </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder={t('email_placeholder')}
-                className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                 {...step2Form.register('email')}
               />
               {step2Form.formState.errors.email && (
@@ -443,9 +443,9 @@ export default function RegisterPage() {
             {/* Gender & Phone */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">{t('gender')}</Label>
+                <Label className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">{t('gender')}</Label>
                 <Select onValueChange={(value) => step2Form.setValue('gender', value)}>
-                  <SelectTrigger className="h-11 bg-white border-slate-200 rounded-xl shadow-sm text-slate-800 focus:ring-[#FCD34D]">
+                  <SelectTrigger className="h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl shadow-sm text-slate-800 dark:text-slate-200 focus:ring-[#FCD34D]">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -460,13 +460,13 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="phoneNumber" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('phone')}
                 </Label>
                 <Input
                   id="phoneNumber"
                   placeholder={t('phone_placeholder')}
-                  className="h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...step2Form.register('phoneNumber')}
                 />
                 {step2Form.formState.errors.phoneNumber && (
@@ -478,7 +478,7 @@ export default function RegisterPage() {
             {/* Password Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="password" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('password_label')}
                 </Label>
                 <div className="relative">
@@ -486,7 +486,7 @@ export default function RegisterPage() {
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder={t('password_placeholder')}
-                    className="pr-8 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                    className="pr-8 h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                     {...step2Form.register('password')}
                   />
                   <button
@@ -503,7 +503,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+                <Label htmlFor="confirmPassword" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                   {t('confirm_password')}
                 </Label>
                 <div className="relative">
@@ -511,7 +511,7 @@ export default function RegisterPage() {
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder={t('password_placeholder')}
-                    className="pr-8 h-11 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                    className="pr-8 h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                     {...step2Form.register('confirmPassword')}
                   />
                   <button
@@ -535,7 +535,7 @@ export default function RegisterPage() {
                 variant="outline"
                 onClick={goBack}
                 disabled={isLoading}
-                className="flex-[0.4] h-12 border-slate-200 rounded-2xl hover:bg-slate-50"
+                className="flex-[0.4] h-12 border-slate-200 dark:border-slate-700 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white rounded-2xl"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 {t('back_button')}

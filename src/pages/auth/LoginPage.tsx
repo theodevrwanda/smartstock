@@ -75,7 +75,7 @@ export default function LoginPage() {
     const success = await login(data.email.trim(), data.password);
 
     if (!success) {
-      setLoginError(errorMessage || t('error'));
+      setLoginError(t(errorMessage || 'error'));
       clearError();
       setIsLoading(false);
     } else {
@@ -91,7 +91,7 @@ export default function LoginPage() {
     const success = await loginWithGoogle();
 
     if (!success) {
-      setLoginError(errorMessage || t('error'));
+      setLoginError(t(errorMessage || 'error'));
       clearError();
       setIsGoogleLoading(false);
     } else {
@@ -104,10 +104,10 @@ export default function LoginPage() {
       <SEOHelmet title="Login" />
       <div className="space-y-8">
         <div className="space-y-2">
-          <h1 className="text-3xl font-medium text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-medium text-slate-900 dark:text-white tracking-tight">
             {t('welcome_back_login')}
           </h1>
-          <p className="text-slate-500 font-medium text-sm">
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
             {t('enter_details_login')}
           </p>
         </div>
@@ -124,7 +124,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(handleEmailLogin)} className="space-y-5">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label htmlFor="email" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                 {t('email_label')}
               </Label>
               <div className="relative">
@@ -132,7 +132,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder={t('email_placeholder')}
-                  className="pl-4 h-12 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-2xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="pl-4 h-12 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-2xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...register('email')}
                 />
               </div>
@@ -142,7 +142,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              <Label htmlFor="password" className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1">
                 {t('password_label')}
               </Label>
               <div className="relative">
@@ -150,13 +150,13 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder={t('password_placeholder')}
-                  className="pl-4 pr-10 h-12 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-2xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="pl-4 pr-10 h-12 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-2xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                   {...register('password')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -170,7 +170,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-end">
             <Link
               to="/forgot-password"
-              className="text-xs font-medium text-slate-500 hover:text-slate-800"
+              className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             >
               {t('forgot_password')}
             </Link>
@@ -191,10 +191,10 @@ export default function LoginPage() {
 
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
+                <div className="w-full border-t border-slate-200 dark:border-slate-800" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#F8F7F2] px-2 text-slate-400 font-medium">{t('or_divider')}</span>
+                <span className="bg-[#F8F7F2] dark:bg-slate-950 px-2 text-slate-400 font-medium">{t('or_divider')}</span>
               </div>
             </div>
 
@@ -203,7 +203,7 @@ export default function LoginPage() {
               onClick={handleGoogleLogin}
               disabled={isGoogleLoading}
               variant="outline"
-              className="w-full h-12 bg-white border-slate-200 hover:bg-slate-50 text-slate-600 font-medium rounded-2xl"
+              className="w-full h-12 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium rounded-2xl"
             >
               {isGoogleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -227,7 +227,7 @@ export default function LoginPage() {
             {t('dont_have_account')}{' '}
             <Link
               to="/register"
-              className="font-bold text-slate-900 hover:underline"
+              className="font-bold text-slate-900 dark:text-white hover:underline"
             >
               {t('sign_up_link')}
             </Link>

@@ -9,7 +9,7 @@ import {
   createUserWithEmailAndPassword,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, addDoc, collection, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, updateDoc, onSnapshot, query, where, getDocs, limit } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebase';
 import { AuthState, User } from '@/types/interface';
 import { saveUserLocally, getLocalUser, addPendingOperation } from '@/lib/offlineDB';
@@ -330,29 +330,77 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
     setAuthState((prev) => ({ ...prev, loading: true }));
-    setErrorMessage(null);
+    setErrorMessage(null); // Clear previous errors
 
     try {
-      let email = identifier;
-
       if (!identifier.includes('@')) {
-        setErrorMessage('Please use your email address to login.');
+        setErrorMessage('invalid_credentials'); // Use key
         setAuthState((prev) => ({ ...prev, loading: false }));
         return false;
       }
 
-      await signInWithEmailAndPassword(auth, email, password);
+      // 0. Pre-check: Verify if user exists in Firestore by email
+      try {
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', identifier), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          setErrorMessage('user_not_found_create');
+          setAuthState((prev) => ({ ...prev, loading: false }));
+          return false;
+        }
+      } catch (firestoreError) {
+        // console.warn("Firestore pre-check failed. Proceeding to standard auth.", firestoreError);
+      }
+
+      // 1. Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, identifier, password);
+
+      // 2. Fetch User Data to check active status
+      // Note: The onAuthStateChanged listener will also trigger, but we want immediate feedback here
+      // to prevent a "flash" of logged-in state if they are actually inactive.
+      const userData = await getUserFromFirestore(userCredential.user);
+
+      if (!userData) {
+        // Should not happen if auth succeeded, but handle it
+        await signOut(auth);
+        setErrorMessage('user_not_found_create');
+        setAuthState((prev) => ({ ...prev, loading: false }));
+        return false;
+      }
+
+      // 3. User Active Check
+      if (!userData.isActive) {
+        await signOut(auth);
+        setErrorMessage('user_inactive_error');
+        setAuthState((prev) => ({ ...prev, loading: false }));
+        return false;
+      }
+
+      // 4. Business Active Check
+      if (!userData.businessActive) {
+        await signOut(auth);
+        setErrorMessage('business_inactive_error');
+        setAuthState((prev) => ({ ...prev, loading: false }));
+        return false;
+      }
+
+      // Login Successful - State will be updated by onAuthStateChanged
       return true;
+
     } catch (error: any) {
-      let message = 'Invalid email or password. Please try again.';
+      console.error("Login Error:", error.code);
+      let messageKey = 'error';
 
-      if (error.code === 'auth/user-not-found') message = 'Invalid email or password. Please try again.';
-      else if (error.code === 'auth/wrong-password') message = 'Invalid email or password. Please try again.';
-      else if (error.code === 'auth/invalid-email') message = 'Invalid email address.';
-      else if (error.code === 'auth/too-many-requests') message = 'Too many failed attempts. Please try again later.';
-      else if (error.code === 'auth/invalid-credential') message = 'Invalid email or password. Please try again.';
+      if (error.code === 'auth/user-not-found') messageKey = 'user_not_found_create';
+      else if (error.code === 'auth/wrong-password') messageKey = 'invalid_credentials';
+      else if (error.code === 'auth/invalid-email') messageKey = 'invalid_credentials';
+      else if (error.code === 'auth/too-many-requests') messageKey = 'auth/too-many-requests'; // Needs key or fallback
+      // Note: 'auth/too-many-requests' usually doesn't have a simple key, might want a specific one or generic 'error'
+      else if (error.code === 'auth/invalid-credential') messageKey = 'invalid_credentials';
 
-      setErrorMessage(message);
+      setErrorMessage(messageKey);
       setAuthState((prev) => ({ ...prev, loading: false }));
       return false;
     }

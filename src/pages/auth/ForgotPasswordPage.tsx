@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
 const forgotPasswordSchema = z.object({
@@ -21,8 +22,9 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [sentEmail, setSentEmail] = useState('');
-  
+
   const { resetPassword } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordData>({
@@ -36,9 +38,9 @@ export default function ForgotPasswordPage() {
       await resetPassword(data.email);
       setSentEmail(data.email);
       setIsEmailSent(true);
-      toast.success('Password reset email sent! Check your inbox.');
+      toast.success(t('email_sent'));
     } catch (error: any) {
-      const message = error.message || 'Failed to send reset email. Please try again.';
+      const message = error.message || t('send_reset_failed');
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -57,19 +59,15 @@ export default function ForgotPasswordPage() {
 
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Check your email
+              {t('check_email_reset')}
             </h1>
             <p className="text-slate-600">
-              We've sent a password reset link to:
+              {t('email_sent')}:
             </p>
             <p className="font-medium text-slate-900">{sentEmail}</p>
           </div>
 
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Didn't receive the email? Check your spam folder or try again.
-            </p>
-
             <div className="flex flex-col gap-3">
               <Button
                 onClick={() => {
@@ -77,17 +75,17 @@ export default function ForgotPasswordPage() {
                   setSentEmail('');
                 }}
                 variant="outline"
-                className="w-full h-11"
+                className="w-full h-11 border-slate-200 rounded-2xl hover:bg-slate-50"
               >
-                Try another email
+                {t('enter_email')}
               </Button>
-              
+
               <Link to="/login">
                 <Button
-                  className="w-full h-11 bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90 text-white"
+                  className="w-full h-11 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to login
+                  {t('back_button')}
                 </Button>
               </Link>
             </div>
@@ -101,54 +99,53 @@ export default function ForgotPasswordPage() {
     <AuthLayout>
       <div className="space-y-8">
         <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
-            Forgot password?
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            {t('forgot_password')}
           </h1>
-          <p className="text-slate-600">
-            No worries, we'll send you reset instructions.
+          <p className="text-slate-600 font-medium text-sm">
+            {t('change_password_desc')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-slate-700 font-medium">
-              Email Address
+            <Label htmlFor="email" className="text-slate-600 text-xs font-bold uppercase tracking-wider pl-1">
+              {t('email_label')}
             </Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
-                className="pl-10 h-12 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-gray-300 dark:border-gray-700 focus:ring-blue-500"
+                placeholder={t('email_placeholder')}
+                className="pl-4 h-12 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-2xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
                 {...register('email')}
               />
             </div>
             {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
+              <p className="text-xs text-red-500 pl-1">{errors.email.message}</p>
             )}
           </div>
 
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-gray-900 dark:bg-gray-100 hover:bg-gray-900 dark:bg-gray-100/90 text-white font-medium rounded-lg transition-colors"
+            className="w-full h-12 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              'Send reset link'
+              t('continue_button')
             )}
           </Button>
         </form>
 
         <div className="text-center">
-          <Link 
-            to="/login" 
-            className="inline-flex items-center text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-gray-900 dark:text-gray-100"
+          <Link
+            to="/login"
+            className="inline-flex items-center text-sm font-bold text-slate-900 hover:underline"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to login
+            {t('back_button')}
           </Link>
         </div>
       </div>

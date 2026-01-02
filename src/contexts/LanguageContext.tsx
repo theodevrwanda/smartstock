@@ -488,6 +488,22 @@ const translations: Translations = {
         'success': 'Success',
         'yes': 'Yes',
         'no': 'No',
+        'account_deactivated': 'Your account has been deactivated. Please contact your administrator.',
+        'business_inactive': 'Your business account is inactive. Please contact system administration.',
+        'switch_theme': 'Switch Theme',
+        'light_mode': 'Light Mode',
+        'dark_mode': 'Dark Mode',
+        'language': 'Language',
+        'theme': 'Theme',
+        'english': 'English',
+        'kinyarwanda': 'Kinyarwanda',
+        'user_not_found_create': 'User not found. You can create an account for free.',
+        'invalid_credentials': 'Incorrect email or password.',
+        'business_inactive_error': 'Your business is not active. Please wait for central admin to approve your business.',
+        'user_inactive_error': 'Your account is not active. Please wait for business admin to approve your account.',
+        'access_denied': 'Access Denied',
+        'checking_details': 'Checking details...',
+
     },
     rw: {
         // Header
@@ -966,6 +982,21 @@ const translations: Translations = {
         'success': 'Byagenze neza',
         'yes': 'Yego',
         'no': 'Oya',
+        'account_deactivated': 'Konti yawe yahagaritswe. Vugana n\'ushinzwe sisitemu.',
+        'business_inactive': 'Konti y\'ubucuruzi bwawe ntigikora. Vugana n\'ushinzwe sisitemu.',
+        'switch_theme': 'Hindura Aho Kureba (Theme)',
+        'light_mode': 'Urumuri',
+        'dark_mode': 'Umwijima',
+        'language': 'Ururimi',
+        'theme': 'Insanganyamatsiko',
+        'english': 'Icyongereza',
+        'kinyarwanda': 'Ikinyarwanda',
+        'user_not_found_create': 'Konti ntiyabonetse. Fungura konti nshya ku buntu.',
+        'invalid_credentials': 'Imeri cyangwa ijambo ry\'ibanga siko biri.',
+        'business_inactive_error': 'Business yanyu ntirakora. Tegereza admin abayemere.',
+        'user_inactive_error': 'Konti yanyu ntirakora. Tegereza admin wanyu abayemere.',
+        'access_denied': 'Ntimwemerewe kwinjira',
+        'checking_details': 'Biragenzurwa...',
     }
 };
 
@@ -973,6 +1004,7 @@ interface LanguageContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
     t: (key: string) => string;
+    toggleLanguage: () => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -980,7 +1012,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [language, setLanguageState] = useState<Language>(() => {
         const saved = localStorage.getItem('language');
-        return (saved as Language) || 'en';
+        return (saved as Language) || 'rw';
     });
 
     const setLanguage = (lang: Language) => {
@@ -992,8 +1024,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return translations[language][key] || key;
     };
 
+    const toggleLanguage = () => {
+        setLanguageState(prev => {
+            const newLang = prev === 'en' ? 'rw' : 'en';
+            localStorage.setItem('language', newLang);
+            return newLang;
+        });
+    };
+
     return (
-        <LanguageContext.Provider value={{ language, setLanguage, t }}>
+        <LanguageContext.Provider value={{ language, setLanguage, t, toggleLanguage }}>
             {children}
         </LanguageContext.Provider>
     );
