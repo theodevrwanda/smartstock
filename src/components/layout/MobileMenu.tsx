@@ -16,19 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-
-const sidebarItems = [
-  { icon: Bell, label: 'Dashboard', path: '/dashboard' },
-  { icon: Users, label: 'Products Store', path: '/products' },
-  { icon: Calendar, label: 'Products Sold', path: '/products-sold' },
-  { icon: FileText, label: 'Products Restored', path: '/products-restored' },
-  { icon: User, label: 'My Profile', path: '/profile' },
-  { icon: FileText, label: 'Reports', path: '/reports' },
-  { icon: Folder, label: 'Trash', path: '/trash' },
-  { icon: Handshake, label: 'Manage branch', path: '/manage-branch' },
-  { icon: Home, label: 'Manage Employees', path: '/manage-employees' },
-];
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -37,6 +26,19 @@ interface MobileMenuProps {
 
 const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   const { logout, user } = useAuth();
+  const { t } = useLanguage();
+
+  const sidebarItems = [
+    { icon: Bell, label: t('dashboard_label'), path: '/dashboard' },
+    { icon: Users, label: t('store_label'), path: '/products' },
+    { icon: Calendar, label: t('sold_label'), path: '/products-sold' },
+    { icon: FileText, label: t('restored_label'), path: '/products-restored' },
+    { icon: User, label: t('profile_title'), path: '/profile' },
+    { icon: FileText, label: t('reports_label'), path: '/reports' },
+    { icon: Folder, label: t('trash_label'), path: '/trash' },
+    { icon: Handshake, label: t('branches_label'), path: '/manage-branch' },
+    { icon: Home, label: t('employees_label'), path: '/manage-employees' },
+  ];
 
   // Dynamic user and business data
   const businessName = user?.businessName || "Pixel";
@@ -51,14 +53,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden transition-opacity"
         onClick={onClose}
       />
-      
+
       {/* Mobile Menu */}
       <div className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-sidebar-border z-50 lg:hidden shadow-2xl transform transition-transform duration-300 ease-in-out">
-        
+
         {/* Header - Updated to display Business Name */}
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border min-h-[70px]">
           <div className="flex items-center space-x-3 overflow-hidden">
@@ -123,7 +125,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
                   {fullName}
                 </p>
                 <p className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">
-                  {user?.role || 'Staff'}
+                  {user?.role === 'admin' ? t('admin_account') : t('staff_account')}
                 </p>
               </div>
             </div>
@@ -138,7 +140,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
             className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold justify-start space-x-3 px-3 h-11 rounded-lg transition-colors"
           >
             <LogOut size={18} />
-            <span>Logout</span>
+            <span>{t('logout')}</span>
           </Button>
         </div>
       </div>

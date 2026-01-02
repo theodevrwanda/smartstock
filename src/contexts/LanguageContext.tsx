@@ -18,6 +18,19 @@ const translations: Translations = {
         'switch_language': 'Switch Language',
         'search_placeholder': 'Search anything...',
 
+        // Navigation
+        'dashboard_label': 'Dashboard',
+        'store_label': 'Products Store',
+        'sold_label': 'Products Sold',
+        'restored_label': 'Products Restored',
+        'trash_label': 'Trash',
+        'branches_label': 'Manage Branch',
+        'employees_label': 'Manage Employees',
+        'reports_label': 'Reports',
+        'welcome_back': 'Welcome back,',
+        'need_help': 'Need help? Contact support 24/7.',
+        'sign_out': 'Sign Out',
+
         // Dashboard
         'dashboard_title': 'Dashboard',
         'inventory_console': 'Inventory Console',
@@ -220,6 +233,19 @@ const translations: Translations = {
         'logout': 'Sohoka',
         'switch_language': 'Hindura Ururimi',
         'search_placeholder': 'Shakisha ikintu cyose...',
+
+        // Navigation
+        'dashboard_label': 'Incamake',
+        'store_label': 'Ububiko',
+        'sold_label': 'Byagurishijwe',
+        'restored_label': 'Byasubijwe',
+        'trash_label': 'Trash',
+        'branches_label': 'Amashami',
+        'employees_label': 'Abakozi',
+        'reports_label': 'Raporo',
+        'welcome_back': 'Muraho neza,',
+        'need_help': 'Ukeneye ubufasha? Twandikire igihe cyose.',
+        'sign_out': 'Sohoka',
 
         // Dashboard
         'dashboard_title': 'Incamake',

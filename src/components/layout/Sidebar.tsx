@@ -18,19 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-
-const sidebarItems = [
-  { icon: BarChart2, label: 'Dashboard', path: '/dashboard' },
-  { icon: Package, label: 'Products Store', path: '/products' },
-  { icon: ShoppingCart, label: 'Products Sold', path: '/products-sold' },
-  { icon: ArchiveRestore, label: 'Products Restored', path: '/products-restored' },
-  { icon: User, label: 'My Profile', path: '/profile' },
-  { icon: FileText, label: 'Reports', path: '/reports' },
-  { icon: Trash2, label: 'Trash', path: '/trash' },
-  { icon: Store, label: 'Manage Branch', path: '/manage-branch' },
-  { icon: Users, label: 'Manage Employees', path: '/manage-employees' },
-];
 
 interface SidebarProps {
   collapsed: boolean;
@@ -40,6 +29,19 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => {
   const { logout, user } = useAuth();
+  const { t } = useLanguage();
+
+  const sidebarItems = [
+    { icon: BarChart2, label: t('dashboard_label'), path: '/dashboard' },
+    { icon: Package, label: t('store_label'), path: '/products' },
+    { icon: ShoppingCart, label: t('sold_label'), path: '/products-sold' },
+    { icon: ArchiveRestore, label: t('restored_label'), path: '/products-restored' },
+    { icon: User, label: t('profile_title'), path: '/profile' },
+    { icon: FileText, label: t('reports_label'), path: '/reports' },
+    { icon: Trash2, label: t('trash_label'), path: '/trash' },
+    { icon: Store, label: t('branches_label'), path: '/manage-branch' },
+    { icon: Users, label: t('employees_label'), path: '/manage-employees' },
+  ];
 
   // Dynamic user data
   const businessName = user?.businessName || 'Smart Manager';
@@ -130,14 +132,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
                   <AvatarFallback className="bg-white/10 text-white">{initials}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xs text-slate-400 font-medium">Welcome back,</p>
-                  <p className="font-bold text-sm truncate text-white">{user.firstName}</p>
+                  <p className="text-xs text-slate-400 font-medium">{t('welcome_back')}</p>
+                  <p className="font-bold text-sm truncate text-white">{user?.firstName}</p>
                 </div>
               </div>
 
               {/* Help Message */}
               <p className="text-xs text-slate-400 leading-relaxed">
-                Need help? Contact support 24/7.
+                {t('need_help')}
               </p>
 
               {/* WhatsApp Button */}
@@ -170,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
           )}
         >
           <LogOut size={18} />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>{t('sign_out')}</span>}
         </Button>
       </div>
     </div>
