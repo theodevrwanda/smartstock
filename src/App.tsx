@@ -23,6 +23,7 @@ import TrashPage from "@/pages/TrashPage";
 import ManageBranchPage from "@/pages/ManageBranchPage";
 import ManageEmployeesPage from "@/pages/ManageEmployeesPage";
 import NotFound from "./pages/NotFound";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
 
