@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import {
@@ -14,20 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getDashboardStats } from '@/functions/dashboard';
 import { DashboardStats } from '@/types/interface';
-import {
-  format,
-  startOfWeek,
-  endOfWeek,
-  eachDayOfInterval,
-  isSameDay,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-  isWithinInterval
-} from 'date-fns';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 const DashboardPage: React.FC = () => {
@@ -38,7 +25,6 @@ const DashboardPage: React.FC = () => {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -64,32 +50,6 @@ const DashboardPage: React.FC = () => {
 
     if (user) loadStats();
   }, [user, t, toast]);
-
-  // Activity stats (week, month, year) - using current stock value as proxy
-  const activityStats = useMemo(() => {
-    if (!stats) return { weekly: 0, monthly: 0, yearly: 0, timelineData: [] };
-
-    const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
-
-    const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-
-    const timelineData = weeklyDays.map(day => {
-      const isToday = isSameDay(day, new Date());
-      return {
-        dayName: format(day, 'EEE').toUpperCase(),
-        date: day,
-        value: isToday ? stats.totalStockValue : 0
-      };
-    });
-
-    return {
-      weekly: stats.totalStockValue,
-      monthly: stats.totalStockValue,
-      yearly: stats.totalStockValue,
-      timelineData
-    };
-  }, [stats, selectedDate]);
 
   if (loading || authLoading) {
     return (
@@ -132,125 +92,8 @@ const DashboardPage: React.FC = () => {
           <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
             <CalendarIcon size={14} className="text-muted-foreground" />
             <span className="text-muted-foreground">{t('dashboard_context')}</span>
-            <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
+            <span className="font-semibold text-foreground">{format(new Date(), 'MMMM do, yyyy')}</span>
           </Badge>
-        </div>
-
-        {/* Activity Value Cards - Updated labels to reflect stock value */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">
-                {t('weekly_stock_value')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">
-                    {activityStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
-                  </div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">
-                {t('monthly_stock_value')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">
-                    {activityStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
-                  </div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                <Award size={14} className="text-orange-500" />
-                {t('yearly_stock_value')}
-              </CardTitle>
-              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')} {t('yearly_activity')}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">{t('current_stock_value')}</p>
-                  <div className="text-3xl font-bold">
-                    {activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Weekly Day Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
-          {activityStats.timelineData.map((item, idx) => {
-            const isSelected = isSameDay(item.date, selectedDate);
-            const isToday = isSameDay(item.date, new Date());
-
-            return (
-              <motion.div
-                key={idx}
-                whileHover={{ y: -4 }}
-                onClick={() => setSelectedDate(item.date)}
-                className={cn(
-                  "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
-                  isSelected
-                    ? "bg-primary border-primary shadow-lg text-primary-foreground ring-2 ring-primary/50"
-                    : isToday
-                      ? "bg-secondary border-border"
-                      : "bg-card border-border hover:border-primary/50"
-                )}
-              >
-                {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    {t('today')}
-                  </div>
-                )}
-                <div className="flex flex-col items-center text-center gap-2">
-                  <span className={cn(
-                    "text-[10px] font-bold tracking-tighter uppercase",
-                    isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
-                  )}>
-                    {item.dayName} {isSelected && "•"}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className={cn(
-                      "text-sm font-black",
-                      isSelected ? "text-primary-foreground" : "text-foreground"
-                    )}>
-                      {item.value > 0 ? item.value.toLocaleString() : '—'}
-                    </span>
-                    <span className={cn(
-                      "text-[9px] uppercase font-medium opacity-60",
-                      isSelected ? "text-primary-foreground/60" : "text-muted-foreground"
-                    )}>
-                      RWF
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
         </div>
 
         {/* Primary Stats */}
@@ -260,7 +103,7 @@ const DashboardPage: React.FC = () => {
           <BigProCard title={t('models')} value={stats.totalModels} subtitle={t('unique_models')} icon={<Box />} color="violet" />
         </div>
 
-        {/* Financial Cards - Updated subtitles to reflect correct calculation method */}
+        {/* Financial Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <BigProCard
             title={t('total_net_profit')}
@@ -307,7 +150,7 @@ const DashboardPage: React.FC = () => {
           <SmallProCard title={t('deleted')} value={stats.deletedProducts} subtitle={t('trash_label')} icon={<XCircle className="text-rose-600" />} />
           <SmallProCard title={t('low_stock')} value={stats.lowStockProducts} subtitle="≤10 units" icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
           <SmallProCard title={t('out_of_stock')} value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
-          <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle={t('per_product')} icon={<Package className="text-cyan-600" />} /> {/* per_product might be missing, using '' if so */}
+          <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle={t('per_product')} icon={<Package className="text-cyan-600" />} />
         </div>
 
         {/* Stock Highlights */}
