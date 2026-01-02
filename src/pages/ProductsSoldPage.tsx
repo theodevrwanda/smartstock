@@ -411,10 +411,10 @@ const ProductsSoldPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
-            <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">{t('displaying_sales_for')}:</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+          <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
+            <CalendarIcon size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">{t('displaying_sales_for')}:</span>
+            <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
 
           <Popover>
@@ -469,9 +469,9 @@ const ProductsSoldPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
+          <Card className="relative overflow-hidden bg-card text-foreground border-none shadow-xl border-l-4 border-l-orange-500">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                 <Award size={14} className="text-orange-500" />
                 {t('yearly_income')}
               </CardTitle>
@@ -482,7 +482,7 @@ const ProductsSoldPage: React.FC = () => {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">{t('total_revenue')}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t('total_revenue')}</p>
                   <div className="text-3xl font-bold">{incomeStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
                 </div>
               </div>
@@ -525,7 +525,7 @@ const ProductsSoldPage: React.FC = () => {
                   <div className="flex flex-col">
                     <span className={cn(
                       "text-sm font-black",
-                      isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"
+                      isSelected ? "text-primary-foreground" : "text-foreground"
                     )}>
                       {item.income.toLocaleString()}
                     </span>
@@ -640,12 +640,12 @@ const ProductsSoldPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                          <span className="text-base text-foreground">{product.productName}</span>
                           <span className="text-[10px] text-muted-foreground uppercase">{product.model || '-'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-secondary text-gray-900 dark:text-gray-100 dark:bg-accent/30 dark:text-gray-900 dark:text-gray-100">
+                        <Badge variant="secondary" className="bg-secondary text-foreground">
                           {product.category}
                         </Badge>
                       </TableCell>

@@ -1221,7 +1221,7 @@ const ProductsStorePage: React.FC = () => {
                     <Button
                       type="button"
                       variant={newProduct.costType === 'costPerUnit' ? 'default' : 'ghost'}
-                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'costPerUnit' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
+                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'costPerUnit' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground'}`}
                       onClick={() => setNewProduct(p => ({ ...p, costType: 'costPerUnit' }))}
                     >
                       {t('cost_per_unit')}
@@ -1229,7 +1229,7 @@ const ProductsStorePage: React.FC = () => {
                     <Button
                       type="button"
                       variant={newProduct.costType === 'bulkCost' ? 'default' : 'ghost'}
-                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'bulkCost' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
+                      className={`flex-1 text-xs h-8 ${newProduct.costType === 'bulkCost' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground'}`}
                       onClick={() => setNewProduct(p => ({ ...p, costType: 'bulkCost' }))}
                     >
                       {t('total_bulk_cost')}
@@ -1260,7 +1260,7 @@ const ProductsStorePage: React.FC = () => {
 
               <div className="space-y-4">
                 <div className="bg-muted/30 p-6 rounded-xl border h-full space-y-4">
-                  <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-xs uppercase tracking-wider mb-2">
+                  <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-wider mb-2">
                     <Eye className="h-3 w-3" /> {t('live_preview')}
                   </div>
                   <div className="space-y-4">
@@ -1276,7 +1276,7 @@ const ProductsStorePage: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground uppercase font-semibold">{t('quantity_label')}</p>
-                        <p className="font-bold text-lg text-gray-900 dark:text-gray-100">{newProduct.quantity || 0} <span className="text-sm font-medium">{newProduct.unit}</span></p>
+                        <p className="font-bold text-lg text-foreground">{newProduct.quantity || 0} <span className="text-sm font-medium">{newProduct.unit}</span></p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground uppercase font-semibold">{t('entered_amount')}</p>
@@ -1286,9 +1286,9 @@ const ProductsStorePage: React.FC = () => {
 
                     <div className="pt-4 border-t space-y-2">
                       {newProduct.costType === 'bulkCost' && Number(newProduct.quantity) > 0 && (
-                        <div className="flex justify-between items-center text-sm p-2 bg-gray-900 dark:bg-gray-100/5 rounded border border-gray-300 dark:border-gray-700/10">
+                        <div className="flex justify-between items-center text-sm p-2 bg-secondary rounded border border-border">
                           <span className="text-muted-foreground font-medium">{t('calculated_unit_cost')}:</span>
-                          <span className="font-bold text-gray-900 dark:text-gray-100">
+                          <span className="font-bold text-foreground">
                             {(Number(newProduct.costPrice || 0) / Number(newProduct.quantity || 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })} RWF
                           </span>
                         </div>
@@ -1411,7 +1411,7 @@ const ProductsStorePage: React.FC = () => {
                       <Button
                         type="button"
                         variant={currentProduct.costType === 'costPerUnit' ? 'default' : 'ghost'}
-                        className={`flex-1 text-xs h-8 ${currentProduct.costType === 'costPerUnit' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
+                        className={`flex-1 text-xs h-8 ${currentProduct.costType === 'costPerUnit' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground'}`}
                         onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'costPerUnit' } : null)}
                       >
                         {t('cost_per_unit')}
@@ -1419,7 +1419,7 @@ const ProductsStorePage: React.FC = () => {
                       <Button
                         type="button"
                         variant={currentProduct.costType === 'bulkCost' ? 'default' : 'ghost'}
-                        className={`flex-1 text-xs h-8 ${currentProduct.costType === 'bulkCost' ? 'bg-gray-900 dark:bg-gray-100 shadow-md text-white' : ''}`}
+                        className={`flex-1 text-xs h-8 ${currentProduct.costType === 'bulkCost' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground'}`}
                         onClick={() => setCurrentProduct(prev => prev ? { ...prev, costType: 'bulkCost' } : null)}
                       >
                         {t('total_bulk_cost')}
@@ -1438,7 +1438,7 @@ const ProductsStorePage: React.FC = () => {
 
                 <div className="space-y-4">
                   <div className="bg-muted/30 p-6 rounded-xl border h-full space-y-4">
-                    <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-xs uppercase tracking-wider mb-2">
+                    <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-wider mb-2">
                       <Eye className="h-3 w-3" /> {t('live_preview')}
                     </div>
                     <div className="space-y-4">

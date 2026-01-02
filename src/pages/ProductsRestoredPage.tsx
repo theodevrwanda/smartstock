@@ -397,10 +397,10 @@ const ProductsRestoredPage: React.FC = () => {
 
         {/* Date Context */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
-            <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">{t('showing_restored_products_for')}:</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+          <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
+            <CalendarIcon size={14} className="text-muted-foreground" />
+            <span className="text-muted-foreground">{t('showing_restored_products_for')}:</span>
+            <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
           </Badge>
 
           <Popover>
@@ -455,9 +455,9 @@ const ProductsRestoredPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
+          <Card className="relative overflow-hidden bg-card text-foreground border-none shadow-xl border-l-4 border-l-orange-500">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                 <Award size={14} className="text-orange-500" />
                 {t('yearly_restored_value')}
               </CardTitle>
@@ -468,7 +468,7 @@ const ProductsRestoredPage: React.FC = () => {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">{t('total_cost_value')}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t('total_cost_value')}</p>
                   <div className="text-3xl font-bold">{restoredStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
                 </div>
               </div>
@@ -511,7 +511,7 @@ const ProductsRestoredPage: React.FC = () => {
                   <div className="flex flex-col">
                     <span className={cn(
                       "text-sm font-black",
-                      isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"
+                      isSelected ? "text-primary-foreground" : "text-foreground"
                     )}>
                       {item.value.toLocaleString()}
                     </span>
@@ -623,12 +623,12 @@ const ProductsRestoredPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex flex-col">
-                          <span className="text-base text-gray-900 dark:text-gray-100">{product.productName}</span>
+                          <span className="text-base text-foreground">{product.productName}</span>
                           <span className="text-[10px] text-muted-foreground uppercase">{product.model || '-'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-secondary text-gray-900 dark:text-gray-100 dark:bg-accent/30 dark:text-gray-900 dark:text-gray-100">
+                        <Badge variant="secondary" className="bg-secondary text-foreground">
                           {product.category}
                         </Badge>
                       </TableCell>
@@ -738,7 +738,7 @@ const ProductsRestoredPage: React.FC = () => {
                       {(currentProduct.quantity * (currentProduct.sellingPrice || currentProduct.costPrice)).toLocaleString()} RWF
                     </p>
                   </div>
-                  <div className="col-span-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                  <div className="col-span-2 p-3 bg-secondary rounded-lg border border-border">
                     <p className="text-sm text-muted-foreground">{t('restored_date')}</p>
                     <p className="font-medium">{new Date(currentProduct.restoredDate).toLocaleDateString()} {new Date(currentProduct.restoredDate).toLocaleTimeString()}</p>
                   </div>
@@ -747,7 +747,7 @@ const ProductsRestoredPage: React.FC = () => {
                 {currentProduct.restoreComment && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">{t('restore_reason')}</p>
-                    <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <div className="p-4 bg-secondary rounded-lg">
                       <p className="whitespace-pre-wrap">{currentProduct.restoreComment}</p>
                     </div>
                   </div>

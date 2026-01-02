@@ -180,26 +180,26 @@ const DashboardPage: React.FC = () => {
 /* --- Reusable Components --- */
 const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
   const colors: any = {
-    indigo: "bg-indigo-600 dark:bg-indigo-700",
-    blue: "bg-gray-900 dark:bg-gray-100 dark:bg-gray-900 dark:bg-gray-100/90",
-    violet: "bg-violet-600 dark:bg-violet-700",
-    emerald: "bg-emerald-600 dark:bg-emerald-700",
-    green: "bg-emerald-600 dark:bg-emerald-700",
-    red: "bg-rose-600 dark:bg-rose-700",
+    indigo: "bg-indigo-600",
+    blue: "bg-primary text-primary-foreground",
+    violet: "bg-violet-600",
+    emerald: "bg-emerald-600",
+    green: "bg-emerald-600",
+    red: "bg-rose-600",
   };
   return (
-    <Card className={`border-none shadow-lg ${colors[color] || colors.blue} text-white transition-all rounded-2xl overflow-hidden`}>
+    <Card className={`border-none shadow-lg ${colors[color] || colors.blue} ${color === 'blue' ? '' : 'text-white'} transition-all rounded-2xl overflow-hidden`}>
       <CardContent className="p-6 relative">
         <div className="flex justify-between items-start mb-4 relative z-10">
-          <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl">
-            {React.cloneElement(icon, { className: "h-6 w-6 text-white" })}
+          <div className={`p-3 rounded-xl ${color === 'blue' ? 'bg-primary-foreground/10' : 'bg-white/10'} backdrop-blur-sm`}>
+            {React.cloneElement(icon, { className: `h-6 w-6 ${color === 'blue' ? 'text-primary-foreground' : 'text-white'}` })}
           </div>
           <div className="text-right">
             <p className="text-xs font-bold uppercase tracking-widest opacity-80">{title}</p>
             <h3 className="text-4xl font-black mt-2 tracking-tight">{value}</h3>
           </div>
         </div>
-        <div className="relative z-10 pt-2 border-t border-white/10">
+        <div className={`relative z-10 pt-2 border-t ${color === 'blue' ? 'border-primary-foreground/10' : 'border-white/10'}`}>
           <p className="text-xs font-bold uppercase tracking-wider opacity-90 flex items-center gap-2">
             {subtitle}
           </p>
@@ -234,26 +234,26 @@ const HighlightCard = ({ type, name, quantity, value, icon, color }: any) => {
   const bgAccent: any = color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-amber-50 dark:bg-amber-900/10';
 
   return (
-    <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-[#1e293b] flex flex-col rounded-2xl group hover:shadow-lg transition-all">
+    <Card className="overflow-hidden border-none shadow-md bg-card flex flex-col rounded-2xl group hover:shadow-lg transition-all">
       <CardContent className="p-0 flex flex-col h-full">
-        <div className={`p-6 ${bgAccent} border-b border-slate-100 dark:border-slate-800`}>
+        <div className={`p-6 ${bgAccent} border-b border-border`}>
           <div className="flex items-center gap-3 mb-2">
             <div className={`${color === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-amber-100 dark:bg-amber-900/30'} p-2 rounded-lg`}>
               {React.cloneElement(icon, { className: `h-5 w-5 ${text}` })}
             </div>
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">{type}</p>
+            <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">{type}</p>
           </div>
-          <p className="text-xl font-bold uppercase text-slate-900 dark:text-white leading-tight mt-2 line-clamp-2">{name || 'N/A'}</p>
+          <p className="text-xl font-bold uppercase text-foreground leading-tight mt-2 line-clamp-2">{name || 'N/A'}</p>
         </div>
 
-        <div className="p-6 flex justify-between items-center mt-auto bg-white dark:bg-[#1e293b]">
+        <div className="p-6 flex justify-between items-center mt-auto bg-card">
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Stock</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Stock</p>
             <p className={`text-[10px] uppercase font-black tracking-tight mt-1 ${text}`}>Inventory Count</p>
           </div>
           <div className="text-right">
             <p className={`text-4xl font-black ${text}`}>{quantity}</p>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Units</p>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Units</p>
             {value && (
               <p className={`text-xs font-bold mt-1 ${text}`}>
                 {value.toLocaleString()} RWF

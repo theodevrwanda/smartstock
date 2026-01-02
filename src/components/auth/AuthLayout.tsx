@@ -24,13 +24,13 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="absolute top-12 left-12 bg-[#FCD34D] p-4 rounded-xl shadow-lg max-w-[240px]"
+          className="absolute top-12 left-12 bg-primary p-4 rounded-xl shadow-lg max-w-[240px]"
         >
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 bg-black rounded-full" />
-            <p className="text-xs font-bold text-black uppercase">Low Stock Alert</p>
+            <div className="w-2 h-2 bg-primary-foreground rounded-full" />
+            <p className="text-xs font-bold text-primary-foreground uppercase">Low Stock Alert</p>
           </div>
-          <p className="text-[10px] font-medium text-black/80">
+          <p className="text-[10px] font-medium text-primary-foreground/80">
             Wireless Headphones (WH-1000XM5) are running low. Only 3 units remaining.
           </p>
         </motion.div>
@@ -40,19 +40,19 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="absolute bottom-12 right-12 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-xl max-w-[280px]"
+          className="absolute bottom-12 right-12 bg-background/90 backdrop-blur-md p-5 rounded-2xl shadow-xl max-w-[280px] border border-border"
         >
           <div className="flex items-center gap-3 mb-3">
             <div className="flex -space-x-2">
-              <img src="https://i.pravatar.cc/100?img=1" className="w-8 h-8 rounded-full border-2 border-white" alt="User" />
-              <img src="https://i.pravatar.cc/100?img=5" className="w-8 h-8 rounded-full border-2 border-white" alt="User" />
-              <img src="https://i.pravatar.cc/100?img=8" className="w-8 h-8 rounded-full border-2 border-white" alt="User" />
+              <img src="https://i.pravatar.cc/100?img=1" className="w-8 h-8 rounded-full border-2 border-background" alt="User" />
+              <img src="https://i.pravatar.cc/100?img=5" className="w-8 h-8 rounded-full border-2 border-background" alt="User" />
+              <img src="https://i.pravatar.cc/100?img=8" className="w-8 h-8 rounded-full border-2 border-background" alt="User" />
             </div>
-            <p className="text-xs text-slate-500 font-medium">+12 Sales</p>
+            <p className="text-xs text-muted-foreground font-medium">+12 Sales</p>
           </div>
           <div className="space-y-1">
-            <p className="text-sm font-bold text-slate-900">Weekly Meeting</p>
-            <p className="text-xs text-slate-500">10:00 AM - 11:30 AM</p>
+            <p className="text-sm font-bold text-foreground">Weekly Meeting</p>
+            <p className="text-xs text-muted-foreground">10:00 AM - 11:30 AM</p>
           </div>
         </motion.div>
       </div>

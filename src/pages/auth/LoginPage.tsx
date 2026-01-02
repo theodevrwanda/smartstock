@@ -154,10 +154,10 @@ export default function LoginPage() {
       <SEOHelmet title="Login" />
       <div className="space-y-8">
         <div className="space-y-2">
-          <h1 className="text-3xl font-medium text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-medium text-foreground tracking-tight">
             {t('welcome_back_login')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+          <p className="text-muted-foreground font-medium text-sm">
             {t('enter_details_login')}
           </p>
         </div>
@@ -197,7 +197,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="email"
-                className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1"
+                className="text-muted-foreground text-xs font-bold uppercase tracking-wider pl-1"
               >
                 {t('email_label')}
               </Label>
@@ -207,7 +207,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder={t('email_placeholder')}
                   autoComplete="email"
-                  className="pl-4 h-12 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-2xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="pl-4 h-12 bg-secondary border-transparent hover:bg-secondary/80 transition-colors rounded-2xl text-foreground focus:bg-background focus:border-primary focus:ring-primary"
                   {...register('email')}
                 />
               </div>
@@ -219,7 +219,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label
                 htmlFor="password"
-                className="text-slate-600 dark:text-slate-400 text-xs font-bold uppercase tracking-wider pl-1"
+                className="text-muted-foreground text-xs font-bold uppercase tracking-wider pl-1"
               >
                 {t('password_label')}
               </Label>
@@ -229,13 +229,13 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder={t('password_placeholder')}
                   autoComplete="current-password"
-                  className="pl-4 pr-10 h-12 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-2xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                  className="pl-4 pr-10 h-12 bg-secondary border-transparent hover:bg-secondary/80 transition-colors rounded-2xl text-foreground focus:bg-background focus:border-primary focus:ring-primary"
                   {...register('password')}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -249,7 +249,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-end">
             <Link
               to="/forgot-password"
-              className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground"
             >
               {t('forgot_password')}
             </Link>
@@ -270,10 +270,10 @@ export default function LoginPage() {
 
             <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#F8F7F2] dark:bg-slate-950 px-2 text-slate-400 font-medium">
+                <span className="bg-background px-2 text-muted-foreground font-medium">
                   {t('or_divider')}
                 </span>
               </div>
@@ -284,7 +284,7 @@ export default function LoginPage() {
               onClick={handleGoogleLogin}
               disabled={isGoogleLoading}
               variant="outline"
-              className="w-full h-12 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium rounded-2xl"
+              className="w-full h-12 bg-background border-border hover:bg-secondary text-foreground font-medium rounded-2xl"
             >
               {isGoogleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -304,11 +304,11 @@ export default function LoginPage() {
         </form>
 
         <div className="text-center">
-          <p className="text-slate-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             {t('dont_have_account')}{' '}
             <Link
               to="/register"
-              className="font-bold text-slate-900 dark:text-white hover:underline"
+              className="font-bold text-foreground hover:underline"
             >
               {t('sign_up_link')}
             </Link>
