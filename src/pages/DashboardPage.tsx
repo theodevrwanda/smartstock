@@ -1,5 +1,4 @@
 // src/pages/DashboardPage.tsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -153,7 +152,7 @@ const DashboardPage: React.FC = () => {
                   <div className="text-3xl font-bold">
                     {activityStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
                   </div>
-                  <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p>
+                  {/* <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p> */}
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <TrendingUp className="h-6 w-6 text-white" />
@@ -174,7 +173,7 @@ const DashboardPage: React.FC = () => {
                   <div className="text-3xl font-bold">
                     {activityStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
                   </div>
-                  <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p>
+                  {/* <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p> */}
                 </div>
                 <div className="bg-white/20 p-2 rounded-lg">
                   <DollarSign className="h-6 w-6 text-white" />
@@ -200,7 +199,7 @@ const DashboardPage: React.FC = () => {
                   <div className="text-3xl font-bold">
                     {activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span>
                   </div>
-                  <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p>
+                  {/* <p className="text-xs opacity-75 mt-1">CostPricePerUnit × Quantity</p> */}
                 </div>
               </div>
             </CardContent>
@@ -271,21 +270,21 @@ const DashboardPage: React.FC = () => {
           <BigProCard
             title="Net Profit"
             value={stats.totalNetProfit.toLocaleString()}
-            subtitle="(SellingPrice - CostPricePerUnit) × Quantity (RWF)"
+            subtitle="Profit from all sold products after calculated loss"
             icon={<DollarSign />}
             color={stats.totalNetProfit >= 0 ? "green" : "red"}
           />
           <BigProCard
             title="Current Stock Value"
             value={stats.totalStockValue.toLocaleString()}
-            subtitle="CostPricePerUnit × Quantity (RWF)"
+            subtitle="Total value of all products in stock"
             icon={<Package />}
             color="emerald"
           />
           <BigProCard
             title="Total Loss"
             value={stats.totalLoss.toLocaleString()}
-            subtitle="(CostPricePerUnit - SellingPrice) × Quantity (RWF)"
+            subtitle="Total loss from all sold products"
             icon={<TrendingDown />}
             color="red"
           />
