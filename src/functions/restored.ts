@@ -157,8 +157,13 @@ export const getRestoredProducts = async (
 // Delete restored product (admin only)
 export const deleteRestoredProduct = async (id: string): Promise<boolean> => {
   try {
-    await deleteDoc(doc(db, 'products', id));
-    toast.success('Restored product deleted permanently');
+    await updateDoc(doc(db, 'products', id), {
+      status: 'deleted',
+      oldStatus: 'restored',
+      deletedDate: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    toast.success('Restored product moved to trash');
     return true;
   } catch (error: any) {
     console.error('Error deleting restored product:', error);

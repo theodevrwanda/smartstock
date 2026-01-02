@@ -28,6 +28,7 @@ export interface DeletedProduct {
   deletedDate: string;
   restoreComment?: string;
   businessId: string;
+  oldStatus?: 'store' | 'sold' | 'restored';
 }
 
 // Get deleted products
@@ -79,8 +80,9 @@ export const restoreDeletedProduct = async (
     }
 
     await updateDoc(deletedDoc, {
-      status: 'store',
+      status: deleted.oldStatus || 'store', // Restore to previous status
       deletedDate: null,
+      oldStatus: null, // Clear oldStatus
       updatedAt: new Date().toISOString(),
     });
 
@@ -121,8 +123,9 @@ export const bulkRestoreDeletedProducts = async (
       }
 
       batch.update(deletedDoc, {
-        status: 'store',
+        status: deleted.oldStatus || 'store',
         deletedDate: null,
+        oldStatus: null,
         updatedAt: new Date().toISOString(),
       });
       successCount++;

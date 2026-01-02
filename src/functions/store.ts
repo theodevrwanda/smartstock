@@ -554,6 +554,7 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
 
     await updateDoc(doc(db, 'products', id), {
       status: 'deleted',
+      oldStatus: 'store',
       deletedDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

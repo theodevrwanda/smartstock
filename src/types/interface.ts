@@ -24,6 +24,7 @@ export interface Product {
     productNameLower?: string;
     categoryLower?: string;
     modelLower?: string;
+    oldStatus?: 'store' | 'sold' | 'restored';
 }
 
 export interface SoldProduct {
@@ -45,6 +46,7 @@ export interface SoldProduct {
     costType?: 'costPerUnit' | 'bulkCost';
     costPricePerUnit?: number; // Added for consistency
     unitCost?: number; // Kept for backward compatibility/clarity
+    oldStatus?: 'store' | 'sold' | 'restored';
 }
 
 export interface RestoredProduct {
