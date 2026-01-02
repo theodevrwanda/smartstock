@@ -72,8 +72,11 @@ export const PWAInstallPrompt: React.FC = () => {
         setShowPrompt(false);
     };
 
-    // Don't show if already installed or user is on iOS without prompt support
-    if (isStandalone || (!deferredPrompt && !isIOS) || !showPrompt) {
+    // For Android/Chrome, we need deferredPrompt
+    // For iOS, we check isIOS
+    const canInstall = deferredPrompt || isIOS;
+
+    if (isStandalone || !canInstall || !showPrompt) {
         return null;
     }
 

@@ -11,25 +11,25 @@ export default defineConfig(({ mode }) => {
       registerType: "autoUpdate",
       strategies: "generateSW",
 
-      includeAssets: ["pixelmart.png"],
+      includeAssets: ["smartstock.png"],
 
       manifest: {
-        name: "PixelMart",
-        short_name: "PixelMart",
-        description: "Offline-first stock management system",
+        name: "SmartStock",
+        short_name: "SmartStock",
+        description: "Intelligent Inventory & Financial Management System",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
-        theme_color: "#0f172a",
+        theme_color: "#FCD34D",
         icons: [
           {
-            src: "/pixelmart.png",
+            src: "/smartstock.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/pixelmart.png",
+            src: "/smartstock.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
