@@ -216,6 +216,7 @@ const ReportsPage: React.FC = () => {
     ...(isAdmin ? [{ header: 'Branch', key: 'branchName', width: 20 }] : []),
     { header: 'Status', key: 'status', width: 12 },
     { header: 'Cost Price', key: 'costPriceFormatted', width: 15 },
+    { header: 'Total Value', key: 'totalValueFormatted', width: 15 },
     { header: 'Selling Price', key: 'sellingPriceFormatted', width: 15 },
     { header: 'Profit/Loss', key: 'profitLossFormatted', width: 15 },
     { header: 'Added Date', key: 'addedDateFormatted', width: 15 },
@@ -232,6 +233,7 @@ const ReportsPage: React.FC = () => {
       ...(isAdmin ? { branchName: getBranchName(p.branch) } : {}),
       status: p.status.charAt(0).toUpperCase() + p.status.slice(1),
       costPriceFormatted: `${(p.costPricePerUnit ?? p.costPrice).toLocaleString()} RWF`,
+      totalValueFormatted: `${((p.costPricePerUnit ?? p.costPrice) * p.quantity).toLocaleString()} RWF`,
       sellingPriceFormatted: p.sellingPrice !== null ? `${p.sellingPrice.toLocaleString()} RWF` : 'N/A',
       profitLossFormatted: p.profitLoss !== null ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF` : 'N/A',
       addedDateFormatted: new Date(p.addedDate).toLocaleDateString(),
@@ -534,7 +536,8 @@ const ReportsPage: React.FC = () => {
                   <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Cost Price</TableHead>
+                <TableHead>Unit Cost</TableHead>
+                <TableHead>Total Value</TableHead>
                 <TableHead>Selling Price</TableHead>
                 <TableHead>Profit</TableHead>
                 <TableHead className="cursor-pointer" onClick={() => handleSort('addedDate')}>
@@ -591,6 +594,9 @@ const ReportsPage: React.FC = () => {
                     </TableCell>
                     <TableCell className={getProfitColor(p.costPrice)}>
                       {(p.costPricePerUnit ?? p.costPrice).toLocaleString()} RWF
+                    </TableCell>
+                    <TableCell className="font-bold">
+                      {((p.costPricePerUnit ?? p.costPrice) * p.quantity).toLocaleString()} RWF
                     </TableCell>
                     <TableCell>
                       {p.sellingPrice !== null

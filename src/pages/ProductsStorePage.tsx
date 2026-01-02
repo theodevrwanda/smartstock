@@ -269,11 +269,12 @@ const ProductsStorePage: React.FC = () => {
   const currentDayIndex = getDay(new Date()) === 0 ? 6 : getDay(new Date()) - 1;
 
   // Auto-highlight today
-  useEffect(() => {
-    if (selectedDay === null && !selectedDate) {
-      setSelectedDay(currentDayIndex);
-    }
-  }, []);
+  // Auto-highlight today - REMOVED to show all products by default
+  // useEffect(() => {
+  //   if (selectedDay === null && !selectedDate) {
+  //     setSelectedDay(currentDayIndex);
+  //   }
+  // }, []);
 
   // Products for stats: only confirmed + apply all filters except confirmFilter
   const confirmedProductsForStats = useMemo(() => {
