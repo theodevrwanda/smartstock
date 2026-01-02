@@ -112,8 +112,9 @@ export const getReportData = async (
 
     const netProfit = grossProfit - totalLoss;
 
-    // Total value of current stock (store + restored) using actual unit cost
-    const totalStoreValue = [...storeProducts, ...restoredProducts].reduce(
+    // Total value of current stock (only confirmed store products) using actual unit cost
+    const confirmedStoreProducts = storeProducts.filter(p => p.confirm === true);
+    const totalStoreValue = confirmedStoreProducts.reduce(
       (sum, p) => sum + (getActualUnitCost(p) * p.quantity),
       0
     );

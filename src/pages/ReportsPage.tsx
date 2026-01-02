@@ -536,6 +536,7 @@ const ReportsPage: React.FC = () => {
                   <div className="flex items-center gap-1 justify-center">Branch <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-center">Confirm</TableHead>
                 <TableHead>Unit Cost</TableHead>
                 <TableHead>Total Value</TableHead>
                 <TableHead>Selling Price</TableHead>
@@ -550,7 +551,7 @@ const ReportsPage: React.FC = () => {
             <TableBody>
               {sortedProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 12 : 11} className="h-64 text-center text-muted-foreground">
+                  <TableCell colSpan={isAdmin ? 13 : 12} className="h-64 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <Package className="h-12 w-12 opacity-20" />
                       {!isAdmin && !userBranch ? (
@@ -590,6 +591,11 @@ const ReportsPage: React.FC = () => {
                               p.status === 'deleted' ? 'destructive' : 'secondary'
                       }>
                         {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={p.confirm ? 'default' : 'outline'} className={p.confirm ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-100 text-gray-600'}>
+                        {p.confirm ? '✓ Confirmed' : 'Pending'}
                       </Badge>
                     </TableCell>
                     <TableCell className={getProfitColor(p.costPrice)}>
