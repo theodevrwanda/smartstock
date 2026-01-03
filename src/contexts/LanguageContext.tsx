@@ -1056,7 +1056,7 @@ const translations: Translations = {
         'days_remaining': 'Iminsi isigaye',
         'expired_product': 'Igicuruzwa cyarengeje igihe',
         'expired_products': 'Ibicuruzwa byarengeje igihe',
-        'never_expires': 'Ntirurengaho igihe',
+        'never_expires': 'Nta gihe cyo kurangira igira',
         'expires_soon': 'Kirenda  kurenza igihe',
         'days_left': 'iminsi',
         'add_expiry_date': 'Shyiraho itariki yo kurenza igihe (Bihiswemo)',
