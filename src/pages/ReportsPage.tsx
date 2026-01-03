@@ -704,7 +704,7 @@ const ReportsPage: React.FC = () => {
                           p.deletedDate ? new Date(p.deletedDate).toLocaleDateString() : '-'}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {p.expiryDate ? (
+                        {p.status !== 'sold' && p.expiryDate ? (
                           <span className={cn(
                             "px-2 py-0.5 rounded-full font-bold",
                             isExpired ? "text-red-600 bg-red-100" :
