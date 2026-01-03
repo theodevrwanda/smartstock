@@ -554,7 +554,7 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(true);
 
     const costChanged = currentProduct.costPrice !== originalCostBeforeEdit ||
-                        currentProduct.costType !== originalCostTypeBeforeEdit;
+      currentProduct.costType !== originalCostTypeBeforeEdit;
     const quantityUnchanged = currentProduct.quantity === originalQuantityBeforeEdit;
 
     // Special case: only cost changed, quantity same → update existing product cost only
@@ -963,7 +963,9 @@ const ProductsStorePage: React.FC = () => {
                       layout
                       className={cn(
                         "group hover:bg-muted/30 transition-colors border-b last:border-0",
-                        getDaysRemaining(product.expiryDate) !== null && getDaysRemaining(product.expiryDate)! < 10 && "bg-red-50 dark:bg-red-950/20"
+                        getDaysRemaining(product.expiryDate) !== null && getDaysRemaining(product.expiryDate)! < 10 && "bg-red-50 dark:bg-red-950/20",
+                        getDaysRemaining(product.expiryDate) === 0 && "animate-red-pulse",
+                        getDaysRemaining(product.expiryDate) !== null && getDaysRemaining(product.expiryDate)! < 0 && "line-through text-muted-foreground opacity-70 grayscale-[0.5]"
                       )}
                     >
                       <TableCell className="text-xs text-muted-foreground font-mono">
@@ -1102,7 +1104,19 @@ const ProductsStorePage: React.FC = () => {
           ) : (
             <AnimatePresence mode='popLayout'>
               {sortedProducts.map(p => (
-                <motion.div key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }} layout>
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  layout
+                  className={cn(
+                    "rounded-xl overflow-hidden",
+                    getDaysRemaining(p.expiryDate) === 0 && "animate-red-pulse",
+                    getDaysRemaining(p.expiryDate) !== null && getDaysRemaining(p.expiryDate)! < 0 && "line-through opacity-70 grayscale-[0.5]"
+                  )}
+                >
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start gap-3">

@@ -192,6 +192,16 @@ All colors MUST be HSL.
     animation: spin 1s linear infinite;
   }
 
+  /* Red pulse animation for products expiring today */
+  @keyframes red-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+  .animate-red-pulse {
+    animation: red-pulse 2s infinite;
+  }
+
   /* Mobile app container */
   .mobile-container {
     @apply bg-background/95 backdrop-blur-sm border border-border/50 rounded-2xl;
