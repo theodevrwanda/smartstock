@@ -521,6 +521,9 @@ const translations: Translations = {
         'restored_qty': 'Restored Qty',
         'search_deleted_products': 'Search deleted products...',
         'deleted_date': 'Deleted Date',
+        'delete_permanently': 'Delete Permanently',
+        'restore_product_q': 'Restore Product?',
+        'restoring': 'Restoring...',
     },
     rw: {
         // Header
@@ -1034,6 +1037,9 @@ const translations: Translations = {
         'restored_qty': 'Ingano yasubijwe',
         'search_deleted_products': 'Shakisha ibyasibiwe mu mase...',
         'deleted_date': 'Itariki byasibiweho',
+        'delete_permanently': 'Siba Burundu',
+        'restore_product_q': 'Kugarura Igicuruzwa?',
+        'restoring': 'Biragarurwa...',
     }
 };
 
