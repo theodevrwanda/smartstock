@@ -555,7 +555,7 @@ const ProductsSoldPage: React.FC = () => {
           </div>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t('all_categories')} /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">{t('all_categories')}</SelectItem>
               {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -564,7 +564,7 @@ const ProductsSoldPage: React.FC = () => {
 
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger><SelectValue placeholder="All Branches" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t('all_branches')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">{t('all_branches')}</SelectItem>
                 {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
@@ -573,13 +573,13 @@ const ProductsSoldPage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder="Min Price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-            <Input type="number" placeholder="Max Price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+            <Input type="number" placeholder={t('min_value')} value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+            <Input type="number" placeholder={t('max_value')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder="Min Qty" value={minQty} onChange={e => setMinQty(e.target.value)} />
-            <Input type="number" placeholder="Max Qty" value={maxQty} onChange={e => setMaxQty(e.target.value)} />
+            <Input type="number" placeholder={t('min_qty')} value={minQty} onChange={e => setMinQty(e.target.value)} />
+            <Input type="number" placeholder={t('max_qty')} value={maxQty} onChange={e => setMaxQty(e.target.value)} />
           </div>
         </div>
 
@@ -701,7 +701,7 @@ const ProductsSoldPage: React.FC = () => {
                             size="icon"
                             className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10 transition-colors"
                             onClick={() => openRestore(product)}
-                            title="Return Product"
+                            title={t('return_product')}
                           >
                             <Undo className="h-4 w-4" />
                           </Button>

@@ -162,6 +162,7 @@ const DashboardPage: React.FC = () => {
             value={stats.mostStockedProduct.value}
             icon={<TrendingUp />}
             color="emerald"
+            t={t}
           />
           <HighlightCard
             type={t('least_stocked')}
@@ -170,6 +171,7 @@ const DashboardPage: React.FC = () => {
             value={stats.leastStockedProduct.value}
             icon={<TrendingDown />}
             color="amber"
+            t={t}
           />
         </div>
       </div>
@@ -228,7 +230,7 @@ const SmallProCard = ({ title, value, subtitle, icon, highlight, danger }: any) 
   </Card>
 );
 
-const HighlightCard = ({ type, name, quantity, value, icon, color }: any) => {
+const HighlightCard = ({ type, name, quantity, value, icon, color, t }: any) => {
   const accent: any = color === 'emerald' ? 'bg-emerald-500' : 'bg-amber-500';
   const text: any = color === 'emerald' ? 'text-emerald-600 dark:text-emerald-500' : 'text-amber-600 dark:text-amber-500';
   const bgAccent: any = color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-amber-50 dark:bg-amber-900/10';
@@ -248,12 +250,12 @@ const HighlightCard = ({ type, name, quantity, value, icon, color }: any) => {
 
         <div className="p-6 flex justify-between items-center mt-auto bg-card">
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Stock</p>
-            <p className={`text-[10px] uppercase font-black tracking-tight mt-1 ${text}`}>Inventory Count</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('current_stock')}</p>
+            <p className={`text-[10px] uppercase font-black tracking-tight mt-1 ${text}`}>{t('inventory_count')}</p>
           </div>
           <div className="text-right">
             <p className={`text-4xl font-black ${text}`}>{quantity}</p>
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Units</p>
+            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{t('units')}</p>
             {value && (
               <p className={`text-xs font-bold mt-1 ${text}`}>
                 {value.toLocaleString()} RWF

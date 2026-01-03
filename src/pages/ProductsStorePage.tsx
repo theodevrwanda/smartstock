@@ -1190,7 +1190,7 @@ const ProductsStorePage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label>Quantity *</Label>
+                    <Label>{t('quantity_label')} *</Label>
                     <Input
                       type="number"
                       min="1"

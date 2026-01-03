@@ -331,7 +331,7 @@ const ProductsDeletedPage: React.FC = () => {
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="All Categories" />
+              <SelectValue placeholder={t('all_categories')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">{t('all_categories')}</SelectItem>
@@ -344,7 +344,7 @@ const ProductsDeletedPage: React.FC = () => {
           {isAdmin && (
             <Select value={branchFilter} onValueChange={setBranchFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="All Branches" />
+                <SelectValue placeholder={t('all_branches')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">{t('all_branches')}</SelectItem>
