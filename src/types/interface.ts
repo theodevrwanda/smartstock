@@ -18,13 +18,14 @@ export interface Product {
     confirm: boolean;
     businessId: string;
     unit: string;
-    costType?: 'costPerUnit' | 'bulkCost' | 'costPricePerUnit';
+    costType?: 'costPerUnit' | 'bulkCost';
     costPricePerUnit?: number; // Added to store unit cost specifically
     updatedAt?: string;
     productNameLower?: string;
     categoryLower?: string;
     modelLower?: string;
     oldStatus?: 'store' | 'sold' | 'restored';
+    expiryDate?: string;
 }
 
 export interface SoldProduct {
@@ -160,8 +161,9 @@ export interface DashboardStats {
     averageStockPerProduct: number;
     totalStockQuantity: number;
     totalNetProfit: number;
-    totalStockValue: number;
     totalLoss: number;
+    totalStockValue: number;
+    expiredProductsCount: number;
 }
 
 export interface ProductReport {
@@ -184,6 +186,7 @@ export interface ProductReport {
     unit: string;
     costPricePerUnit?: number;
     confirm?: boolean;
+    expiryDate?: string;
 }
 
 export interface ReportSummary {
@@ -198,6 +201,7 @@ export interface ReportSummary {
     totalStoreValue: number;
     lowStockCount: number;
     outOfStockCount: number;
+    expiredCount: number;
 }
 
 export interface AuthState {

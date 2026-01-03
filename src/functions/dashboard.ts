@@ -28,6 +28,7 @@ interface ProductData {
   quantity: number;
   branch: string;
   updatedAt?: string;
+  expiryDate?: string;
 }
 
 // Empty stats for restricted users
@@ -48,13 +49,14 @@ const emptyStats: DashboardStats = {
   deletedProducts: 0,
   lowStockProducts: 0,
   outOfStockProducts: 0,
-  mostStockedProduct: { name: 'N/A', quantity: 0 },
-  leastStockedProduct: { name: 'N/A', quantity: 0 },
+  mostStockedProduct: { name: 'N/A', quantity: 0, value: 0 },
+  leastStockedProduct: { name: 'N/A', quantity: 0, value: 0 },
   averageStockPerProduct: 0,
   totalStockQuantity: 0,
   totalNetProfit: 0,
   totalStockValue: 0,
   totalLoss: 0,
+  expiredProductsCount: 0,
 };
 
 // Date helpers (UTC)
@@ -120,6 +122,7 @@ export const getDashboardStats = async (
         quantity: data.quantity || 0,
         branch: data.branch || '',
         updatedAt: data.updatedAt || undefined,
+        expiryDate: data.expiryDate || undefined,
       };
     });
 
@@ -198,14 +201,15 @@ export const getDashboardStats = async (
     const models = new Set(products.filter(p => p.model).map(p => `${p.category}-${p.productName}-${p.model}`)).size;
 
     // Most/least stocked (confirmed store)
-    let mostStockedProduct = { name: 'N/A', quantity: 0 };
-    let leastStockedProduct = { name: 'N/A', quantity: 0 };
+    let mostStockedProduct = { name: 'N/A', quantity: 0, value: 0 };
+    let leastStockedProduct = { name: 'N/A', quantity: 0, value: 0 };
 
     if (confirmedStoreProducts.length > 0) {
       const sortedDesc = [...confirmedStoreProducts].sort((a, b) => b.quantity - a.quantity);
       mostStockedProduct = {
         name: `${sortedDesc[0].productName}${sortedDesc[0].model ? ` (${sortedDesc[0].model})` : ''}`,
         quantity: sortedDesc[0].quantity,
+        value: getUnitCost(sortedDesc[0]) * sortedDesc[0].quantity,
       };
 
       const withStock = confirmedStoreProducts.filter(p => p.quantity > 0);
@@ -214,11 +218,22 @@ export const getDashboardStats = async (
         leastStockedProduct = {
           name: `${sortedAsc[0].productName}${sortedAsc[0].model ? ` (${sortedAsc[0].model})` : ''}`,
           quantity: sortedAsc[0].quantity,
+          value: getUnitCost(sortedAsc[0]) * sortedAsc[0].quantity,
         };
       }
     }
 
     const averageStockPerProduct = activeProducts > 0 ? Math.round(totalStockQuantity / activeProducts) : 0;
+
+    // Expired products (only confirmed store products)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiredProductsCount = confirmedStoreProducts.filter(p => {
+      if (!p.expiryDate) return false;
+      const expDate = new Date(p.expiryDate);
+      expDate.setHours(0, 0, 0, 0);
+      return expDate < today;
+    }).length;
 
     return {
       totalProducts: products.length,
@@ -244,6 +259,7 @@ export const getDashboardStats = async (
       totalNetProfit,
       totalStockValue,
       totalLoss,
+      expiredProductsCount,
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

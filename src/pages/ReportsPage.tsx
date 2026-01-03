@@ -34,6 +34,7 @@ import { getBranches } from '@/functions/branch';
 import { ProductReport, ReportSummary, Branch } from '@/types/interface';
 import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const ReportsPage: React.FC = () => {
   const { toast } = useToast();
@@ -220,6 +221,7 @@ const ReportsPage: React.FC = () => {
     { header: t('selling_price'), key: 'sellingPriceFormatted', width: 15 },
     { header: 'Profit/Loss', key: 'profitLossFormatted', width: 15 },
     { header: t('added_date'), key: 'addedDateFormatted', width: 15 },
+    { header: t('expiry_date'), key: 'expiryDateFormatted', width: 15 },
     { header: 'Sold/Deleted Date', key: 'soldDeletedDate', width: 15 },
     { header: 'Comment', key: 'restoreComment', width: 25 },
   ];
@@ -237,6 +239,7 @@ const ReportsPage: React.FC = () => {
       sellingPriceFormatted: p.sellingPrice !== null ? `${p.sellingPrice.toLocaleString()} RWF` : 'N/A',
       profitLossFormatted: p.profitLoss !== null ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF` : 'N/A',
       addedDateFormatted: new Date(p.addedDate).toLocaleDateString(),
+      expiryDateFormatted: p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : 'N/A',
       soldDeletedDate: p.soldDate ? new Date(p.soldDate).toLocaleDateString() : p.deletedDate ? new Date(p.deletedDate).toLocaleDateString() : 'N/A',
       restoreComment: p.restoreComment || '-',
     }));
@@ -455,6 +458,10 @@ const ReportsPage: React.FC = () => {
             <p className="text-2xl font-bold text-red-600">{summary.deletedCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+            <p className="text-sm text-muted-foreground">{t('expired_products')}</p>
+            <p className="text-2xl font-bold text-red-500">{summary.expiredCount}</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('total_store_value')}</p>
             <p className="text-2xl font-bold">{summary.totalStoreValue.toLocaleString()} RWF</p>
           </div>
@@ -545,6 +552,9 @@ const ReportsPage: React.FC = () => {
                   <div className="flex items-center gap-1">{t('added_date')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
                 <TableHead>{t('sold_deleted_date_label')}</TableHead>
+                <TableHead className="cursor-pointer" onClick={() => handleSort('expiryDate')}>
+                  <div className="flex items-center gap-1">{t('expiry_date')} <ArrowUpDown className="h-4 w-4" /></div>
+                </TableHead>
                 <TableHead>{t('comment')}</TableHead>
               </TableRow>
             </TableHeader>
@@ -618,6 +628,16 @@ const ReportsPage: React.FC = () => {
                     <TableCell className="text-xs">
                       {p.soldDate ? new Date(p.soldDate).toLocaleDateString() :
                         p.deletedDate ? new Date(p.deletedDate).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {p.expiryDate ? (
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full font-medium",
+                          new Date(p.expiryDate) < new Date() ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
+                        )}>
+                          {new Date(p.expiryDate).toLocaleDateString()}
+                        </span>
+                      ) : '-'}
                     </TableCell>
                     <TableCell className="max-w-[150px] truncate text-xs">{p.restoreComment || '-'}</TableCell>
                   </TableRow>

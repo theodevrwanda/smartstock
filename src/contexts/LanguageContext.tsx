@@ -524,6 +524,14 @@ const translations: Translations = {
         'delete_permanently': 'Delete Permanently',
         'restore_product_q': 'Restore Product?',
         'restoring': 'Restoring...',
+        'expiry_date': 'Expiry Date',
+        'days_remaining': 'Days Remaining',
+        'expired_product': 'Expired Product',
+        'expired_products': 'Expired Products',
+        'never_expires': 'Never Expires',
+        'expires_soon': 'Expires Soon',
+        'days_left': 'days left',
+        'add_expiry_date': 'Add Expiry Date (Optional)',
     },
     rw: {
         // Header
@@ -1040,6 +1048,14 @@ const translations: Translations = {
         'delete_permanently': 'Siba Burundu',
         'restore_product_q': 'Kugarura Igicuruzwa?',
         'restoring': 'Biragarurwa...',
+        'expiry_date': 'Itariki yo kurenza igihe',
+        'days_remaining': 'Iminsi isigaye',
+        'expired_product': 'Igicuuzwa cyarengeje igihe',
+        'expired_products': 'Ibicuruzwa byarengeje igihe',
+        'never_expires': 'Ntirurengaho igihe',
+        'expires_soon': 'Kiragana ku kurenza igihe',
+        'days_left': 'iminsi isigaye',
+        'add_expiry_date': 'Shyiraho itariki yo kurenza igihe (Bihiswemo)',
     }
 };
 

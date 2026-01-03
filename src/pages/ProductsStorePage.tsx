@@ -155,6 +155,7 @@ const ProductsStorePage: React.FC = () => {
     costType: 'costPerUnit' as 'costPerUnit' | 'bulkCost',
     branch: '',
     deadline: '',
+    expiryDate: '',
   });
 
   const [sellForm, setSellForm] = useState({
@@ -247,6 +248,16 @@ const ProductsStorePage: React.FC = () => {
   const getUnitCost = (p: Product | null): number => {
     if (!p) return 0;
     return p.costPricePerUnit ?? 0;
+  };
+
+  const getDaysRemaining = (expiryDate?: string) => {
+    if (!expiryDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const getTotalValue = (p: Product | null): number => {
@@ -508,6 +519,7 @@ const ProductsStorePage: React.FC = () => {
       confirm: isAdmin ? true : false,
       businessId: businessId || '',
       deadline: finalDeadline,
+      expiryDate: newProduct.expiryDate || null,
       status: 'store',
       addedDate: new Date().toISOString(),
       sellingPrice: null,
@@ -568,6 +580,7 @@ const ProductsStorePage: React.FC = () => {
       costPrice: enteredCost,
       costPricePerUnit: costPricePerUnit,
       costType: currentProduct.costType,
+      expiryDate: currentProduct.expiryDate || null,
       updatedAt: new Date().toISOString(),
     };
 
@@ -890,6 +903,8 @@ const ProductsStorePage: React.FC = () => {
                 <TableHead className="text-right cursor-pointer" onClick={() => handleSort('costPrice')}>
                   <div className="flex items-center gap-1 justify-end">{t('total_value')} <ArrowUpDown className="h-4 w-4" /></div>
                 </TableHead>
+                <TableHead>{t('expiry_date')}</TableHead>
+                <TableHead>{t('days_remaining')}</TableHead>
                 <TableHead>{t('added_date')}</TableHead>
                 <TableHead>{t('status_label')}</TableHead>
                 <TableHead className="text-right">{t('actions')}</TableHead>
@@ -913,9 +928,13 @@ const ProductsStorePage: React.FC = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
                       layout
-                      className="group hover:bg-muted/30 transition-colors border-b last:border-0"
+                      className={cn(
+                        "group hover:bg-muted/30 transition-colors border-b last:border-0",
+                        getDaysRemaining(product.expiryDate) !== null && getDaysRemaining(product.expiryDate)! < 10 && "bg-red-50 dark:bg-red-950/20"
+                      )}
                     >
                       <TableCell className="text-xs text-muted-foreground font-mono">
                         {idx + 1}
@@ -946,6 +965,18 @@ const ProductsStorePage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right font-black text-amber-600 dark:text-amber-400">
                         {getTotalValue(product).toLocaleString()} RWF
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {product.expiryDate ? format(new Date(product.expiryDate), 'dd MMM yyyy') : t('never_expires')}
+                      </TableCell>
+                      <TableCell className="text-xs font-semibold">
+                        {(() => {
+                          const days = getDaysRemaining(product.expiryDate);
+                          if (days === null) return '-';
+                          if (days < 0) return <span className="text-red-600 font-bold">{t('expired_product')} ({Math.abs(days)} {t('days_left')})</span>;
+                          if (days < 10) return <span className="text-orange-600 font-bold">{t('expires_soon')} ({days} {t('days_left')})</span>;
+                          return <span>{days} {t('days_left')}</span>;
+                        })()}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {product.addedDate ? format(new Date(product.addedDate), 'dd MMM yyyy') : '-'}
@@ -1082,6 +1113,11 @@ const ProductsStorePage: React.FC = () => {
 
                       <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px] text-muted-foreground">
                         <span>{t('added_date')}: {p.addedDate ? format(new Date(p.addedDate), 'dd MMM yyyy') : '-'}</span>
+                        {p.expiryDate && (
+                          <span className={cn(getDaysRemaining(p.expiryDate) !== null && getDaysRemaining(p.expiryDate)! < 10 ? "text-red-500 font-bold" : "")}>
+                            {t('expiry_date')}: {format(new Date(p.expiryDate), 'dd MMM yyyy')}
+                          </span>
+                        )}
                         {isAdmin && <span>{getBranchName(p.branch)}</span>}
                       </div>
 
@@ -1213,6 +1249,14 @@ const ProductsStorePage: React.FC = () => {
                         <SelectItem value="pack">{t('pack')}</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{t('expiry_date')} ({t('optional')})</Label>
+                    <Input
+                      type="date"
+                      value={newProduct.expiryDate || ''}
+                      onChange={e => setNewProduct(p => ({ ...p, expiryDate: e.target.value }))}
+                    />
                   </div>
                 </div>
                 <div className="grid gap-2">
@@ -1404,6 +1448,14 @@ const ProductsStorePage: React.FC = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{t('expiry_date')} ({t('optional')})</Label>
+                    <Input
+                      type="date"
+                      value={currentProduct.expiryDate || ''}
+                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, expiryDate: e.target.value } : null)}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>{t('cost_configuration')} *</Label>
@@ -1675,7 +1727,7 @@ const ProductsStorePage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </div >
     </>
   );
 };

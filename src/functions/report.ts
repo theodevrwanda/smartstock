@@ -24,6 +24,7 @@ const emptySummary: ReportSummary = {
   totalStoreValue: 0,
   lowStockCount: 0,
   outOfStockCount: 0,
+  expiredCount: 0,
 };
 
 // Helper: Get true unit cost based on costType
@@ -97,6 +98,7 @@ export const getReportData = async (
         unit: data.unit || 'pcs',
         costPricePerUnit: data.costPricePerUnit,
         confirm: data.confirm === true,
+        expiryDate: data.expiryDate || undefined,
       };
     });
 
@@ -129,6 +131,16 @@ export const getReportData = async (
     const lowStockCount = activeStock.filter(p => p.quantity > 0 && p.quantity <= 10).length; // Adjustable threshold
     const outOfStockCount = activeStock.filter(p => p.quantity === 0).length;
 
+    // Expired products (only confirmed store products)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiredCount = confirmedStoreProducts.filter(p => {
+      if (!p.expiryDate) return false;
+      const expDate = new Date(p.expiryDate);
+      expDate.setHours(0, 0, 0, 0);
+      return expDate < today;
+    }).length;
+
     const summary: ReportSummary = {
       totalProducts: products.length,
       storeCount: storeProducts.length,
@@ -141,6 +153,7 @@ export const getReportData = async (
       totalStoreValue,
       lowStockCount,
       outOfStockCount,
+      expiredCount,
     };
 
     return { products, summary };
