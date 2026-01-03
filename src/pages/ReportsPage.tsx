@@ -105,6 +105,23 @@ const ReportsPage: React.FC = () => {
 
   const getBranchName = (id: string) => branchMap.get(id) || 'Unknown Branch';
 
+  const getActualUnitCost = (p: ProductReport): number => {
+    // If costType is 'bulkCost' is implied if costPricePerUnit exists and is likely different from costPrice
+    // But we should stick to the same logic as backend if possible.
+    // Since ProductReport doesn't have costType explicitly, we rely on costPricePerUnit.
+    return p.costPricePerUnit ?? p.costPrice ?? 0;
+  };
+
+  const getDaysRemaining = (expiryDate?: string) => {
+    if (!expiryDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
   const categories = useMemo(() => ['All', ...Array.from(new Set(products.map(p => p.category)))], [products]);
 
   // NEW: Daily/Weekly/Monthly/Yearly activity stats (added, sold, restored value)
@@ -131,7 +148,7 @@ const ReportsPage: React.FC = () => {
         if (!isSameDay(date, day)) return;
 
         if (p.status === 'store' && p.confirm === true) {
-          dayValue += (p.costPricePerUnit ?? p.costPrice) * p.quantity;
+          dayValue += getActualUnitCost(p) * p.quantity;
         }
       });
 
@@ -150,7 +167,7 @@ const ReportsPage: React.FC = () => {
       if (!dateStr) return;
 
       const date = new Date(dateStr);
-      const value = (p.costPricePerUnit ?? p.costPrice) * p.quantity;
+      const value = getActualUnitCost(p) * p.quantity;
 
       if (isWithinInterval(date, { start: weekStart, end: weekEnd })) weekly += value;
       if (isWithinInterval(date, { start: monthStart, end: monthEnd })) monthly += value;
@@ -178,6 +195,52 @@ const ReportsPage: React.FC = () => {
 
     return filtered;
   }, [products, searchTerm, statusFilter, categoryFilter, branchFilter, isAdmin]);
+
+  // Reactive summary based on filtered products
+  const filteredSummary = useMemo(() => {
+    const storeProds = filteredProducts.filter(p => p.status === 'store');
+    const soldProds = filteredProducts.filter(p => p.status === 'sold');
+    const restoredProds = filteredProducts.filter(p => p.status === 'restored');
+    const deletedProds = filteredProducts.filter(p => p.status === 'deleted');
+    const confirmedStore = storeProds.filter(p => p.confirm === true);
+
+    const grossProfit = soldProds.reduce((sum, p) => {
+      return p.profitLoss && p.profitLoss > 0 ? sum + p.profitLoss : sum;
+    }, 0);
+
+    const totalLoss = soldProds.reduce((sum, p) => {
+      return p.profitLoss && p.profitLoss < 0 ? sum + Math.abs(p.profitLoss) : sum;
+    }, 0);
+
+    const netProfit = grossProfit - totalLoss;
+
+    const totalStoreValue = confirmedStore.reduce(
+      (sum, p) => sum + (getActualUnitCost(p) * p.quantity),
+      0
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiredCount = confirmedStore.filter(p => {
+      if (!p.expiryDate) return false;
+      const expDate = new Date(p.expiryDate);
+      expDate.setHours(0, 0, 0, 0);
+      return expDate < today;
+    }).length;
+
+    return {
+      totalProducts: filteredProducts.length,
+      storeCount: storeProds.length,
+      soldCount: soldProds.length,
+      restoredCount: restoredProds.length,
+      deletedCount: deletedProds.length,
+      grossProfit,
+      totalLoss,
+      netProfit,
+      totalStoreValue,
+      expiredCount
+    };
+  }, [filteredProducts]);
 
   // Sorting
   const sortedProducts = useMemo(() => {
@@ -235,7 +298,7 @@ const ReportsPage: React.FC = () => {
       ...(isAdmin ? { branchName: getBranchName(p.branch) } : {}),
       status: p.status.charAt(0).toUpperCase() + p.status.slice(1),
       costPriceFormatted: `${(p.costPricePerUnit ?? p.costPrice).toLocaleString()} RWF`,
-      totalValueFormatted: `${((p.costPricePerUnit ?? p.costPrice) * p.quantity).toLocaleString()} RWF`,
+      totalValueFormatted: `${(getActualUnitCost(p) * p.quantity).toLocaleString()} RWF`,
       sellingPriceFormatted: p.sellingPrice !== null ? `${p.sellingPrice.toLocaleString()} RWF` : 'N/A',
       profitLossFormatted: p.profitLoss !== null ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF` : 'N/A',
       addedDateFormatted: new Date(p.addedDate).toLocaleDateString(),
@@ -259,7 +322,7 @@ const ReportsPage: React.FC = () => {
       toast({ title: t('error'), description: t('no_data_available'), variant: 'destructive' });
       return;
     }
-    const netProfit = summary?.netProfit?.toLocaleString() || '0';
+    const netProfit = filteredSummary.netProfit.toLocaleString() || '0';
     exportToPDF(
       getReportExportData(),
       reportExportColumns,
@@ -436,47 +499,46 @@ const ReportsPage: React.FC = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Existing summary cards */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('total_products')}</p>
-            <p className="text-2xl font-bold">{summary.totalProducts}</p>
+            <p className="text-2xl font-bold">{filteredSummary.totalProducts}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('in_stock')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.storeCount}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{filteredSummary.storeCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('sold')}</p>
-            <p className="text-2xl font-bold text-green-600">{summary.soldCount}</p>
+            <p className="text-2xl font-bold text-green-600">{filteredSummary.soldCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('restored')}</p>
-            <p className="text-2xl font-bold text-purple-600">{summary.restoredCount}</p>
+            <p className="text-2xl font-bold text-purple-600">{filteredSummary.restoredCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('deleted')}</p>
-            <p className="text-2xl font-bold text-red-600">{summary.deletedCount}</p>
+            <p className="text-2xl font-bold text-red-600">{filteredSummary.deletedCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('expired_products')}</p>
-            <p className="text-2xl font-bold text-red-500">{summary.expiredCount}</p>
+            <p className="text-2xl font-bold text-red-500">{filteredSummary.expiredCount}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('total_store_value')}</p>
-            <p className="text-2xl font-bold">{summary.totalStoreValue.toLocaleString()} RWF</p>
+            <p className="text-2xl font-bold">{filteredSummary.totalStoreValue.toLocaleString()} RWF</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('gross_profit')}</p>
-            <p className="text-2xl font-bold text-green-600">{summary.grossProfit.toLocaleString()} RWF</p>
+            <p className="text-2xl font-bold text-green-600">{filteredSummary.grossProfit.toLocaleString()} RWF</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <p className="text-sm text-muted-foreground">{t('total_loss')}</p>
-            <p className="text-2xl font-bold text-red-600">{summary.totalLoss.toLocaleString()} RWF</p>
+            <p className="text-2xl font-bold text-red-600">{filteredSummary.totalLoss.toLocaleString()} RWF</p>
           </div>
           <div className="col-span-1 sm:col-span-2 lg:col-span-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-xl shadow-lg">
             <p className="text-lg font-semibold">{t('net_profit')}</p>
             <p className="text-4xl font-black mt-2">
-              {summary.netProfit.toLocaleString()} RWF
+              {filteredSummary.netProfit.toLocaleString()} RWF
             </p>
           </div>
         </div>
@@ -576,72 +638,92 @@ const ReportsPage: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedProducts.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex flex-col">
-                        <span>{p.productName}</span>
-                        <span className="text-[10px] text-muted-foreground uppercase">{p.model || '-'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{p.category}</TableCell>
-                    <TableCell className="text-center font-bold">
-                      {p.quantity.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{p.unit || 'pcs'}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
-                        {getBranchName(p.branch)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        p.status === 'store' ? 'default' :
-                          p.status === 'sold' ? 'secondary' :
-                            p.status === 'restored' ? 'outline' :
-                              p.status === 'deleted' ? 'destructive' : 'secondary'
-                      }>
-                        {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={p.confirm ? 'default' : 'outline'} className={p.confirm ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}>
-                        {p.confirm ? `✓ ${t('confirmed')}` : t('pending')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className={getProfitColor(p.costPrice)}>
-                      {(p.costPricePerUnit ?? p.costPrice).toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell className="font-bold">
-                      {((p.costPricePerUnit ?? p.costPrice) * p.quantity).toLocaleString()} RWF
-                    </TableCell>
-                    <TableCell>
-                      {p.sellingPrice !== null
-                        ? <span className={getProfitColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</span>
-                        : '-'}
-                    </TableCell>
-                    <TableCell className={getProfitColor(p.profitLoss)}>
-                      {p.profitLoss !== null
-                        ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="text-xs">{new Date(p.addedDate).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-xs">
-                      {p.soldDate ? new Date(p.soldDate).toLocaleDateString() :
-                        p.deletedDate ? new Date(p.deletedDate).toLocaleDateString() : '-'}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {p.expiryDate ? (
-                        <span className={cn(
-                          "px-2 py-0.5 rounded-full font-medium",
-                          new Date(p.expiryDate) < new Date() ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
-                        )}>
-                          {new Date(p.expiryDate).toLocaleDateString()}
-                        </span>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[150px] truncate text-xs">{p.restoreComment || '-'}</TableCell>
-                  </TableRow>
-                ))
+                sortedProducts.map(p => {
+                  const daysLeft = getDaysRemaining(p.expiryDate);
+                  // Only show expiry warnings for products currently in stock
+                  const isExpired = p.status === 'store' && daysLeft !== null && daysLeft < 0;
+                  const expiresToday = p.status === 'store' && daysLeft === 0;
+
+                  return (
+                    <TableRow
+                      key={p.id}
+                      className={cn(
+                        isExpired && "bg-red-50/80 dark:bg-red-900/20 line-through opacity-80",
+                        expiresToday && "animate-red-pulse bg-red-50/50 dark:bg-red-900/10"
+                      )}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span>{p.productName}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase">{p.model || '-'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{p.category}</TableCell>
+                      <TableCell className="text-center font-bold">
+                        {p.quantity.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{p.unit || 'pcs'}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="bg-gray-50 text-gray-600 text-[10px]">
+                          {getBranchName(p.branch)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          p.status === 'store' ? 'default' :
+                            p.status === 'sold' ? 'secondary' :
+                              p.status === 'restored' ? 'outline' :
+                                p.status === 'deleted' ? 'destructive' : 'secondary'
+                        }>
+                          {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={p.confirm ? 'default' : 'outline'} className={p.confirm ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}>
+                          {p.confirm ? `✓ ${t('confirmed')}` : t('pending')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={getProfitColor(p.costPrice)}>
+                        {getActualUnitCost(p).toLocaleString()} RWF
+                      </TableCell>
+                      <TableCell className="font-bold">
+                        {(getActualUnitCost(p) * p.quantity).toLocaleString()} RWF
+                      </TableCell>
+                      <TableCell>
+                        {p.sellingPrice !== null
+                          ? <span className={getProfitColor(p.sellingPrice)}>{p.sellingPrice.toLocaleString()} RWF</span>
+                          : '-'}
+                      </TableCell>
+                      <TableCell className={getProfitColor(p.profitLoss)}>
+                        {p.profitLoss !== null
+                          ? `${p.profitLoss >= 0 ? '+' : ''}${p.profitLoss.toLocaleString()} RWF`
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs">{new Date(p.addedDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-xs">
+                        {p.soldDate ? new Date(p.soldDate).toLocaleDateString() :
+                          p.deletedDate ? new Date(p.deletedDate).toLocaleDateString() : '-'}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {p.expiryDate ? (
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full font-bold",
+                            isExpired ? "text-red-600 bg-red-100" :
+                              daysLeft !== null && daysLeft < 7 ? "text-orange-600 bg-orange-100" :
+                                "text-gray-600 bg-gray-100"
+                          )}>
+                            {new Date(p.expiryDate).toLocaleDateString()}
+                            {daysLeft !== null && (
+                              <span className="ml-1 text-[10px] opacity-70">
+                                ({daysLeft === 0 ? t('today') : daysLeft < 0 ? 'Expired' : `${daysLeft}d`})
+                              </span>
+                            )}
+                          </span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell className="max-w-[150px] truncate text-xs">{p.restoreComment || '-'}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
