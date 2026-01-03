@@ -69,7 +69,6 @@ export const syncOfflineOperations = async (): Promise<void> => {
           where('branch', '==', op.data.branch),
           where('productNameLower', '==', normalizedName),
           where('categoryLower', '==', normalizedCategory),
-          where('costPrice', '==', op.data.costPrice),
           where('status', '==', 'store')
         );
 
@@ -78,7 +77,9 @@ export const syncOfflineOperations = async (): Promise<void> => {
         }
 
         const snapshot = await getDocs(q);
-        if (!snapshot.empty) {
+
+        // If it's a cost-only update, we don't merge even if match exists
+        if (!snapshot.empty && !op.data.isCostUpdateOnly && op.data.quantity > 0) {
           const existing = snapshot.docs[0];
           batch.update(existing.ref, {
             quantity: increment(op.data.quantity),
@@ -86,27 +87,41 @@ export const syncOfflineOperations = async (): Promise<void> => {
           });
         } else {
           const newRef = doc(productsRef);
+          const costPricePerUnit =
+            op.data.costType === 'bulkCost'
+              ? op.data.quantity > 0
+                ? op.data.costPrice / op.data.quantity
+                : 0
+              : op.data.costPrice;
+
           const newProduct: Product = {
-            ...op.data,
             id: newRef.id,
+            productName: op.data.productName.trim(),
             productNameLower: normalizedName,
+            category: op.data.category.trim(),
             categoryLower: normalizedCategory,
+            model: op.data.model?.trim() || '',
             modelLower: normalizedModel || '',
-            model: op.data.model || '',
+            costPrice: op.data.costPrice,
+            costPricePerUnit: costPricePerUnit,
+            costType: op.data.costType,
             unit: op.data.unit || 'pcs',
-            costType: op.data.costType || 'costPerUnit',
-            costPricePerUnit: op.data.costPricePerUnit || 0,
-            addedDate: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
             sellingPrice: null,
             restoreComment: null,
             status: 'store',
+            addedDate: new Date().toISOString(),
+            quantity: op.data.quantity,
+            branch: op.data.branch,
+            businessId: op.data.businessId,
+            confirm: op.data.confirm,
+            deadline: op.data.deadline,
+            expiryDate: op.data.expiryDate || null,
+            updatedAt: new Date().toISOString(),
           };
           batch.set(newRef, newProduct);
         }
       } else if (op.type === 'sell') {
         const originalRef = doc(db, 'products', op.productId);
-
         batch.update(originalRef, {
           quantity: increment(-op.quantity),
           updatedAt: new Date().toISOString(),
@@ -232,8 +247,10 @@ export const addOrUpdateProduct = async (
     confirm: boolean;
     unit?: string;
     deadline?: string;
+    expiryDate?: string;
     costType: 'costPerUnit' | 'bulkCost';
     costPricePerUnit: number;
+    isCostUpdateOnly?: boolean;
   }
 ): Promise<Product | null> => {
   if (!data.branch) {
@@ -267,6 +284,7 @@ export const addOrUpdateProduct = async (
       productNameLower: data.productName.toLowerCase(),
       categoryLower: data.category.toLowerCase(),
       modelLower: (data.model || '').toLowerCase(),
+      expiryDate: data.expiryDate || null,
     } as Product;
   }
 
@@ -276,13 +294,74 @@ export const addOrUpdateProduct = async (
     const normalizedCategory = data.category.trim().toLowerCase();
     const normalizedModel = (data.model || '').trim().toLowerCase();
 
+    // Special case: only updating cost price (quantity unchanged = 0)
+    if (data.isCostUpdateOnly && data.quantity === 0) {
+      let q = query(
+        productsRef,
+        where('businessId', '==', data.businessId),
+        where('branch', '==', data.branch),
+        where('productNameLower', '==', normalizedName),
+        where('categoryLower', '==', normalizedCategory),
+        where('status', '==', 'store')
+      );
+      if (normalizedModel) {
+        q = query(q, where('modelLower', '==', normalizedModel));
+      }
+
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        toast.error('Product not found for cost update');
+        return null;
+      }
+
+      const existingDoc = snapshot.docs[0];
+      const existingData = existingDoc.data() as Product;
+
+      const newUnitCost =
+        data.costType === 'bulkCost'
+          ? existingData.quantity > 0
+            ? data.costPrice / existingData.quantity
+            : 0
+          : data.costPrice;
+
+      await updateDoc(existingDoc.ref, {
+        costPrice: data.costPrice,
+        costPricePerUnit: newUnitCost,
+        costType: data.costType,
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (txContext) {
+        await logTransaction({
+          transactionType: 'cost_updated',
+          actionDetails: `Updated cost price for ${data.productName}`,
+          userId: txContext.userId,
+          userName: txContext.userName,
+          userRole: txContext.userRole,
+          businessId: data.businessId,
+          businessName: txContext.businessName,
+          branchId: data.branch,
+          branchName: txContext.branchName,
+          productId: existingDoc.id,
+          productName: data.productName,
+          costPrice: data.costPrice,
+          costPricePerUnit: newUnitCost,
+          costType: data.costType,
+        });
+      }
+
+      toast.success('Cost price updated');
+      const updated = (await getDoc(existingDoc.ref)).data();
+      return { id: existingDoc.id, ...updated } as Product;
+    }
+
+    // Normal case: match on name, category, model (ignore cost price)
     let q = query(
       productsRef,
       where('businessId', '==', data.businessId),
       where('branch', '==', data.branch),
       where('productNameLower', '==', normalizedName),
       where('categoryLower', '==', normalizedCategory),
-      where('costPrice', '==', data.costPrice),
       where('status', '==', 'store')
     );
 
@@ -292,7 +371,7 @@ export const addOrUpdateProduct = async (
 
     const snapshot = await getDocs(q);
 
-    if (!snapshot.empty) {
+    if (!snapshot.empty && data.quantity > 0) {
       const existingDoc = snapshot.docs[0];
       await updateDoc(existingDoc.ref, {
         quantity: increment(data.quantity),
@@ -315,65 +394,74 @@ export const addOrUpdateProduct = async (
           category: data.category,
           quantity: data.quantity,
           costPrice: data.costPrice,
-          costPricePerUnit: data.costPricePerUnit, // Added
+          costPricePerUnit: data.costPricePerUnit,
         });
       }
 
       toast.success(`Added ${data.quantity} units`);
       const updatedData = (await getDoc(existingDoc.ref)).data();
       return { id: existingDoc.id, ...updatedData } as Product;
-    } else {
-      const newRef = doc(productsRef);
-      const newProduct: Product = {
-        id: newRef.id,
-        productName: data.productName.trim(),
-        productNameLower: normalizedName,
-        category: data.category.trim(),
-        categoryLower: normalizedCategory,
-        model: data.model?.trim() || '',
-        modelLower: normalizedModel || '',
-        costPrice: data.costPrice,
-        costPricePerUnit: data.costPricePerUnit,
-        costType: data.costType,
-        unit: data.unit || 'pcs',
-        sellingPrice: null,
-        restoreComment: null,
-        status: 'store',
-        addedDate: new Date().toISOString(),
-        quantity: data.quantity,
-        branch: data.branch,
-        businessId: data.businessId,
-        confirm: data.confirm,
-        deadline: data.deadline,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await setDoc(newRef, newProduct);
-
-      if (txContext) {
-        await logTransaction({
-          transactionType: 'stock_added',
-          actionDetails: `Added new product: ${data.productName} (Qty: ${data.quantity})`,
-          userId: txContext.userId,
-          userName: txContext.userName,
-          userRole: txContext.userRole,
-          businessId: data.businessId,
-          businessName: txContext.businessName,
-          branchId: data.branch,
-          branchName: txContext.branchName,
-          productId: newRef.id,
-          productName: data.productName,
-          category: data.category,
-          quantity: data.quantity,
-          costPrice: data.costPrice,
-          costType: data.costType,
-          costPricePerUnit: data.costPricePerUnit,
-        });
-      }
-
-      toast.success('New product added');
-      return newProduct;
     }
+
+    // No match → create new product (even if same name but different cost)
+    const newRef = doc(productsRef);
+    const costPricePerUnit =
+      data.costType === 'bulkCost'
+        ? data.quantity > 0
+          ? data.costPrice / data.quantity
+          : 0
+        : data.costPrice;
+
+    const newProduct: Product = {
+      id: newRef.id,
+      productName: data.productName.trim(),
+      productNameLower: normalizedName,
+      category: data.category.trim(),
+      categoryLower: normalizedCategory,
+      model: data.model?.trim() || '',
+      modelLower: normalizedModel || '',
+      costPrice: data.costPrice,
+      costPricePerUnit: costPricePerUnit,
+      costType: data.costType,
+      unit: data.unit || 'pcs',
+      sellingPrice: null,
+      restoreComment: null,
+      status: 'store',
+      addedDate: new Date().toISOString(),
+      quantity: data.quantity,
+      branch: data.branch,
+      businessId: data.businessId,
+      confirm: data.confirm,
+      deadline: data.deadline,
+      expiryDate: data.expiryDate || null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await setDoc(newRef, newProduct);
+
+    if (txContext) {
+      await logTransaction({
+        transactionType: 'stock_added',
+        actionDetails: `Added new product (different cost): ${data.productName} (Qty: ${data.quantity})`,
+        userId: txContext.userId,
+        userName: txContext.userName,
+        userRole: txContext.userRole,
+        businessId: data.businessId,
+        businessName: txContext.businessName,
+        branchId: data.branch,
+        branchName: txContext.branchName,
+        productId: newRef.id,
+        productName: data.productName,
+        category: data.category,
+        quantity: data.quantity,
+        costPrice: data.costPrice,
+        costType: data.costType,
+        costPricePerUnit: costPricePerUnit,
+      });
+    }
+
+    toast.success('New product added');
+    return newProduct;
   } catch (error) {
     console.error('Error adding product:', error);
     toast.error('Failed to add product');
@@ -458,7 +546,6 @@ export const sellProduct = async (
       const profit = totalAmount > costTotal ? totalAmount - costTotal : 0;
       const loss = totalAmount < costTotal ? costTotal - totalAmount : 0;
 
-      // FIXED: Use atomic increment instead of read-then-write
       transaction.update(originalDoc, {
         quantity: increment(-quantity),
         updatedAt: new Date().toISOString(),
@@ -480,7 +567,6 @@ export const sellProduct = async (
         updatedAt: new Date().toISOString(),
       });
 
-      // Log transaction after successful commit (outside transaction)
       if (txContext) {
         await logTransaction({
           transactionType: 'product_sold',
@@ -573,7 +659,7 @@ export const deleteProduct = async (id: string): Promise<boolean> => {
         productName: productData.productName,
         quantity: productData.quantity,
         costPrice: productData.costPrice,
-        costPricePerUnit: productData.costPricePerUnit, // Added
+        costPricePerUnit: productData.costPricePerUnit,
       });
     }
 

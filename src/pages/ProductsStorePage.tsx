@@ -144,6 +144,11 @@ const ProductsStorePage: React.FC = () => {
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [productToConfirm, setProductToConfirm] = useState<{ id: string; current: boolean } | null>(null);
 
+  // Track original values when opening edit dialog for smart cost update
+  const [originalQuantityBeforeEdit, setOriginalQuantityBeforeEdit] = useState<number>(0);
+  const [originalCostBeforeEdit, setOriginalCostBeforeEdit] = useState<number>(0);
+  const [originalCostTypeBeforeEdit, setOriginalCostTypeBeforeEdit] = useState<'costPerUnit' | 'bulkCost'>('costPerUnit');
+
   // Forms
   const [newProduct, setNewProduct] = useState({
     productName: '',
@@ -281,14 +286,6 @@ const ProductsStorePage: React.FC = () => {
   // Current day index (Mon = 0, Sun = 6)
   const currentDayIndex = getDay(new Date()) === 0 ? 6 : getDay(new Date()) - 1;
 
-  // Auto-highlight today
-  // Auto-highlight today - REMOVED to show all products by default
-  // useEffect(() => {
-  //   if (selectedDay === null && !selectedDate) {
-  //     setSelectedDay(currentDayIndex);
-  //   }
-  // }, []);
-
   // Products for stats: only confirmed + apply all filters except confirmFilter
   const confirmedProductsForStats = useMemo(() => {
     return products
@@ -386,7 +383,6 @@ const ProductsStorePage: React.FC = () => {
       const dayIdx = getDay(pDate);
       const monSunIdx = dayIdx === 0 ? 6 : dayIdx - 1;
 
-      // Only show if day matches AND is within current week/month/year context
       return (
         monSunIdx === selectedDay &&
         isWithinInterval(pDate, { start: weekStart, end: weekEnd }) &&
@@ -465,6 +461,15 @@ const ProductsStorePage: React.FC = () => {
     toast.success('Exported to PDF');
   };
 
+  // Open edit dialog and remember original values
+  const openEditDialog = (product: Product) => {
+    setCurrentProduct({ ...product });
+    setOriginalQuantityBeforeEdit(product.quantity);
+    setOriginalCostBeforeEdit(product.costPrice);
+    setOriginalCostTypeBeforeEdit(product.costType);
+    setEditDialogOpen(true);
+  };
+
   // ADD PRODUCT
   const handleAddProduct = async () => {
     const targetBranch = isAdmin ? (newProduct.branch || userBranch) : userBranch;
@@ -496,37 +501,25 @@ const ProductsStorePage: React.FC = () => {
     const qty = Number(newProduct.quantity);
     const enteredCost = Number(newProduct.costPrice);
 
-    let costPricePerUnit = 0;
-    if (newProduct.costType === 'bulkCost') {
-      costPricePerUnit = qty > 0 ? enteredCost / qty : 0;
-    } else {
-      costPricePerUnit = enteredCost;
-    }
+    const costPricePerUnit = newProduct.costType === 'bulkCost'
+      ? (qty > 0 ? enteredCost / qty : 0)
+      : enteredCost;
 
-    const productData: Product = {
+    const result = await addOrUpdateProduct({
       productName: newProduct.productName.trim(),
-      productNameLower: newProduct.productName.trim().toLowerCase(),
       category: newProduct.category,
-      categoryLower: newProduct.category.toLowerCase(),
-      model: newProduct.model || null,
-      modelLower: newProduct.model?.toLowerCase() || null,
-      quantity: qty,
-      unit: newProduct.unit,
+      model: newProduct.model || undefined,
       costPrice: enteredCost,
-      costPricePerUnit: costPricePerUnit,
-      costType: newProduct.costType as 'costPerUnit' | 'bulkCost',
+      quantity: qty,
       branch: targetBranch,
-      confirm: isAdmin ? true : false,
       businessId: businessId || '',
+      confirm: isAdmin ? true : false,
+      unit: newProduct.unit,
       deadline: finalDeadline,
-      expiryDate: newProduct.expiryDate || null,
-      status: 'store',
-      addedDate: new Date().toISOString(),
-      sellingPrice: null,
-      restoreComment: null,
-    };
-
-    const result = await addOrUpdateProduct(productData);
+      expiryDate: newProduct.expiryDate || undefined,
+      costType: newProduct.costType,
+      costPricePerUnit,
+    });
 
     if (result) {
       setProducts(prev => {
@@ -546,6 +539,7 @@ const ProductsStorePage: React.FC = () => {
         unit: 'pcs',
         costType: 'costPerUnit',
         deadline: '',
+        expiryDate: '',
       });
     } else {
       toast.error(t('product_add_failed'));
@@ -553,21 +547,49 @@ const ProductsStorePage: React.FC = () => {
     setActionLoading(false);
   };
 
-  // UPDATE PRODUCT
+  // UPDATE PRODUCT (with smart cost-only update)
   const handleUpdateProduct = async () => {
     if (!currentProduct) return;
 
     setActionLoading(true);
-    const qty = currentProduct.quantity;
-    const enteredCost = currentProduct.costPrice;
 
-    let costPricePerUnit = 0;
-    if (currentProduct.costType === 'bulkCost') {
-      costPricePerUnit = qty > 0 ? enteredCost / qty : 0;
-    } else {
-      costPricePerUnit = enteredCost;
+    const costChanged = currentProduct.costPrice !== originalCostBeforeEdit ||
+                        currentProduct.costType !== originalCostTypeBeforeEdit;
+    const quantityUnchanged = currentProduct.quantity === originalQuantityBeforeEdit;
+
+    // Special case: only cost changed, quantity same → update existing product cost only
+    if (costChanged && quantityUnchanged) {
+      const costPricePerUnit = currentProduct.costType === 'bulkCost'
+        ? (currentProduct.quantity > 0 ? currentProduct.costPrice / currentProduct.quantity : 0)
+        : currentProduct.costPrice;
+
+      const result = await addOrUpdateProduct({
+        productName: currentProduct.productName,
+        category: currentProduct.category,
+        model: currentProduct.model || undefined,
+        costPrice: currentProduct.costPrice,
+        quantity: 0,
+        branch: currentProduct.branch,
+        businessId: currentProduct.businessId,
+        confirm: currentProduct.confirm,
+        unit: currentProduct.unit,
+        costType: currentProduct.costType,
+        costPricePerUnit,
+        expiryDate: currentProduct.expiryDate || undefined,
+        isCostUpdateOnly: true,
+      });
+
+      if (result) {
+        setProducts(prev => prev.map(p => p.id === currentProduct.id ? result : p));
+        toast.success('Cost price updated successfully');
+        setEditDialogOpen(false);
+        setCurrentProduct(null);
+        setActionLoading(false);
+        return;
+      }
     }
 
+    // Normal update
     const updates: Partial<Product> = {
       productName: currentProduct.productName.trim(),
       productNameLower: currentProduct.productName.trim().toLowerCase(),
@@ -575,14 +597,23 @@ const ProductsStorePage: React.FC = () => {
       categoryLower: currentProduct.category.toLowerCase(),
       model: currentProduct.model?.trim() || null,
       modelLower: currentProduct.model?.trim()?.toLowerCase() || null,
-      quantity: qty,
+      quantity: currentProduct.quantity,
       unit: currentProduct.unit,
-      costPrice: enteredCost,
-      costPricePerUnit: costPricePerUnit,
-      costType: currentProduct.costType,
       expiryDate: currentProduct.expiryDate || null,
       updatedAt: new Date().toISOString(),
     };
+
+    if (costChanged || currentProduct.quantity !== originalQuantityBeforeEdit) {
+      const costPricePerUnit = currentProduct.costType === 'bulkCost'
+        ? (currentProduct.quantity > 0 ? currentProduct.costPrice / currentProduct.quantity : 0)
+        : currentProduct.costPrice;
+
+      Object.assign(updates, {
+        costPrice: currentProduct.costPrice,
+        costPricePerUnit,
+        costType: currentProduct.costType,
+      });
+    }
 
     const success = await updateProduct(currentProduct.id!, updates);
     if (success) {
@@ -593,8 +624,6 @@ const ProductsStorePage: React.FC = () => {
     }
     setActionLoading(false);
   };
-
-  const openConfirmSale = () => setConfirmSaleDialogOpen(true);
 
   const isSellingRef = React.useRef(false);
 
@@ -885,6 +914,8 @@ const ProductsStorePage: React.FC = () => {
             </Select>
           )}
         </div>
+
+        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
@@ -914,7 +945,7 @@ const ProductsStorePage: React.FC = () => {
               <AnimatePresence mode='popLayout'>
                 {sortedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 11 : 10} className="h-64 text-center text-muted-foreground">
+                    <TableCell colSpan={isAdmin ? 13 : 12} className="h-64 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Package className="h-12 w-12 opacity-20" />
                         <p className="text-lg font-medium">{t('no_products_found_filters')}</p>
@@ -927,7 +958,6 @@ const ProductsStorePage: React.FC = () => {
                       key={product.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
                       layout
@@ -943,7 +973,7 @@ const ProductsStorePage: React.FC = () => {
                         {product.productName}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="bg-secondary text-gray-900 dark:text-gray-100 dark:bg-accent/30 dark:text-gray-900 dark:text-gray-100">
+                        <Badge variant="secondary" className="bg-secondary text-gray-900 dark:text-gray-100 dark:bg-accent/30">
                           {product.category}
                         </Badge>
                       </TableCell>
@@ -1013,19 +1043,14 @@ const ProductsStorePage: React.FC = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!isStaff && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
-                              onClick={() => {
-                                setCurrentProduct(product);
-                                setEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                            onClick={() => openEditDialog(product)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1048,20 +1073,18 @@ const ProductsStorePage: React.FC = () => {
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </Button>
-                          {!isStaff && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => {
-                                setProductToDelete(product.id!);
-                                setDeleteConfirmOpen(true);
-                              }}
-                              disabled={!isOnline}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                              setProductToDelete(product.id!);
+                              setDeleteConfirmOpen(true);
+                            }}
+                            disabled={!isOnline || !canDelete}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </motion.tr>
@@ -1148,10 +1171,7 @@ const ProductsStorePage: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 hover:text-primary transition-colors"
-                            onClick={() => {
-                              setCurrentProduct({ ...p });
-                              setEditDialogOpen(true);
-                            }}
+                            onClick={() => openEditDialog(p)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -1173,6 +1193,12 @@ const ProductsStorePage: React.FC = () => {
                             className="h-8 ml-2"
                             onClick={() => {
                               setCurrentProduct(p);
+                              setSellForm({
+                                quantity: '',
+                                sellingPrice: getUnitCost(p) * 1.5,
+                                deadline: p.deadline || '',
+                                sellInBaseUnit: true
+                              });
                               setSellDialogOpen(true);
                             }}
                           >
@@ -1220,7 +1246,7 @@ const ProductsStorePage: React.FC = () => {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>{t('model_label')} ({t('optional') || 'optional'})</Label>
+                    <Label>{t('model_label')} ({t('optional')})</Label>
                     <Input value={newProduct.model} onChange={e => setNewProduct(p => ({ ...p, model: e.target.value }))} placeholder="e.g. kigori" />
                   </div>
                 </div>
@@ -1250,14 +1276,14 @@ const ProductsStorePage: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid gap-2">
-                    <Label>{t('expiry_date')} ({t('optional')})</Label>
-                    <Input
-                      type="date"
-                      value={newProduct.expiryDate || ''}
-                      onChange={e => setNewProduct(p => ({ ...p, expiryDate: e.target.value }))}
-                    />
-                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>{t('expiry_date')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
+                  <Input
+                    type="date"
+                    value={newProduct.expiryDate || ''}
+                    onChange={e => setNewProduct(p => ({ ...p, expiryDate: e.target.value }))}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label>{t('cost_configuration')} *</Label>
@@ -1450,11 +1476,11 @@ const ProductsStorePage: React.FC = () => {
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label>{t('expiry_date')} ({t('optional')})</Label>
+                    <Label>{t('expiry_date')} <span className="text-muted-foreground text-xs">({t('optional')})</span></Label>
                     <Input
                       type="date"
                       value={currentProduct.expiryDate || ''}
-                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, expiryDate: e.target.value } : null)}
+                      onChange={e => setCurrentProduct(prev => prev ? { ...prev, expiryDate: e.target.value || null } : null)}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -1638,7 +1664,7 @@ const ProductsStorePage: React.FC = () => {
                 {t('cancel')}
               </Button>
               <Button
-                onClick={openConfirmSale}
+                onClick={() => setConfirmSaleDialogOpen(true)}
                 disabled={
                   actionLoading ||
                   Number(sellForm.quantity) <= 0 ||
@@ -1708,6 +1734,7 @@ const ProductsStorePage: React.FC = () => {
                 <p><strong>{t('branch')}:</strong> {getBranchName(currentProduct.branch)}</p>
                 <p><strong>{t('confirmed')}:</strong> {currentProduct.confirm ? t('yes') : t('no')}</p>
                 <p><strong>{t('added_date')}:</strong> {currentProduct.addedDate ? format(new Date(currentProduct.addedDate), 'dd MMM yyyy') : '-'}</p>
+                <p><strong>{t('expiry_date')}:</strong> {currentProduct.expiryDate ? format(new Date(currentProduct.expiryDate), 'dd MMM yyyy') : t('never_expires')}</p>
               </div>
             )}
             <DialogFooter>
@@ -1727,7 +1754,7 @@ const ProductsStorePage: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div >
+      </div>
     </>
   );
 };
