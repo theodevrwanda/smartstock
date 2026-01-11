@@ -750,118 +750,8 @@ const ProductsStorePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_stats')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">{storeStats.week.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-blue-100 mt-1 opacity-80">{storeStats.week.count} {t('confirmed_stock')}</p>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_stats')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">{storeStats.month.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-emerald-100 mt-1 opacity-80">{storeStats.month.count} {t('confirmed_stock')}</p>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <Package className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                <CalendarDays size={14} className="text-orange-500" />
-                {t('yearly_investment')}
-              </CardTitle>
-              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(referenceDate, 'yyyy')}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">{t('total_confirmed_investment')}</p>
-                  <div className="text-3xl font-bold">{storeStats.year.value.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                  <p className="text-xs text-orange-500 mt-1 font-semibold">{storeStats.year.count} {t('total_products')}</p>
-                </div>
-                <div className="bg-white/5 p-2 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-orange-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Weekday Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
-            const isSelected = selectedDay === idx;
-            const isToday = idx === currentDayIndex && !selectedDate;
-
-            return (
-              <motion.div
-                key={day}
-                whileHover={{ y: -4 }}
-                onClick={() => setSelectedDay(isSelected ? null : idx)}
-                className={cn(
-                  "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
-                  isSelected
-                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
-                    : isToday
-                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
-                )}
-              >
-                {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    Today
-                  </div>
-                )}
-                <div className="flex flex-col items-center text-center gap-2">
-                  <span className={cn(
-                    "text-[10px] font-bold tracking-tighter uppercase",
-                    isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"
-                  )}>
-                    {day} {isSelected && "•"}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className={cn(
-                      "text-sm font-black",
-                      isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"
-                    )}>
-                      {storeStats.daily[idx].value.toLocaleString()}
-                    </span>
-                    <span className={cn(
-                      "text-[9px] uppercase font-medium opacity-60",
-                      isSelected ? "text-amber-200" : "text-gray-500"
-                    )}>
-                      {storeStats.daily[idx].count} {t('total_products')}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
 
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-none border-b">
@@ -1252,12 +1142,11 @@ const ProductsStorePage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label>{t('category_label')} *</Label>
-                    <Select value={newProduct.category} onValueChange={(val) => setNewProduct(p => ({ ...p, category: val }))}>
-                      <SelectTrigger><SelectValue placeholder={t('category_label')} /></SelectTrigger>
-                      <SelectContent>
-                        {MIXED_SHOP_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={newProduct.category}
+                      onChange={e => setNewProduct(p => ({ ...p, category: e.target.value }))}
+                      placeholder="e.g. Beverages"
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>{t('model_label')} ({t('optional')})</Label>
@@ -1279,14 +1168,15 @@ const ProductsStorePage: React.FC = () => {
                     <Select value={newProduct.unit} onValueChange={(val) => setNewProduct(p => ({ ...p, unit: val }))}>
                       <SelectTrigger><SelectValue placeholder={t('unit')} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pcs">{t('pieces')}</SelectItem>
-                        <SelectItem value="bag">{t('bag')}</SelectItem>
-                        <SelectItem value="crate">{t('crate')}</SelectItem>
-                        <SelectItem value="liter">{t('liter')}</SelectItem>
                         <SelectItem value="kg">{t('kilograms')}</SelectItem>
-                        <SelectItem value="sack">{t('sack')}</SelectItem>
-                        <SelectItem value="bottle">{t('bottle')}</SelectItem>
+                        <SelectItem value="g">{t('gram')}</SelectItem>
+                        <SelectItem value="liter">{t('liter')}</SelectItem>
+                        <SelectItem value="ml">{t('milliliter')}</SelectItem>
+                        <SelectItem value="pcs">{t('pieces')}</SelectItem>
                         <SelectItem value="pack">{t('pack')}</SelectItem>
+                        <SelectItem value="box">{t('box')}</SelectItem>
+                        <SelectItem value="bottle">{t('bottle')}</SelectItem>
+                        <SelectItem value="m">{t('meter')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1441,15 +1331,10 @@ const ProductsStorePage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label>{t('category_label')} *</Label>
-                      <Select
+                      <Input
                         value={currentProduct.category}
-                        onValueChange={(val) => setCurrentProduct(prev => prev ? { ...prev, category: val } : null)}
-                      >
-                        <SelectTrigger><SelectValue placeholder={t('category_label')} /></SelectTrigger>
-                        <SelectContent>
-                          {MIXED_SHOP_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                        onChange={e => setCurrentProduct(prev => prev ? { ...prev, category: e.target.value } : null)}
+                      />
                     </div>
                     <div className="grid gap-2">
                       <Label>{t('model_label')} ({t('optional')})</Label>
@@ -1477,14 +1362,15 @@ const ProductsStorePage: React.FC = () => {
                       >
                         <SelectTrigger><SelectValue placeholder={t('unit')} /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pcs">{t('pieces')}</SelectItem>
-                          <SelectItem value="bag">{t('bag')}</SelectItem>
-                          <SelectItem value="crate">{t('crate')}</SelectItem>
-                          <SelectItem value="liter">{t('liter')}</SelectItem>
                           <SelectItem value="kg">{t('kilograms')}</SelectItem>
-                          <SelectItem value="sack">{t('sack')}</SelectItem>
-                          <SelectItem value="bottle">{t('bottle')}</SelectItem>
+                          <SelectItem value="g">{t('gram')}</SelectItem>
+                          <SelectItem value="liter">{t('liter')}</SelectItem>
+                          <SelectItem value="ml">{t('milliliter')}</SelectItem>
+                          <SelectItem value="pcs">{t('pieces')}</SelectItem>
                           <SelectItem value="pack">{t('pack')}</SelectItem>
+                          <SelectItem value="box">{t('box')}</SelectItem>
+                          <SelectItem value="bottle">{t('bottle')}</SelectItem>
+                          <SelectItem value="m">{t('meter')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

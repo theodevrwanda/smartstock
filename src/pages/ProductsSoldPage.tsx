@@ -95,6 +95,7 @@ const ProductsSoldPage: React.FC = () => {
   const [minQty, setMinQty] = useState<string>('');
   const [maxQty, setMaxQty] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showFullReport, setShowFullReport] = useState(false);
 
   // Sorting
   const [sortColumn, setSortColumn] = useState<keyof SoldProduct | 'branchName'>('soldDate');
@@ -203,7 +204,7 @@ const ProductsSoldPage: React.FC = () => {
   // FILTERED PRODUCTS - Shows only products sold on the selected date
   const filteredProducts = useMemo(() => {
     return soldProducts
-      .filter(p => isSameDay(new Date(p.soldDate), selectedDate))
+      .filter(p => showFullReport || isSameDay(new Date(p.soldDate), selectedDate))
       .filter(p =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -215,7 +216,7 @@ const ProductsSoldPage: React.FC = () => {
       .filter(p => maxPrice === '' || p.sellingPrice <= Number(maxPrice))
       .filter(p => minQty === '' || p.quantity >= Number(minQty))
       .filter(p => maxQty === '' || p.quantity <= Number(maxQty));
-  }, [soldProducts, selectedDate, searchTerm, categoryFilter, branchFilter, minPrice, maxPrice, minQty, maxQty]);
+  }, [soldProducts, selectedDate, searchTerm, categoryFilter, branchFilter, minPrice, maxPrice, minQty, maxQty, showFullReport]);
 
   // Sorting
   const sortedProducts = useMemo(() => {
@@ -390,157 +391,180 @@ const ProductsSoldPage: React.FC = () => {
               {isAdmin ? t('all_sold_products_admin') : userBranch ? `${t('sold_products_from')} ${getBranchName(userBranch)}` : t('no_branch_assigned')}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                {t('export')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={handleExportExcel}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                {t('export_excel')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF}>
-                <FileText className="mr-2 h-4 w-4" />
-                {t('export_pdf')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showFullReport ? "default" : "outline"}
+              onClick={() => setShowFullReport(!showFullReport)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              {showFullReport ? "Standard View" : "Full Report"}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  {t('export')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {t('export_excel')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('export_pdf')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
+        {/* Date Context or Full Report Indicator */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
-            <CalendarIcon size={14} className="text-muted-foreground" />
-            <span className="text-muted-foreground">{t('displaying_sales_for')}:</span>
-            <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
-          </Badge>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-background shadow-sm">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, 'PPP') : <span>{t('pick_date')}</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* Income Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_income')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">{incomeStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_income')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">{incomeStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="relative overflow-hidden bg-card text-foreground border-none shadow-xl border-l-4 border-l-orange-500">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                <Award size={14} className="text-orange-500" />
-                {t('yearly_income')}
-              </CardTitle>
-              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')}
+          {showFullReport ? (
+            <Badge variant="default" className="px-3 py-1 bg-blue-600 text-white flex items-center gap-2">
+              <Award size={14} className="text-white" />
+              <span className="font-semibold">Full Sales History - All Time Data</span>
+            </Badge>
+          ) : (
+            <>
+              <Badge variant="outline" className="px-3 py-1 bg-secondary border-dashed border-border flex items-center gap-2">
+                <CalendarIcon size={14} className="text-muted-foreground" />
+                <span className="text-muted-foreground">{t('displaying_sales_for')}:</span>
+                <span className="font-semibold text-foreground">{format(selectedDate, 'MMMM do, yyyy')}</span>
               </Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">{t('total_revenue')}</p>
-                  <div className="text-3xl font-bold">{incomeStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-background shadow-sm">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, 'PPP') : <span>{t('pick_date')}</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
         </div>
 
-        {/* Weekly Day Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
-          {incomeStats.timelineData.map((item, idx) => {
-            const isSelected = isSameDay(item.date, selectedDate);
-            const isToday = isSameDay(item.date, new Date());
+        {!showFullReport && (
+          <>
+            {/* Income Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_income')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{incomeStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            return (
-              <motion.div
-                key={idx}
-                whileHover={{ y: -4 }}
-                onClick={() => setSelectedDate(item.date)}
-                className={cn(
-                  "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
-                  isSelected
-                    ? "bg-primary border-primary shadow-lg text-primary-foreground ring-2 ring-primary/50"
-                    : isToday
-                      ? "bg-secondary/50 border-border dark:bg-secondary/20 shadow-sm"
-                      : "bg-card border-border hover:border-primary/50"
-                )}
-              >
-                {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    {t('today')}
+              <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_income')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{incomeStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
                   </div>
-                )}
-                <div className="flex flex-col items-center text-center gap-2">
-                  <span className={cn(
-                    "text-[10px] font-bold tracking-tighter uppercase",
-                    isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"
-                  )}>
-                    {item.dayName} {isSelected && "•"}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className={cn(
-                      "text-sm font-black",
-                      isSelected ? "text-primary-foreground" : "text-foreground"
-                    )}>
-                      {item.income.toLocaleString()}
-                    </span>
-                    <span className={cn(
-                      "text-[9px] uppercase font-medium opacity-60",
-                      isSelected ? "text-amber-200" : "text-gray-500"
-                    )}>
-                      {t('income_label')}
-                    </span>
+                </CardContent>
+              </Card>
+
+              <Card className="relative overflow-hidden bg-card text-foreground border-none shadow-xl border-l-4 border-l-orange-500">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <Award size={14} className="text-orange-500" />
+                    {t('yearly_income')}
+                  </CardTitle>
+                  <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
+                    {format(selectedDate, 'yyyy')}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">{t('total_revenue')}</p>
+                      <div className="text-3xl font-bold">{incomeStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Weekly Day Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+              {incomeStats.timelineData.map((item, idx) => {
+                const isSelected = isSameDay(item.date, selectedDate);
+                const isToday = isSameDay(item.date, new Date());
+
+                return (
+                  <motion.div
+                    key={idx}
+                    whileHover={{ y: -4 }}
+                    onClick={() => setSelectedDate(item.date)}
+                    className={cn(
+                      "p-4 rounded-xl border cursor-pointer transition-all duration-300 relative",
+                      isSelected
+                        ? "bg-primary border-primary shadow-lg text-primary-foreground ring-2 ring-primary/50"
+                        : isToday
+                          ? "bg-secondary/50 border-border dark:bg-secondary/20 shadow-sm"
+                          : "bg-card border-border hover:border-primary/50"
+                    )}
+                  >
+                    {isToday && !isSelected && (
+                      <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                        {t('today')}
+                      </div>
+                    )}
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <span className={cn(
+                        "text-[10px] font-bold tracking-tighter uppercase",
+                        isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"
+                      )}>
+                        {item.dayName} {isSelected && "•"}
+                      </span>
+                      <div className="flex flex-col">
+                        <span className={cn(
+                          "text-sm font-black",
+                          isSelected ? "text-primary-foreground" : "text-foreground"
+                        )}>
+                          {item.income.toLocaleString()}
+                        </span>
+                        <span className={cn(
+                          "text-[9px] uppercase font-medium opacity-60",
+                          isSelected ? "text-amber-200" : "text-gray-500"
+                        )}>
+                          {t('income_label')}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-card p-6 rounded-xl shadow-md border">

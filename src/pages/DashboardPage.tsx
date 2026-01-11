@@ -76,7 +76,7 @@ const DashboardPage: React.FC = () => {
               {t('real_time_analytics')}
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-secondary p-3 rounded-2xl shadow-sm border border-border">
+          <div className="flex items-center gap-3 bg-secondary p-3 rounded-2xl border border-border">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
@@ -191,7 +191,7 @@ const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
     red: "bg-rose-600",
   };
   return (
-    <Card className={`border-none shadow-lg ${colors[color] || colors.blue} ${color === 'blue' ? '' : 'text-white'} transition-all rounded-2xl overflow-hidden`}>
+    <Card className={`border-none shadow-none ${colors[color] || colors.blue} ${color === 'blue' ? '' : 'text-white'} transition-all rounded-2xl overflow-hidden`}>
       <CardContent className="p-6 relative">
         <div className="flex justify-between items-start mb-4 relative z-10">
           <div className={`p-3 rounded-xl ${color === 'blue' ? 'bg-primary-foreground/10' : 'bg-white/10'} backdrop-blur-sm`}>
@@ -213,7 +213,7 @@ const BigProCard = ({ title, value, subtitle, icon, color }: any) => {
 };
 
 const SmallProCard = ({ title, value, subtitle, icon, highlight, danger }: any) => (
-  <Card className={`border-none group bg-white dark:bg-secondary rounded-2xl overflow-hidden`}>
+  <Card className={`border-none shadow-none group bg-white dark:bg-secondary rounded-2xl overflow-hidden`}>
     <CardContent className="p-5">
       <div className="flex items-center justify-between mb-3">
         <div className={`p-2 rounded-xl transition-colors ${highlight ? 'bg-primary/10' :
@@ -237,7 +237,7 @@ const HighlightCard = ({ type, name, quantity, value, icon, color, t }: any) => 
   const bgAccent: any = color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'bg-amber-50 dark:bg-amber-900/10';
 
   return (
-    <Card className="overflow-hidden border-none shadow-md bg-card flex flex-col rounded-2xl group hover:shadow-lg transition-all">
+    <Card className="overflow-hidden border-none shadow-none bg-card flex flex-col rounded-2xl group transition-all">
       <CardContent className="p-0 flex flex-col h-full">
         <div className={`p-6 ${bgAccent} border-b border-border`}>
           <div className="flex items-center gap-3 mb-2">

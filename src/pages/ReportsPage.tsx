@@ -57,6 +57,7 @@ const ReportsPage: React.FC = () => {
   const [branchFilter, setBranchFilter] = useState<string>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showFullReport, setShowFullReport] = useState(false);
 
   // Sorting
   const [sortColumn, setSortColumn] = useState<keyof ProductReport | 'branchName'>('addedDate');
@@ -360,142 +361,162 @@ const ReportsPage: React.FC = () => {
               {t('business_report_desc')}
             </p>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                {t('export_report')}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportExcel}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                {t('export_excel')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportPDF}>
-                <FileText className="mr-2 h-4 w-4" />
-                {t('export_pdf')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={showFullReport ? "default" : "outline"}
+              onClick={() => setShowFullReport(!showFullReport)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              {showFullReport ? "Standard View" : "Full Report"}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  {t('export_report')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  {t('export_excel')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  {t('export_pdf')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        {/* Date Badge */}
+        {/* Date Badge or Full Report Indicator */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
-            <CalendarIcon size={14} className="text-gray-500" />
-            <span className="text-gray-600 dark:text-gray-400">{t('report_context')}:</span>
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
-          </Badge>
+          {showFullReport ? (
+            <Badge variant="default" className="px-3 py-1 bg-blue-600 text-white flex items-center gap-2">
+              <Award size={14} className="text-white" />
+              <span className="font-semibold">Full System Report - All Time Data</span>
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="px-3 py-1 bg-white/50 dark:bg-white/5 border-dashed border-gray-300 dark:border-gray-700 flex items-center gap-2">
+              <CalendarIcon size={14} className="text-gray-500" />
+              <span className="text-gray-600 dark:text-gray-400">{t('report_context')}:</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{format(selectedDate, 'MMMM do, yyyy')}</span>
+            </Badge>
+          )}
         </div>
 
-        {/* Activity Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_activity')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">{activityStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {!showFullReport && (
+          <>
+            {/* Activity Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_activity')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{activityStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_activity')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-3xl font-bold">{activityStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_activity')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-3xl font-bold">{activityStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                <Award size={14} className="text-orange-500" />
-                {t('yearly_activity')}
-              </CardTitle>
-              <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                {format(selectedDate, 'yyyy')}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">{t('total_value_processed')}</p>
-                  <div className="text-3xl font-bold">{activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card className="relative overflow-hidden bg-gray-900 text-white border-none shadow-xl border-l-4 border-l-orange-500">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm font-medium text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <Award size={14} className="text-orange-500" />
+                    {t('yearly_activity')}
+                  </CardTitle>
+                  <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
+                    {format(selectedDate, 'yyyy')}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">{t('total_value_processed')}</p>
+                      <div className="text-3xl font-bold">{activityStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-        {/* Weekly Day Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
-          {activityStats.timelineData.map((item, idx) => {
-            const isSelected = isSameDay(item.date, selectedDate);
-            const isToday = isSameDay(item.date, new Date());
+            {/* Weekly Day Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+              {activityStats.timelineData.map((item, idx) => {
+                const isSelected = isSameDay(item.date, selectedDate);
+                const isToday = isSameDay(item.date, new Date());
 
-            return (
-              <motion.div
-                key={idx}
-                whileHover={{ y: -4 }}
-                onClick={() => setSelectedDate(item.date)}
-                className={`
+                return (
+                  <motion.div
+                    key={idx}
+                    whileHover={{ y: -4 }}
+                    onClick={() => setSelectedDate(item.date)}
+                    className={`
                   p-4 rounded-xl border cursor-pointer transition-all duration-300 relative
                   ${isSelected
-                    ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
-                    : isToday
-                      ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
-                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
-                  }
+                        ? "bg-amber-950/90 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-white ring-2 ring-amber-500/50"
+                        : isToday
+                          ? "bg-secondary/50 border-gray-300 dark:border-gray-700/60 dark:bg-accent/20 dark:border-gray-300 dark:border-gray-700/40 shadow-sm"
+                          : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      }
                 `}
-              >
-                {isToday && !isSelected && (
-                  <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
-                    {t('today')}
-                  </div>
-                )}
-                <div className="flex flex-col items-center text-center gap-2">
-                  <span className={`
+                  >
+                    {isToday && !isSelected && (
+                      <div className="absolute -top-1.5 -right-1.5 bg-secondary0 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm uppercase">
+                        {t('today')}
+                      </div>
+                    )}
+                    <div className="flex flex-col items-center text-center gap-2">
+                      <span className={`
                     text-[10px] font-bold tracking-tighter uppercase
                     ${isSelected ? "text-amber-500" : "text-gray-400 dark:text-gray-600"}
                   `}>
-                    {item.dayName} {isSelected && "•"}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className={`
+                        {item.dayName} {isSelected && "•"}
+                      </span>
+                      <div className="flex flex-col">
+                        <span className={`
                       text-sm font-black
                       ${isSelected ? "text-white" : "text-gray-900 dark:text-gray-100 dark:text-blue-400"}
                     `}>
-                      {item.value.toLocaleString()}
-                    </span>
-                    <span className={`
+                          {item.value.toLocaleString()}
+                        </span>
+                        <span className={`
                       text-[9px] uppercase font-medium opacity-60
                       ${isSelected ? "text-amber-200" : "text-gray-500"}
                     `}>
-                      {t('value')}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                          {t('value')}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
