@@ -608,7 +608,7 @@ const ProductsSoldPage: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -747,6 +747,100 @@ const ProductsSoldPage: React.FC = () => {
               </AnimatePresence>
             </TableBody>
           </Table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden space-y-3">
+          {sortedProducts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">{t('no_products_found')}</div>
+          ) : (
+            <AnimatePresence mode='popLayout'>
+              {sortedProducts.map(p => (
+                <motion.div
+                  key={p.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  layout
+                  className="rounded-xl overflow-hidden"
+                >
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold truncate">{p.productName}</h3>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">{p.category}</Badge>
+                            {p.model && <Badge variant="outline" className="text-xs">{p.model}</Badge>}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant="outline" className="font-bold">{p.quantity} {p.unit || 'pcs'}</Badge>
+                          <span className="text-xs text-muted-foreground">{format(new Date(p.soldDate), 'dd MMM')}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-muted-foreground uppercase">{t('selling_price')}</span>
+                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                            {p.sellingPrice.toLocaleString()} RWF
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-[10px] text-muted-foreground uppercase">{t('total_received')}</span>
+                          <span className="text-lg font-black text-amber-600 dark:text-amber-400">
+                            {(p.quantity * p.sellingPrice).toLocaleString()} RWF
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          {calculateProfitLoss(p) >= 0 ? <TrendingUp className="h-3 w-3 text-green-500" /> : <TrendingDown className="h-3 w-3 text-red-500" />}
+                          <span className={calculateProfitLoss(p) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {Math.abs(calculateProfitLoss(p)).toLocaleString()} RWF
+                          </span>
+                        </div>
+                        {isAdmin && <span>{getBranchName(p.branch)}</span>}
+                      </div>
+
+                      <div className="mt-3 flex gap-2 justify-end bg-muted/20 p-2 rounded-lg">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:text-primary transition-colors"
+                          onClick={() => openDetails(p)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:text-primary/80 transition-colors"
+                          onClick={() => openRestore(p)}
+                          title={t('return_product')}
+                        >
+                          <Undo className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive/80 transition-colors"
+                            onClick={() => openDelete(p)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
         </div>
         {/* Details Dialog */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
