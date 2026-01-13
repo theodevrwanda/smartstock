@@ -169,13 +169,19 @@ const ProductsSoldPage: React.FC = () => {
     const monthStart = startOfMonth(selectedDate);
     const monthEnd = endOfMonth(selectedDate);
     const yearStart = startOfYear(selectedDate);
+    const yearEnd = endOfYear(selectedDate);
 
     const weeklyDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-    let daily = 0;
-    let weekly = 0;
-    let monthly = 0;
-    let yearly = 0;
+    // Helper to init stats object
+    const createStats = () => ({ income: 0, grossProfit: 0, totalLoss: 0, netProfit: 0 });
+
+    const stats = {
+      daily: createStats(),
+      weekly: createStats(),
+      monthly: createStats(),
+      yearly: createStats(),
+    };
 
     const timelineData = weeklyDays.map(day => {
       const dayIncome = soldProducts
@@ -190,15 +196,29 @@ const ProductsSoldPage: React.FC = () => {
 
     soldProducts.forEach(p => {
       const soldDateObj = new Date(p.soldDate);
-      const amount = p.quantity * p.sellingPrice;
+      const income = p.quantity * p.sellingPrice;
 
-      if (isSameDay(soldDateObj, selectedDate)) daily += amount;
-      if (isWithinInterval(soldDateObj, { start: weekStart, end: weekEnd })) weekly += amount;
-      if (isWithinInterval(soldDateObj, { start: monthStart, end: monthEnd })) monthly += amount;
-      if (isWithinInterval(soldDateObj, { start: yearStart, end: endOfYear(selectedDate) })) yearly += amount;
+      const unitCost = p.costPricePerUnit ?? p.unitCost ?? p.costPrice ?? 0;
+      const profitLoss = (p.sellingPrice - unitCost) * p.quantity;
+
+      const gross = profitLoss > 0 ? profitLoss : 0;
+      const loss = profitLoss < 0 ? Math.abs(profitLoss) : 0;
+      const net = profitLoss;
+
+      const updateStats = (periodStats: ReturnType<typeof createStats>) => {
+        periodStats.income += income;
+        periodStats.grossProfit += gross;
+        periodStats.totalLoss += loss;
+        periodStats.netProfit += net;
+      };
+
+      if (isSameDay(soldDateObj, selectedDate)) updateStats(stats.daily);
+      if (isWithinInterval(soldDateObj, { start: weekStart, end: weekEnd })) updateStats(stats.weekly);
+      if (isWithinInterval(soldDateObj, { start: monthStart, end: monthEnd })) updateStats(stats.monthly);
+      if (isWithinInterval(soldDateObj, { start: yearStart, end: yearEnd })) updateStats(stats.yearly);
     });
 
-    return { daily, weekly, monthly, yearly, timelineData };
+    return { ...stats, timelineData };
   }, [soldProducts, selectedDate]);
 
   // FILTERED PRODUCTS - Shows only products sold on the selected date
@@ -458,58 +478,49 @@ const ProductsSoldPage: React.FC = () => {
         {!showFullReport && (
           <>
             {/* Income Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 text-white border-none shadow-lg">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-blue-100 uppercase tracking-wider">{t('weekly_income')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold">{incomeStats.weekly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                    </div>
-                    <div className="bg-white/20 p-2 rounded-lg">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Income Cards - Daily, Weekly, Monthly, Yearly */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {[
+                { label: t('daily_income'), data: incomeStats.daily, icon: TrendingUp, color: 'from-blue-600 to-indigo-700', subColor: 'text-blue-100' },
+                { label: t('weekly_income'), data: incomeStats.weekly, icon: TrendingUp, color: 'from-indigo-600 to-purple-700', subColor: 'text-indigo-100' },
+                { label: t('monthly_income'), data: incomeStats.monthly, icon: DollarSign, color: 'from-emerald-500 to-teal-700', subColor: 'text-emerald-100' },
+                { label: t('yearly_income'), data: incomeStats.yearly, icon: Award, color: 'from-orange-500 to-red-700', subColor: 'text-orange-100' }
+              ].map((card, idx) => (
+                <Card key={idx} className={`relative overflow-hidden bg-gradient-to-br ${card.color} text-white border-none shadow-lg`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className={`text-sm font-medium ${card.subColor} uppercase tracking-wider flex justify-between items-center`}>
+                      {card.label}
+                      <card.icon className="h-4 w-4 opacity-70" />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <div className="text-2xl font-bold">{card.data.income.toLocaleString()} <span className="text-sm font-normal opacity-80">RWF</span></div>
+                        <p className="text-[10px] uppercase opacity-70">{t('total_revenue')}</p>
+                      </div>
 
-              <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white border-none shadow-lg">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-emerald-100 uppercase tracking-wider">{t('monthly_income')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold">{incomeStats.monthly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
-                    </div>
-                    <div className="bg-white/20 p-2 rounded-lg">
-                      <DollarSign className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/20">
+                        <div>
+                          <p className="text-[10px] uppercase opacity-80">{t('gross_profit')}</p>
+                          <p className="text-sm font-semibold text-green-200">+{card.data.grossProfit.toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase opacity-80">{t('total_loss')}</p>
+                          <p className="text-sm font-semibold text-red-200">-{card.data.totalLoss.toLocaleString()}</p>
+                        </div>
+                      </div>
 
-              <Card className="relative overflow-hidden bg-card text-foreground border-none shadow-xl border-l-4 border-l-orange-500">
-                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                    <Award size={14} className="text-orange-500" />
-                    {t('yearly_income')}
-                  </CardTitle>
-                  <Badge variant="outline" className="text-[10px] uppercase border-orange-500/50 text-orange-500 font-bold bg-orange-500/10">
-                    {format(selectedDate, 'yyyy')}
-                  </Badge>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">{t('total_revenue')}</p>
-                      <div className="text-3xl font-bold">{incomeStats.yearly.toLocaleString()} <span className="text-lg font-normal opacity-80 ml-1">RWF</span></div>
+                      <div className="pt-2 border-t border-white/20 flex justify-between items-center">
+                        <p className="text-[10px] uppercase font-bold">{t('net_profit')}</p>
+                        <p className={`text-lg font-black ${card.data.netProfit >= 0 ? 'text-white' : 'text-red-200'}`}>
+                          {card.data.netProfit.toLocaleString()} RWF
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
             {/* Weekly Day Cards */}
