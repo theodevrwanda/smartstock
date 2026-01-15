@@ -8,13 +8,13 @@ export const mockPlans = [
         description: '(Test Mode – First Month Only)',
         features: [
             'All SmartStock features unlocked',
-            'Dashboard & Analytics',
-            'Store & Product Management',
-            'Sales & Returns Tracking',
-            'Reports & Export',
-            'English & Kinyarwanda',
-            'Limited to 30 days',
-            'Test mode (not for production)'
+            'Unlimited Products & Sales',
+            'Unlimited Employees & Branches',
+            'Multi-Branch Management',
+            'Advanced Reports & Analytics',
+            'Returns & Trash Recovery',
+            'Admin Transaction Monitoring',
+            'System Updates & Support'
         ]
     },
     {
@@ -26,7 +26,7 @@ export const mockPlans = [
         features: [
             'All SmartStock features unlocked',
             'Unlimited Products & Sales',
-            'Unlimited Employees',
+            'Unlimited Employees & Branches',
             'Multi-Branch Management',
             'Advanced Reports & Analytics',
             'Returns & Trash Recovery',
@@ -41,13 +41,14 @@ export const mockPlans = [
         duration: 'year',
         description: '(Best Value – Save 25%)',
         features: [
-            'Equivalent to 7,500 RWF / month',
             'All SmartStock features unlocked',
             'Unlimited Products & Sales',
             'Unlimited Employees & Branches',
-            'Priority Support',
-            'Save 30,000 RWF per year',
-            'Business continuity guaranteed'
+            'Multi-Branch Management',
+            'Advanced Reports & Analytics',
+            'Returns & Trash Recovery',
+            'Admin Transaction Monitoring',
+            'System Updates & Support'
         ]
     },
     {
@@ -57,12 +58,14 @@ export const mockPlans = [
         duration: 'forever',
         description: 'Lifetime License – One Time Payment',
         features: [
-            'Lifetime Access',
-            'One-time payment',
-            'No monthly fees',
-            'All Future Updates',
-            'Priority Support',
-            'Full Ownership'
+            'All SmartStock features unlocked',
+            'Unlimited Products & Sales',
+            'Unlimited Employees & Branches',
+            'Multi-Branch Management',
+            'Advanced Reports & Analytics',
+            'Returns & Trash Recovery',
+            'Admin Transaction Monitoring',
+            'System Updates & Support'
         ]
     }
 ];
