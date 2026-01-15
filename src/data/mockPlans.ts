@@ -2,54 +2,67 @@
 export const mockPlans = [
     {
         _id: '1',
-        name: 'Starter Plan',
+        name: 'Free Trial Plan',
         price: 0,
-        duration: 'forever',
+        duration: 'month',
+        description: '(Test Mode – First Month Only)',
         features: [
-            'Basic Inventory Tracking',
-            'Single User Access',
-            'Daily Sales Reports',
-            'Community Support'
+            'All SmartStock features unlocked',
+            'Dashboard & Analytics',
+            'Store & Product Management',
+            'Sales & Returns Tracking',
+            'Reports & Export',
+            'English & Kinyarwanda',
+            'Limited to 30 days',
+            'Test mode (not for production)'
         ]
     },
     {
         _id: '2',
-        name: 'Business Plan',
-        price: 15000,
+        name: 'Standard Monthly Plan',
+        price: 10000,
         duration: 'month',
+        description: '(For Active Businesses)',
         features: [
-            'Advanced Inventory Management',
-            'Multi-User Access (up to 5)',
-            'Real-time Analytics',
-            'Priority Email Support',
-            'Branch Management'
+            'All SmartStock features unlocked',
+            'Unlimited Products & Sales',
+            'Unlimited Employees',
+            'Multi-Branch Management',
+            'Advanced Reports & Analytics',
+            'Returns & Trash Recovery',
+            'Admin Transaction Monitoring',
+            'System Updates & Support'
         ]
     },
     {
         _id: '3',
-        name: 'Professional Plan',
-        price: 30000,
-        duration: 'month',
+        name: 'Standard Yearly Plan',
+        price: 90000,
+        duration: 'year',
+        description: '(Best Value – Save 25%)',
         features: [
-            'All Business Features',
-            'Advanced Analytics & Forecasting',
-            'Unlimited Users',
-            'Priority Support 24/7',
-            'API Access'
+            'Equivalent to 7,500 RWF / month',
+            'All SmartStock features unlocked',
+            'Unlimited Products & Sales',
+            'Unlimited Employees & Branches',
+            'Priority Support',
+            'Save 30,000 RWF per year',
+            'Business continuity guaranteed'
         ]
     },
     {
         _id: '4',
         name: 'Enterprise Plan',
-        price: 45000,
-        duration: 'month',
+        price: 500000,
+        duration: 'forever',
+        description: 'Lifetime License – One Time Payment',
         features: [
-            'Unlimited Inventory & Users',
-            'Custom API Integration',
-            'Dedicated Account Manager',
-            '24/7 Phone Support',
-            'Advanced Security Features',
-            'Multiple Branches & Warehouses'
+            'Lifetime Access',
+            'One-time payment',
+            'No monthly fees',
+            'All Future Updates',
+            'Priority Support',
+            'Full Ownership'
         ]
     }
 ];

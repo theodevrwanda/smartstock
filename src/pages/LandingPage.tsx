@@ -708,15 +708,15 @@ const LandingPage = () => {
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
                                     whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                                    className={`relative p-8 rounded-2xl border-2 bg-card transition-all duration-300 ${plan.name === 'Business Plan'
+                                    className={`relative p-8 rounded-2xl border-2 bg-card transition-all duration-300 ${plan.name === 'Standard Yearly Plan'
                                         ? 'border-primary shadow-hover scale-105'
                                         : 'border-border shadow-card hover:shadow-hover'
                                         }`}
                                 >
-                                    {plan.name === 'Business Plan' && (
+                                    {plan.name === 'Standard Yearly Plan' && (
                                         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                                            <span className="gradient-primary text-white text-sm font-semibold px-4 py-1 rounded-full">
-                                                Most Popular
+                                            <span className="gradient-primary text-white text-sm font-semibold px-4 py-1 rounded-full whitespace-nowrap">
+                                                Best Value
                                             </span>
                                         </div>
                                     )}
@@ -725,6 +725,10 @@ const LandingPage = () => {
                                         <h3 className="text-2xl font-bold text-foreground mb-2">
                                             {plan.name}
                                         </h3>
+                                        <p className="text-sm text-primary font-medium mb-4">
+                                            {/* @ts-ignore - description was added implicitly */}
+                                            {plan.description}
+                                        </p>
                                         <div className="mt-4">
                                             <span className="text-4xl font-bold text-foreground">
                                                 {plan.price === 0 ? 'FREE' : `${plan.price.toLocaleString()} RWF`}
@@ -744,18 +748,38 @@ const LandingPage = () => {
                                         ))}
                                     </ul>
 
-                                    <Link to="/register" className="block">
-                                        <Button
-                                            className={`w-full ${plan.name === 'Business Plan'
-                                                ? 'gradient-primary'
-                                                : ''
-                                                }`}
-                                            variant={plan.name === 'Business Plan' ? 'default' : 'outline'}
+                                    {plan.price === 0 ? (
+                                        <Link to="/register" className="block">
+                                            <Button
+                                                className={`w-full ${plan.name === 'Standard Yearly Plan'
+                                                    ? 'gradient-primary'
+                                                    : ''
+                                                    }`}
+                                                variant={plan.name === 'Standard Yearly Plan' ? 'default' : 'outline'}
+                                            >
+                                                Get Started
+                                                <ArrowRight className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </Link>
+                                    ) : (
+                                        <a
+                                            href={`https://wa.me/250792734752?text=${encodeURIComponent(`Hello, I'm interested in the ${plan.name}. Please guide me on how to pay/subscribe.`)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block"
                                         >
-                                            Get Started
-                                            <ArrowRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </Link>
+                                            <Button
+                                                className={`w-full ${plan.name === 'Standard Yearly Plan'
+                                                    ? 'gradient-primary'
+                                                    : ''
+                                                    }`}
+                                                variant={plan.name === 'Standard Yearly Plan' ? 'default' : 'outline'}
+                                            >
+                                                Select Plan
+                                                <MessageCircle className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </a>
+                                    )}
                                 </motion.div>
                             ))}
                         </div>
@@ -1049,20 +1073,17 @@ const LandingPage = () => {
                             <div>
                                 <h4 className="font-semibold text-foreground mb-4">Stay Updated</h4>
                                 <p className="text-muted-foreground text-sm mb-4">
-                                    Subscribe to get the latest updates and unlock Pro features.
+                                    Join our WhatsApp channel for the latest updates and news.
                                 </p>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        className="flex-1 px-4 py-2 text-sm border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                    />
-                                    <button
-                                        className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors"
-                                    >
-                                        Subscribe
-                                    </button>
-                                </div>
+                                <a
+                                    href="https://whatsapp.com/channel/0029Vb79i5j8KMqkov7ng61H"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#25D366]/90 text-white rounded-md transition-all shadow-md hover:shadow-lg text-sm font-medium"
+                                >
+                                    <MessageCircle className="h-4 w-4 fill-current" />
+                                    <span>Join WhatsApp Channel</span>
+                                </a>
                             </div>
                         </div>
 
