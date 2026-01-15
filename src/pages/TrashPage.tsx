@@ -184,11 +184,11 @@ const ProductsDeletedPage: React.FC = () => {
   };
 
   const getPriceColor = (price: number) => {
-    if (price < 100000) return 'text-gray-900 dark:text-gray-100 font-bold';
-    if (price < 500000) return 'text-green-600 dark:text-green-400 font-bold';
-    if (price < 1000000) return 'text-yellow-600 dark:text-yellow-400 font-bold';
-    if (price < 2000000) return 'text-orange-600 dark:text-orange-400 font-bold';
-    return 'text-red-600 dark:text-red-400 font-bold';
+    if (price < 100000) return 'text-muted-foreground font-bold';
+    if (price < 500000) return 'text-primary/70 font-bold';
+    if (price < 1000000) return 'text-primary font-bold';
+    if (price < 2000000) return 'text-blue-700 dark:text-blue-300 font-bold';
+    return 'text-blue-800 dark:text-blue-200 font-bold';
   };
 
   // Selection handlers

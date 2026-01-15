@@ -11,6 +11,7 @@ import {
   Store,
   Users,
   LogOut,
+  Settings,
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,14 +32,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
 
   const sidebarItems = [
     { icon: BarChart2, label: t('dashboard_label'), path: '/dashboard' },
-    { icon: Package, label: t('store_label'), path: '/products' },
-    { icon: ShoppingCart, label: t('sold_label'), path: '/products-sold' },
-    { icon: ArchiveRestore, label: t('restored_label'), path: '/products-restored' },
-    { icon: User, label: t('profile_title'), path: '/profile' },
-    { icon: FileText, label: t('reports_label'), path: '/reports' },
-    { icon: Trash2, label: t('trash_label'), path: '/trash' },
-    { icon: Store, label: t('branches_label'), path: '/manage-branch' },
-    { icon: Users, label: t('employees_label'), path: '/manage-employees' },
+    { icon: Package, label: t('store_label'), path: '/dashboard/products' },
+    { icon: ShoppingCart, label: t('sold_label'), path: '/dashboard/products-sold' },
+    { icon: ArchiveRestore, label: t('restored_label'), path: '/dashboard/products-restored' },
+    { icon: User, label: t('profile_title'), path: '/dashboard/profile' },
+    { icon: FileText, label: t('reports_label'), path: '/dashboard/reports' },
+    { icon: Trash2, label: t('trash_label'), path: '/dashboard/trash' },
+    { icon: Store, label: t('branches_label'), path: '/dashboard/manage-branch' },
+    { icon: Users, label: t('employees_label'), path: '/dashboard/manage-employees' },
+    { icon: Settings, label: t('settings_label'), path: '/dashboard/settings' },
   ];
 
   // Dynamic user and business data
@@ -67,7 +69,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="flex-shrink-0 w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm">
               <span className="text-primary-foreground font-bold text-sm uppercase">
-                {businessName.substring(0, 2)}
+                {businessName.substring(0, 3).toUpperCase()}
               </span>
             </div>
             <div className="flex flex-col min-w-0">

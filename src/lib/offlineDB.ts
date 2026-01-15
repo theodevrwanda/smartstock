@@ -35,7 +35,7 @@ export interface OfflineProduct {
 
 export interface PendingOperation {
   id: string;
-  type: 'addProduct' | 'updateProduct' | 'deleteProduct' | 'sellProduct' | 'restoreProduct' | 'sellRestoredProduct';
+  type: 'addProduct' | 'updateProduct' | 'deleteProduct' | 'sellProduct' | 'restoreProduct' | 'sellRestoredProduct' | 'updateBusiness';
   data: any;
   timestamp: number;
   status: 'pending' | 'syncing' | 'failed';
@@ -174,11 +174,11 @@ export async function getDB(): Promise<IDBPDatabase<PixelMartDB>> {
 export async function cacheProducts(products: OfflineProduct[]): Promise<void> {
   const db = await getDB();
   const tx = db.transaction('products', 'readwrite');
-  
+
   for (const product of products) {
     await tx.store.put({ ...product, _localOnly: false, _pendingSync: false });
   }
-  
+
   await tx.done;
 }
 
@@ -190,7 +190,7 @@ export async function getLocalProducts(
 ): Promise<OfflineProduct[]> {
   const db = await getDB();
   const allProducts = await db.getAllFromIndex('products', 'by-businessId', businessId);
-  
+
   return allProducts.filter(p => {
     if (p.status !== status) return false;
     if (branchId && p.branch !== branchId) return false;
@@ -206,7 +206,7 @@ export async function getLocalProductsByStatus(
 ): Promise<OfflineProduct[]> {
   const db = await getDB();
   const allProducts = await db.getAllFromIndex('products', 'by-businessId', businessId);
-  
+
   return allProducts.filter(p => {
     if (!statuses.includes(p.status)) return false;
     if (branchId && p.branch !== branchId) return false;
@@ -217,14 +217,14 @@ export async function getLocalProductsByStatus(
 // Add/update product locally
 export async function saveProductLocally(product: OfflineProduct, isPending = true): Promise<OfflineProduct> {
   const db = await getDB();
-  
+
   const toSave = {
     ...product,
     _localOnly: !navigator.onLine,
     _pendingSync: isPending && !navigator.onLine,
     updatedAt: new Date().toISOString(),
   };
-  
+
   await db.put('products', toSave);
   return toSave;
 }
@@ -247,7 +247,7 @@ export async function getLocalProduct(id: string): Promise<OfflineProduct | unde
 export async function addPendingOperation(operation: Omit<PendingOperation, 'id' | 'timestamp' | 'status' | 'retryCount'>): Promise<string> {
   const db = await getDB();
   const id = `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   await db.put('pendingOperations', {
     ...operation,
     id,
@@ -255,7 +255,7 @@ export async function addPendingOperation(operation: Omit<PendingOperation, 'id'
     status: 'pending',
     retryCount: 0,
   });
-  
+
   return id;
 }
 
@@ -304,11 +304,11 @@ export async function clearPendingOperations(): Promise<void> {
 export async function cacheUsers(users: OfflineUser[]): Promise<void> {
   const db = await getDB();
   const tx = db.transaction('users', 'readwrite');
-  
+
   for (const user of users) {
     await tx.store.put(user);
   }
-  
+
   await tx.done;
 }
 
@@ -336,11 +336,11 @@ export async function getLocalUser(id: string): Promise<OfflineUser | undefined>
 export async function cacheBranches(branches: OfflineBranch[]): Promise<void> {
   const db = await getDB();
   const tx = db.transaction('branches', 'readwrite');
-  
+
   for (const branch of branches) {
     await tx.store.put(branch);
   }
-  
+
   await tx.done;
 }
 
@@ -372,7 +372,7 @@ export async function markProductsSynced(): Promise<void> {
   const db = await getDB();
   const tx = db.transaction('products', 'readwrite');
   const products = await tx.store.getAll();
-  
+
   for (const product of products) {
     if (product._pendingSync) {
       product._pendingSync = false;
@@ -380,7 +380,7 @@ export async function markProductsSynced(): Promise<void> {
       await tx.store.put(product);
     }
   }
-  
+
   await tx.done;
 }
 

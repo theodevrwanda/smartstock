@@ -147,11 +147,11 @@ const Header: React.FC = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{t('account')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
                   <UserIcon className="mr-2 h-4 w-4" />
                   <span>{t('profile_title')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <DropdownMenuItem onClick={() => navigate('/dashboard/profile')}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>{t('personal_details')}</span>
                 </DropdownMenuItem>

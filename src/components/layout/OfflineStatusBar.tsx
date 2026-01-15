@@ -1,5 +1,6 @@
 import React from 'react';
-import { WifiOff, CloudOff, Upload, Languages, Loader2 } from 'lucide-react';
+import { WifiOff, CloudOff, Upload, Languages } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { Button } from '@/components/ui/button';
 import { useOffline } from '@/contexts/OfflineContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -58,7 +59,7 @@ const OfflineStatusBar: React.FC = () => {
             className="h-7 px-3 text-xs bg-white/20 hover:bg-white/30 text-inherit"
           >
             {isSyncing ? (
-              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              <LoadingSpinner size="sm" className="mr-1" />
             ) : (
               <Upload className="h-3 w-3 mr-1" />
             )}

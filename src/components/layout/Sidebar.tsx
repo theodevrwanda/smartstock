@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,14 +34,15 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
 
   const sidebarItems = [
     { icon: BarChart2, label: t('dashboard_label'), path: '/dashboard' },
-    { icon: Package, label: t('store_label'), path: '/products' },
-    { icon: ShoppingCart, label: t('sold_label'), path: '/products-sold' },
-    { icon: ArchiveRestore, label: t('restored_label'), path: '/products-restored' },
-    { icon: User, label: t('profile_title'), path: '/profile' },
-    { icon: FileText, label: t('reports_label'), path: '/reports' },
-    { icon: Trash2, label: t('trash_label'), path: '/trash' },
-    { icon: Store, label: t('branches_label'), path: '/manage-branch' },
-    { icon: Users, label: t('employees_label'), path: '/manage-employees' },
+    { icon: Package, label: t('store_label'), path: '/dashboard/products' },
+    { icon: ShoppingCart, label: t('sold_label'), path: '/dashboard/products-sold' },
+    { icon: ArchiveRestore, label: t('restored_label'), path: '/dashboard/products-restored' },
+    { icon: User, label: t('profile_title'), path: '/dashboard/profile' },
+    { icon: FileText, label: t('reports_label'), path: '/dashboard/reports' },
+    { icon: Trash2, label: t('trash_label'), path: '/dashboard/trash' },
+    { icon: Store, label: t('branches_label'), path: '/dashboard/manage-branch' },
+    { icon: Users, label: t('employees_label'), path: '/dashboard/manage-employees' },
+    { icon: Settings, label: t('settings_label'), path: '/dashboard/settings' },
   ];
 
   // Dynamic user data
@@ -72,8 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
             </div>
           </div>
         ) : (
-          <div className="w-8 h-8 bg-[#FCD34D] rounded-xl flex items-center justify-center mx-auto shadow-sm">
-            <span className="text-slate-900 font-bold text-xs">
+          <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center mx-auto shadow-sm">
+            <span className="text-primary-foreground font-bold text-xs">
               {businessName.substring(0, 3).toUpperCase()}
             </span>
           </div>
@@ -90,12 +92,13 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.path === '/dashboard'}
               className={({ isActive }) =>
                 cn(
                   "flex items-center px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium",
                   isActive
-                    ? "bg-[#FCD34D] text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                   collapsed ? "justify-center" : "space-x-3"
                 )
               }
@@ -146,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
               <Button
                 asChild
                 size="sm"
-                className="w-full bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold border-none shadow-none"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold border-none shadow-none"
               >
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center space-x-2">
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

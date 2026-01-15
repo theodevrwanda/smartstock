@@ -29,14 +29,14 @@ export const useSearch = () => {
 
 const navigationItems = [
   { title: 'Dashboard', path: '/dashboard' },
-  { title: 'Products Store', path: '/products' },
-  { title: 'Products Sold', path: '/products-sold' },
-  { title: 'Products Restored', path: '/products-restored' },
-  { title: 'My Profile', path: '/profile' },
-  { title: 'Reports', path: '/reports' },
-  { title: 'Trash', path: '/trash' },
-  { title: 'Manage Branch', path: '/manage-branch' },
-  { title: 'Manage Employees', path: '/manage-employees' },
+  { title: 'Products Store', path: '/dashboard/products' },
+  { title: 'Products Sold', path: '/dashboard/products-sold' },
+  { title: 'Products Restored', path: '/dashboard/products-restored' },
+  { title: 'My Profile', path: '/dashboard/profile' },
+  { title: 'Reports', path: '/dashboard/reports' },
+  { title: 'Trash', path: '/dashboard/trash' },
+  { title: 'Manage Branch', path: '/dashboard/manage-branch' },
+  { title: 'Manage Employees', path: '/dashboard/manage-employees' },
 ];
 
 export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

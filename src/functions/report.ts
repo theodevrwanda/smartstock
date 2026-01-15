@@ -40,7 +40,8 @@ const getActualUnitCost = (data: any): number => {
 export const getReportData = async (
   businessId: string,
   userRole: 'admin' | 'staff',
-  userBranch: string | null
+  userBranch: string | null,
+  stockSettings?: { lowStock: number; outOfStock: number }
 ): Promise<{ products: ProductReport[]; summary: ReportSummary }> => {
   try {
     // BLOCK: Staff with no branch assigned sees NOTHING
@@ -127,9 +128,11 @@ export const getReportData = async (
     );
 
     // Stock status
+    const lowStockThreshold = stockSettings?.lowStock ?? 10;
+    const outOfStockThreshold = stockSettings?.outOfStock ?? 0;
     const activeStock = [...storeProducts, ...restoredProducts];
-    const lowStockCount = activeStock.filter(p => p.quantity > 0 && p.quantity <= 10).length; // Adjustable threshold
-    const outOfStockCount = activeStock.filter(p => p.quantity === 0).length;
+    const lowStockCount = activeStock.filter(p => p.quantity > outOfStockThreshold && p.quantity <= lowStockThreshold).length;
+    const outOfStockCount = activeStock.filter(p => p.quantity <= outOfStockThreshold).length;
 
     // Expired products (only confirmed store products)
     const today = new Date();

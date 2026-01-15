@@ -182,6 +182,16 @@ const translations: Translations = {
         'relogin_required': 'Please log out and log in again.',
         'login_to_view_profile': 'Please log in to view your profile.',
         'enter_current_password_error': 'Please enter your current password.',
+        'stock_management': 'Stock Management',
+        'low_stock_threshold': 'Low Stock Threshold',
+        'out_of_stock_threshold': 'Out of Stock Threshold',
+        'settings_label': 'Settings',
+        'settings_updated_success': 'Settings updated successfully!',
+        'saved_locally_offline': 'Saved locally (offline) – will sync when online',
+        'error_saving_settings': 'Failed to save settings. Please try again.',
+        'admin_only_settings': 'Only administrators can access business settings.',
+        'low_stock_desc': 'Products with quantities equal to or below this value will be marked as "Low Stock".',
+        'out_of_stock_desc': 'Products with quantities equal to or below this value will be marked as "Out of Stock".',
 
         // Store / Products
         'products_store': 'Products Store',
@@ -718,6 +728,16 @@ const translations: Translations = {
         'relogin_required': 'Sohoka wongere winjire.',
         'login_to_view_profile': 'Injira kugirango urebe umwirondoro wawe.',
         'enter_current_password_error': 'Banza ushyiremo ijambo ry\'ibanga wakoreshanga',
+        'stock_management': 'Imicungire y\'Ububiko',
+        'low_stock_threshold': 'Ingano y\'ibicuruzwa bike',
+        'out_of_stock_threshold': 'Ingano y\'ibicuruzwa byashize',
+        'settings_label': 'Igenamiterere',
+        'settings_updated_success': 'Igenamiterere ryahinduwe neza!',
+        'saved_locally_offline': 'Bibitswe kuri telefoni (offline) – bizongerwa kuri interineti niboneka',
+        'error_saving_settings': 'Guhindura igenamiterere byanze. Ongera ugerageze.',
+        'admin_only_settings': 'Abayobozi gusa nibo bemerewe guhindura igenamiterere ry\'ubucuruzi.',
+        'low_stock_desc': 'Ibicuruzwa bifite ingano ingana cyangwa iri munsi y\'iyi mibare bizashyirwa mu cyiciro cy\' "Ibike cyane".',
+        'out_of_stock_desc': 'Ibicuruzwa bifite ingano ingana cyangwa iri munsi y\'iyi mibare bizashyirwa mu cyiciro cy\' "Byashize".',
 
         // Store / Products
         'products_store': 'Ububiko',
@@ -1095,7 +1115,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [language, setLanguageState] = useState<Language>(() => {
         const saved = localStorage.getItem('language');
-        return (saved as Language) || 'rw';
+        return (saved as Language) || 'en';
     });
 
     const setLanguage = (lang: Language) => {

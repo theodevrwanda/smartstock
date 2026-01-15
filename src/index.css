@@ -8,45 +8,37 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Yellow, Black & White Theme - Light Mode */
+    /* Blue & White Theme - Light Mode */
     --background: 0 0% 100%;
-    /* Pure white */
-    --foreground: 0 0% 10%;
-    /* Almost black */
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 48 96% 64%;
-    /* Yellow #FCD34D */
-    --primary-foreground: 0 0% 0%;
-    /* Pure black text on yellow for maximum contrast */
+    --primary: 221 83% 53%;
+    /* Vibrant Blue #3b82f6 */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 0 0% 96%;
-    /* Light gray - neutral */
-    --secondary-foreground: 0 0% 0%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11.2%;
 
-    --muted: 0 0% 98%;
-    /* Very light gray */
-    --muted-foreground: 0 0% 40%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 48 96% 92%;
-    /* Very light yellow */
-    --accent-foreground: 0 0% 0%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11.2%;
 
-    --destructive: 0 84% 60%;
-    /* Vibrant Red */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 92%;
-    --input: 0 0% 98%;
-    --ring: 48 96% 64%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
 
     --radius: 1rem;
-    /* Slightly more rounded for Apple aesthetic */
 
     /* Clean shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -57,48 +49,54 @@ All colors MUST be HSL.
 
     /* Sidebar theme */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 0%;
-    --sidebar-primary: 48 96% 64%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 48 96% 96%;
-    --sidebar-accent-foreground: 0 0% 0%;
-    --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 48 96% 64%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 221 83% 53%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 221 83% 53%;
   }
 
   .dark {
-    /* Yellow, Black & White Theme - Dark Mode */
-    --background: 0 0% 6%;
-    /* Almost black */
-    --foreground: 0 0% 98%;
-    /* Almost white */
+    /* Blue & White Theme - Dark Mode */
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 48 96% 64%;
-    --primary-foreground: 0 0% 0%;
-    /* Keep black text on yellow in dark mode for visibility */
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 70%;
-    /* Brighter for better visibility on dark bg */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 48 96% 15%;
-    --accent-foreground: 48 96% 64%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 15%;
-    --ring: 48 96% 64%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+
+    /* Dark sidebar */
+    --sidebar-background: 222.2 84% 3.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217.2 91.2% 59.8%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 217.2 91.2% 59.8%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 224.3 76.3% 48%;
 
     /* Dark mode shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
@@ -106,16 +104,6 @@ All colors MUST be HSL.
     --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.5);
     --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.6);
     --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.7);
-
-    /* Dark sidebar */
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 48 96% 64%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 48 96% 64%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 48 96% 64%;
   }
 }
 
@@ -165,6 +153,10 @@ All colors MUST be HSL.
     transform: translateY(-2px);
   }
 
+  .gradient-primary {
+    @apply bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300;
+  }
+
   /* Smooth buttons */
   .smooth-button {
     @apply rounded-xl transition-all duration-300 ease-in-out;
@@ -194,10 +186,19 @@ All colors MUST be HSL.
 
   /* Red pulse animation for products expiring today */
   @keyframes red-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    0% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    70% {
+      box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
   }
+
   .animate-red-pulse {
     animation: red-pulse 2s infinite;
   }

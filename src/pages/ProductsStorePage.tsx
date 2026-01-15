@@ -410,8 +410,11 @@ const ProductsStorePage: React.FC = () => {
   }, [displayProducts, sortColumn, sortDirection]);
 
   const getStatusBadge = (quantity: number) => {
-    if (quantity <= 0) return <Badge variant="destructive" className="rounded-full px-3 py-1 bg-red-100 text-red-700 border-none font-semibold">Out of Stock</Badge>;
-    if (quantity <= 10) return <Badge variant="secondary" className="rounded-full px-3 py-1 bg-orange-100 text-orange-700 border-none font-semibold">Low Stock</Badge>;
+    const lowStock = user?.stockSettings?.lowStock ?? 10;
+    const outOfStock = user?.stockSettings?.outOfStock ?? 0;
+
+    if (quantity <= outOfStock) return <Badge variant="destructive" className="rounded-full px-3 py-1 bg-red-100 text-red-700 border-none font-semibold">Out of Stock</Badge>;
+    if (quantity <= lowStock) return <Badge variant="secondary" className="rounded-full px-3 py-1 bg-orange-100 text-orange-700 border-none font-semibold">Low Stock</Badge>;
     return <Badge variant="secondary" className="rounded-full px-3 py-1 bg-green-100 text-green-700 border-none font-semibold">In Stock</Badge>;
   };
 

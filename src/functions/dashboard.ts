@@ -85,7 +85,8 @@ const getStartOfMonth = (): string => {
 export const getDashboardStats = async (
   businessId: string,
   userRole: 'admin' | 'staff',
-  branchId?: string | null
+  branchId?: string | null,
+  stockSettings?: { lowStock: number; outOfStock: number }
 ): Promise<DashboardStats> => {
   try {
     // Staff without branch → empty stats
@@ -154,8 +155,11 @@ export const getDashboardStats = async (
     const productsNeverUpdated = products.filter(p => !p.updatedAt).length;
 
     // Stock (confirmed store)
-    const lowStockProducts = confirmedStoreProducts.filter(p => p.quantity > 0 && p.quantity <= 5).length;
-    const outOfStockProducts = confirmedStoreProducts.filter(p => p.quantity === 0).length;
+    const lowStockThreshold = stockSettings?.lowStock ?? 10;
+    const outOfStockThreshold = stockSettings?.outOfStock ?? 0;
+
+    const lowStockProducts = confirmedStoreProducts.filter(p => p.quantity > outOfStockThreshold && p.quantity <= lowStockThreshold).length;
+    const outOfStockProducts = confirmedStoreProducts.filter(p => p.quantity <= outOfStockThreshold).length;
     const totalStockQuantity = confirmedStoreProducts.reduce((sum, p) => sum + p.quantity, 0);
 
     // Helper: Get actual unit cost based on costType

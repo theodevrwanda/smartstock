@@ -39,7 +39,7 @@ const DashboardPage: React.FC = () => {
       setLoading(true);
       try {
         const branchId = typeof user.branch === 'string' ? user.branch : null;
-        const data = await getDashboardStats(user.businessId, user.role, branchId);
+        const data = await getDashboardStats(user.businessId, user.role, branchId, user.stockSettings);
         setStats(data);
       } catch (err) {
         toast({ title: t('error'), description: 'Failed to load dashboard data', variant: 'destructive' });
@@ -149,8 +149,8 @@ const DashboardPage: React.FC = () => {
           <SmallProCard title={t('restored')} value={stats.restoredProducts} subtitle={t('restored_label')} icon={<Archive className="text-indigo-600" />} />
           <SmallProCard title={t('deleted')} value={stats.deletedProducts} subtitle={t('trash_label')} icon={<XCircle className="text-rose-600" />} />
           <SmallProCard title={t('expired_products')} value={stats.expiredProductsCount} subtitle={t('expired_product')} icon={<Clock className="text-red-600" />} danger={stats.expiredProductsCount > 0} />
-          <SmallProCard title={t('low_stock')} value={stats.lowStockProducts} subtitle="≤10 units" icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
-          <SmallProCard title={t('out_of_stock')} value={stats.outOfStockProducts} subtitle="0 units" icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
+          <SmallProCard title={t('low_stock')} value={stats.lowStockProducts} subtitle={`≤${user?.stockSettings?.lowStock ?? 10} ${t('units')}`} icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
+          <SmallProCard title={t('out_of_stock')} value={stats.outOfStockProducts} subtitle={`≤${user?.stockSettings?.outOfStock ?? 0} ${t('units')}`} icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
           <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle={t('per_product')} icon={<Package className="text-cyan-600" />} />
         </div>
 

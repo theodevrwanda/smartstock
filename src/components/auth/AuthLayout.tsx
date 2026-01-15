@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AuthSettings } from './AuthSettings';
 
@@ -62,6 +63,17 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         <div className="flex-1 flex flex-col justify-center p-8 lg:p-12 min-h-0">
           {/* Logo Badge */}
           {/* Logo Badge & Settings */}
+          <Link
+            to="/"
+            className="absolute top-8 left-8 lg:top-12 lg:left-12 z-50 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/smartstock.png"
+              alt="Smartstock"
+              className="h-8 w-auto"
+            />
+          </Link>
+
           <div className="absolute top-8 right-8 lg:top-12 lg:right-12 flex items-center gap-2 z-50">
             <AuthSettings />
           </div>

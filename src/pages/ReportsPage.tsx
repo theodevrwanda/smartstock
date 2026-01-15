@@ -76,7 +76,8 @@ const ReportsPage: React.FC = () => {
         const { products: prods, summary: sum } = await getReportData(
           businessId,
           user?.role || 'staff',
-          userBranch
+          userBranch,
+          user?.stockSettings
         );
 
         setProducts(prods);

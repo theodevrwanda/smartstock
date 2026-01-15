@@ -8,7 +8,6 @@ interface LoadingSpinnerProps {
   className?: string;
 }
 
-import { Loader2 } from 'lucide-react';
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'md',
@@ -21,14 +20,31 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      <Loader2
-        className={cn(
-          "animate-spin text-primary",
-          sizeClasses[size],
-          className
-        )}
-      />
+    <div className={cn("flex items-center justify-center", className)}>
+      <div className={cn("relative", sizeClasses[size])}>
+        <div className="absolute inset-0 animate-spin-slow">
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute left-[46%] top-0 h-[28%] w-[8%] rounded-full bg-current"
+              style={{
+                transform: `rotate(${i * 30}deg)`,
+                transformOrigin: '50% 175%',
+                opacity: 1 - (i * 0.07),
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <style>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 1s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };

@@ -4,9 +4,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Mail, Lock, Eye, EyeOff, Loader2, User, Phone,
+  Mail, Lock, Eye, EyeOff, User, Phone,
   Building2, Camera, MapPin, ArrowLeft, ArrowRight, Check
 } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -353,7 +354,7 @@ export default function RegisterPage() {
               <Input
                 id="village"
                 placeholder={t('village')}
-                className="h-11 bg-slate-50 dark:bg-slate-900 border-transparent dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-xl text-slate-800 dark:text-slate-200 focus:bg-white dark:focus:bg-slate-950 focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                className="h-11 bg-secondary border-transparent hover:bg-secondary/80 transition-colors rounded-xl text-foreground focus:bg-background focus:border-primary focus:ring-primary"
                 {...step1Form.register('village')}
               />
               {step1Form.formState.errors.village && (
@@ -364,10 +365,10 @@ export default function RegisterPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md mt-4"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl transition-all shadow-sm hover:shadow-md mt-4"
             >
               {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <LoadingSpinner size="sm" className="text-primary-foreground" />
               ) : (
                 <>
                   {t('next_step')}
@@ -543,10 +544,10 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1 h-12 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
+                className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
               >
                 {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <LoadingSpinner size="sm" className="text-primary-foreground" />
                 ) : (
                   t('create_account_button')
                 )}

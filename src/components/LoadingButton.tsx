@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, ButtonProps } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { cn } from '@/lib/utils';
 
 interface LoadingButtonProps extends ButtonProps {
@@ -18,7 +18,7 @@ export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonPr
                 {...props}
             >
                 {loading && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <LoadingSpinner size="sm" className="mr-2" />
                 )}
                 {loading && loadingText ? loadingText : children}
             </Button>

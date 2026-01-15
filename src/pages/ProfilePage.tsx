@@ -21,7 +21,6 @@ import {
   Check,
   Building2,
   WifiOff,
-  Loader2,
   Calendar,
   Shield,
   Briefcase,
@@ -64,6 +63,8 @@ interface BusinessInfo {
   village: string;
   isActive: boolean;
   createdAt?: any;
+  lowStockThreshold?: number;
+  outOfStockThreshold?: number;
 }
 
 const ProfilePage: React.FC = () => {
@@ -83,7 +84,11 @@ const ProfilePage: React.FC = () => {
   const [localImageData, setLocalImageData] = useState<string | null>(null);
 
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
-  const [businessFormData, setBusinessFormData] = useState({ businessName: '' });
+  const [businessFormData, setBusinessFormData] = useState({
+    businessName: '',
+    lowStockThreshold: 10,
+    outOfStockThreshold: 0,
+  });
 
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
@@ -234,25 +239,39 @@ const ProfilePage: React.FC = () => {
         });
       }
 
-      if (isAdmin && businessInfo && businessFormData.businessName !== businessInfo.businessName) {
+      if (isAdmin && businessInfo && (
+        businessFormData.businessName !== businessInfo.businessName ||
+        businessFormData.lowStockThreshold !== (businessInfo.lowStockThreshold ?? 10) ||
+        businessFormData.outOfStockThreshold !== (businessInfo.outOfStockThreshold ?? 0)
+      )) {
+        const businessUpdates = {
+          businessName: businessFormData.businessName,
+          lowStockThreshold: Number(businessFormData.lowStockThreshold),
+          outOfStockThreshold: Number(businessFormData.outOfStockThreshold),
+          updatedAt: new Date().toISOString(),
+        };
+
         if (isOnline) {
           const businessRef = doc(db, 'businesses', businessInfo.id);
-          await updateDoc(businessRef, {
-            businessName: businessFormData.businessName,
-            updatedAt: new Date().toISOString(),
-          });
+          await updateDoc(businessRef, businessUpdates);
         } else {
           await addPendingOperation({
             type: 'updateProduct',
             data: {
               collection: 'businesses',
               id: businessInfo.id,
-              updates: { businessName: businessFormData.businessName },
+              updates: businessUpdates,
             }
           });
         }
-        setBusinessInfo(prev => prev ? { ...prev, businessName: businessFormData.businessName } : null);
-        updateUser({ businessName: businessFormData.businessName });
+        setBusinessInfo(prev => prev ? { ...prev, ...businessUpdates } : null);
+        updateUser({
+          businessName: businessFormData.businessName,
+          stockSettings: {
+            lowStock: Number(businessFormData.lowStockThreshold),
+            outOfStock: Number(businessFormData.outOfStockThreshold)
+          }
+        });
       }
 
       toast({
@@ -465,9 +484,14 @@ const ProfilePage: React.FC = () => {
               cell: data.cell || '',
               village: data.village || '',
               isActive: data.isActive !== false,
-              createdAt: data.createdAt,
+              outOfStockThreshold: data.outOfStockThreshold ?? 0,
+              lowStockThreshold: data.lowStockThreshold ?? 10,
             });
-            setBusinessFormData({ businessName: data.businessName || '' });
+            setBusinessFormData({
+              businessName: data.businessName || '',
+              lowStockThreshold: data.lowStockThreshold ?? 10,
+              outOfStockThreshold: data.outOfStockThreshold ?? 0,
+            });
           }
         } catch (error) {
           console.error('Error fetching business info:', error);
@@ -616,7 +640,7 @@ const ProfilePage: React.FC = () => {
                     disabled={isSaving}
                     className="bg-[#1B74E4] hover:bg-[#1B74E4]/90 text-white font-semibold px-6 h-9 rounded-md"
                   >
-                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    {isSaving ? <LoadingSpinner size="sm" className="mr-2 text-primary-foreground" /> : <Save className="mr-2 h-4 w-4" />}
                     {t('save')}
                   </Button>
                   <Button
@@ -957,7 +981,7 @@ const ProfilePage: React.FC = () => {
                 disabled={isVerifyingCurrent || !currentPassword.trim()}
               >
                 {isVerifyingCurrent ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoadingSpinner size="sm" className="mr-2 text-primary-foreground" />
                 ) : (
                   <ArrowRight className="mr-2 h-4 w-4" />
                 )}
@@ -973,7 +997,7 @@ const ProfilePage: React.FC = () => {
                 }
               >
                 {isUpdatingPassword ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <LoadingSpinner size="sm" className="mr-2 text-primary-foreground" />
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
                 )}
@@ -1074,7 +1098,7 @@ const ProfilePage: React.FC = () => {
             </Button>
             <Button onClick={handleUpdateEmail} disabled={isUpdatingEmail || !emailPassword.trim() || !newEmail.trim()}>
               {isUpdatingEmail ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <LoadingSpinner size="sm" className="mr-2 text-primary-foreground" />
               ) : (
                 <Check className="mr-2 h-4 w-4" />
               )}

@@ -23,7 +23,9 @@ import ReportsPage from "@/pages/ReportsPage";
 import TrashPage from "@/pages/TrashPage";
 import ManageBranchPage from "@/pages/ManageBranchPage";
 import ManageEmployeesPage from "@/pages/ManageEmployeesPage";
+import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import LandingPage from "@/pages/LandingPage";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const queryClient = new QueryClient();
@@ -44,16 +46,17 @@ const App = () => (
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
                       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+                      <Route path="/" element={<LandingPage />} />
                       <Route
-                        path="/"
+                        path="/dashboard"
                         element={
                           <ProtectedRoute>
                             <DashboardLayout />
                           </ProtectedRoute>
                         }
                       >
-                        <Route index element={<Navigate to="/dashboard" replace />} />
-                        <Route path="dashboard" element={<div className="page-transition"><DashboardPage /></div>} />
+                        <Route index element={<DashboardPage />} />
                         <Route path="products" element={<div className="page-transition"><ProductsStorePage /></div>} />
                         <Route path="products-sold" element={<div className="page-transition"><ProductsSoldPage /></div>} />
                         <Route path="products-restored" element={<div className="page-transition"><ProductsRestoredPage /></div>} />
@@ -62,6 +65,7 @@ const App = () => (
                         <Route path="trash" element={<div className="page-transition"><TrashPage /></div>} />
                         <Route path="manage-branch" element={<div className="page-transition"><ManageBranchPage /></div>} />
                         <Route path="manage-employees" element={<div className="page-transition"><ManageEmployeesPage /></div>} />
+                        <Route path="settings" element={<div className="page-transition"><SettingsPage /></div>} />
                       </Route>
                       <Route path="*" element={<NotFound />} />
                     </Routes>

@@ -20,6 +20,10 @@ export interface AuthUser extends User {
   businessId?: string;
   businessName?: string;
   businessActive?: boolean;
+  stockSettings?: {
+    lowStock: number;
+    outOfStock: number;
+  };
 }
 
 export interface RegisterData {
@@ -105,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [authState.user]);
 
   // Function to get business status
-  const getBusinessStatus = async (businessId: string): Promise<{ isActive: boolean; businessName: string }> => {
+  const getBusinessStatus = async (businessId: string): Promise<{ isActive: boolean; businessName: string; stockSettings?: { lowStock: number; outOfStock: number } }> => {
     try {
       const businessDoc = await getDoc(doc(db, 'businesses', businessId));
       if (businessDoc.exists()) {
@@ -113,6 +117,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return {
           isActive: data.isActive !== false,
           businessName: data.businessName || '',
+          stockSettings: {
+            lowStock: data.lowStockThreshold ?? 10,
+            outOfStock: data.outOfStockThreshold ?? 0,
+          },
         };
       }
       return { isActive: true, businessName: '' };
@@ -132,10 +140,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Get business status if user has businessId
         let businessActive = true;
         let businessName = userData.businessName || '';
+        let stockSettings = { lowStock: 10, outOfStock: 0 };
         if (userData.businessId) {
           const businessInfo = await getBusinessStatus(userData.businessId);
           businessActive = businessInfo.isActive;
           businessName = businessInfo.businessName || businessName;
+          if (businessInfo.stockSettings) {
+            stockSettings = businessInfo.stockSettings;
+          }
         }
 
         const fullUser: AuthUser = {
@@ -159,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           gender: userData.gender || '',
           businessId: userData.businessId || null,
           businessActive,
+          stockSettings,
         };
 
         // Cache user locally in IndexedDB for offline access
@@ -244,10 +257,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 // Get fresh business info
                 let businessActive = true;
                 let businessName = data.businessName || '';
+                let stockSettings = { lowStock: 10, outOfStock: 0 };
                 if (data.businessId) {
                   const businessInfo = await getBusinessStatus(data.businessId);
                   businessActive = businessInfo.isActive;
                   businessName = businessInfo.businessName || businessName;
+                  if (businessInfo.stockSettings) {
+                    stockSettings = businessInfo.stockSettings;
+                  }
                 }
 
                 // Check active status on update
@@ -283,6 +300,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   gender: data.gender || '',
                   businessId: data.businessId || null,
                   businessActive,
+                  stockSettings,
                 };
 
                 setAuthState(prev => ({

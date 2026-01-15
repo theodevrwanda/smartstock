@@ -31,7 +31,7 @@ export async function syncAllPendingOperations(operations: PendingOperation[]): 
   for (const op of operations) {
     try {
       await updateOperationStatus(op.id, 'syncing');
-      
+
       switch (op.type) {
         case 'addProduct':
           await syncAddProduct(op);
@@ -51,10 +51,13 @@ export async function syncAllPendingOperations(operations: PendingOperation[]): 
         case 'sellRestoredProduct':
           await syncSellRestoredProduct(op);
           break;
+        case 'updateBusiness':
+          await syncUpdateBusiness(op);
+          break;
         default:
           console.warn('Unknown operation type:', op.type);
       }
-      
+
       await removeOperation(op.id);
       syncedCount++;
     } catch (error) {
@@ -70,7 +73,7 @@ export async function syncAllPendingOperations(operations: PendingOperation[]): 
 async function syncAddProduct(op: PendingOperation): Promise<void> {
   const data = op.data;
   const productsRef = collection(db, 'products');
-  
+
   const normalizedName = data.productName.trim().toLowerCase();
   const normalizedCategory = data.category.trim().toLowerCase();
   const normalizedModel = (data.model || '').trim().toLowerCase();
@@ -120,7 +123,7 @@ async function syncAddProduct(op: PendingOperation): Promise<void> {
 async function syncUpdateProduct(op: PendingOperation): Promise<void> {
   const { id, updates } = op.data;
   const productRef = doc(db, 'products', id);
-  
+
   await updateDoc(productRef, {
     ...updates,
     updatedAt: new Date().toISOString(),
@@ -131,7 +134,7 @@ async function syncUpdateProduct(op: PendingOperation): Promise<void> {
 async function syncDeleteProduct(op: PendingOperation): Promise<void> {
   const { id } = op.data;
   const productRef = doc(db, 'products', id);
-  
+
   await updateDoc(productRef, {
     status: 'deleted',
     deletedDate: new Date().toISOString(),
@@ -142,24 +145,24 @@ async function syncDeleteProduct(op: PendingOperation): Promise<void> {
 // Sync sell product
 async function syncSellProduct(op: PendingOperation): Promise<void> {
   const { productId, quantity, sellingPrice, deadline, originalProduct } = op.data;
-  
+
   await runTransaction(db, async (transaction) => {
     const originalRef = doc(db, 'products', productId);
     const originalSnap = await transaction.get(originalRef);
-    
+
     if (!originalSnap.exists()) {
       throw new Error('Product not found');
     }
-    
+
     const original = originalSnap.data();
     const newQty = original.quantity - quantity;
-    
+
     // Update original product quantity
     transaction.update(originalRef, {
       quantity: newQty,
       updatedAt: new Date().toISOString(),
     });
-    
+
     // Create sold record
     const soldRef = doc(collection(db, 'products'));
     transaction.set(soldRef, {
@@ -178,18 +181,18 @@ async function syncSellProduct(op: PendingOperation): Promise<void> {
 // Sync restore product (from sold to restored)
 async function syncRestoreProduct(op: PendingOperation): Promise<void> {
   const { soldId, restoreQty, comment, soldProduct } = op.data;
-  
+
   await runTransaction(db, async (transaction) => {
     const soldRef = doc(db, 'products', soldId);
     const soldSnap = await transaction.get(soldRef);
-    
+
     if (!soldSnap.exists()) {
       throw new Error('Sold product not found');
     }
-    
+
     const sold = soldSnap.data();
     const remainingQty = sold.quantity - restoreQty;
-    
+
     // Update or delete sold product
     if (remainingQty <= 0) {
       transaction.delete(soldRef);
@@ -199,7 +202,7 @@ async function syncRestoreProduct(op: PendingOperation): Promise<void> {
         updatedAt: new Date().toISOString(),
       });
     }
-    
+
     // Create restored product
     const restoredRef = doc(collection(db, 'products'));
     transaction.set(restoredRef, {
@@ -217,24 +220,24 @@ async function syncRestoreProduct(op: PendingOperation): Promise<void> {
 // Sync sell restored product
 async function syncSellRestoredProduct(op: PendingOperation): Promise<void> {
   const { restoredId, sellQty, sellingPrice, deadline, restoredProduct } = op.data;
-  
+
   await runTransaction(db, async (transaction) => {
     const restoredRef = doc(db, 'products', restoredId);
     const restoredSnap = await transaction.get(restoredRef);
-    
+
     if (!restoredSnap.exists()) {
       throw new Error('Restored product not found');
     }
-    
+
     const restored = restoredSnap.data();
-    
+
     // Check status is restored
     if (restored.status !== 'restored') {
       throw new Error('Product is not in restored status');
     }
-    
+
     const remainingQty = restored.quantity - sellQty;
-    
+
     // Update or delete restored product
     if (remainingQty <= 0) {
       transaction.delete(restoredRef);
@@ -244,7 +247,7 @@ async function syncSellRestoredProduct(op: PendingOperation): Promise<void> {
         updatedAt: new Date().toISOString(),
       });
     }
-    
+
     // Create sold record from restored
     const soldRef = doc(collection(db, 'products'));
     transaction.set(soldRef, {
@@ -259,5 +262,16 @@ async function syncSellRestoredProduct(op: PendingOperation): Promise<void> {
       // Keep restore comment for tracking
       restoreComment: restoredProduct.restoreComment,
     });
+  });
+}
+
+// Sync update business settings
+async function syncUpdateBusiness(op: PendingOperation): Promise<void> {
+  const { id, updates } = op.data;
+  const businessRef = doc(db, 'businesses', id);
+
+  await updateDoc(businessRef, {
+    ...updates,
+    updatedAt: new Date().toISOString(),
   });
 }

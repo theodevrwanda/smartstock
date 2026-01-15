@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,7 +83,7 @@ export default function ForgotPasswordPage() {
 
               <Link to="/login">
                 <Button
-                  className="w-full h-11 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl"
+                  className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   {t('back_button')}
@@ -117,7 +118,7 @@ export default function ForgotPasswordPage() {
                 id="email"
                 type="email"
                 placeholder={t('email_placeholder')}
-                className="pl-4 h-12 bg-slate-50 border-transparent hover:bg-slate-100 transition-colors rounded-2xl text-slate-800 focus:bg-white focus:border-[#FCD34D] focus:ring-[#FCD34D]"
+                className="pl-4 h-12 bg-secondary border-transparent hover:bg-secondary/80 transition-colors rounded-2xl text-foreground focus:bg-background focus:border-primary focus:ring-primary"
                 {...register('email')}
               />
             </div>
@@ -129,10 +130,10 @@ export default function ForgotPasswordPage() {
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full h-12 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <LoadingSpinner size="sm" className="text-primary-foreground" />
             ) : (
               t('continue_button')
             )}

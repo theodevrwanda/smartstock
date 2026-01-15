@@ -6,11 +6,11 @@ import { z } from 'zod';
 import {
   Eye,
   EyeOff,
-  Loader2,
   AlertTriangle,
   Info,
   CheckCircle,
 } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -259,10 +259,10 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-[#FCD34D] hover:bg-[#fbbf24] text-slate-900 font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-2xl transition-all shadow-sm hover:shadow-md"
             >
               {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <LoadingSpinner size="sm" className="text-primary-foreground" />
               ) : (
                 t('sign_in_button')
               )}
@@ -287,7 +287,7 @@ export default function LoginPage() {
               className="w-full h-12 bg-background border-border hover:bg-secondary text-foreground font-medium rounded-2xl"
             >
               {isGoogleLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <LoadingSpinner size="sm" className="mr-2" />
               ) : (
                 <>
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" aria-hidden="true">
