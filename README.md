@@ -1,7 +1,15 @@
 
 # SmartStock - Modern Inventory Management System
 
+![SmartStock Preview](public/previews/hero.png)
+
 SmartStock is a powerful, modern, and intuitive inventory management solution designed for businesses in Rwanda and beyond. It helps businesses track inventory, manage stock levels, monitor sales, and generate automated reports with ease. Built with performance and user experience in mind, SmartStock supports multiple branches, role-based access control, and English & Kinyarwanda languages.
+
+
+## 📸 System Overview
+
+![Dashboard Preview](public/previews/system.png)
+*Figure 1: SmartStock Dashboard - Real-time analytics and quick actions.*
 
 ## 🚀 Key Features
 
@@ -49,7 +57,14 @@ src/
 └── main.tsx           # Application entry point
 ```
 
+
+## 🤝 Partners & Community
+
+![Our Partners](public/previews/partners.png)
+*Figure 3: Joined by industry leaders and partners.*
+
 ## 📖 Customization Guide
+
 
 ### Branding
 To customize the branding (Name, Logo, Colors):
@@ -58,6 +73,9 @@ To customize the branding (Name, Logo, Colors):
 
 ### Pricing Plans
 Pricing plans are defined in `src/data/mockPlans.ts`. Modify this file to update plan names, prices, durations, and features.
+
+![Pricing Plans](public/previews/plan.png)
+*Figure 2: Pricing Logic and Plan Display.*
 
 ### Navigation
 Sidebar menu items are defined in `src/components/layout/Sidebar.tsx`.
