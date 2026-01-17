@@ -8,15 +8,18 @@ export interface Message {
 export const getAIResponse = async (history: Message[], userMessage: string): Promise<string> => {
     try {
         // Use gemini-3-flash for the best balance of speed and intelligence
-        const MODEL_ID = "gemini-3-flash-preview"; 
+        const MODEL_ID = "gemini-3-flash-preview";
         const API_VERSION = "v1beta"; // or "v1" for stable
-        
+
         const response = await fetch(
             `https://generativelanguage.googleapis.com/${API_VERSION}/models/${MODEL_ID}:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    system_instruction: {
+                        parts: [{ text: "You are ST AI, a helpful assistant for the SmartStock application developed by RwandaScratch. You only answer questions related to SmartStock. Identify yourself as ST AI. IMPORTANT: Do NOT use markdown bolding (double asterisks) when writing the name SmartStock. Just write it as SmartStock." }]
+                    },
                     contents: [
                         ...history, // Include history if you want it to remember the conversation
                         { role: 'user', parts: [{ text: userMessage }] }

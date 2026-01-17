@@ -200,9 +200,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ isOpen, onClose }) => {
                                 <Send className="h-4 w-4" />
                             </Button>
                         </form>
-                        <p className="text-[10px] text-center text-muted-foreground mt-3">
-                            Powered by Google Gemini AI
-                        </p>
+
                     </div>
                 </motion.div>
             )}
