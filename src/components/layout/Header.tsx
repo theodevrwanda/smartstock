@@ -48,15 +48,17 @@ const Header: React.FC = () => {
         className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4 sticky top-0 z-50 shadow-sm"
       >
         <div className="flex items-center justify-between">
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2"
-          >
-            <Menu size={20} />
-          </Button>
+          <div className="flex items-center">
+            {/* Mobile Menu Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-2"
+            >
+              <Menu size={20} />
+            </Button>
+          </div>
 
           {/* Global Search */}
           <div className="hidden md:block">
@@ -64,7 +66,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center gap-1.5 sm:gap-4">
             {/* Plan Status */}
             {user?.subscription && (
               <div className="hidden md:flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
@@ -75,49 +77,40 @@ const Header: React.FC = () => {
               </div>
             )}
 
-            {/* Online/Offline Status */}
-            <div className="flex items-center gap-1">
-              {isOnline ? (
-                <Wifi className="h-4 w-4 text-green-500" />
-              ) : (
-                <CloudOff className="h-4 w-4 text-red-500" />
-              )}
+            {/* Tech Group: Status, Language, Theme */}
+            <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800/50 p-1 rounded-full border border-gray-100 dark:border-gray-700">
+              {/* Online/Offline Status Dot */}
+              <div className="flex items-center px-1.5">
+                {isOnline ? (
+                  <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" />
+                ) : (
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                )}
+              </div>
+
+              <LanguageSelector />
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheme}
+                className="h-8 w-8 p-0 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors"
+              >
+                {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+              </Button>
             </div>
 
-            {/* Blockchain Ledger Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setBlockchainOpen(true)}
-              className="hidden sm:flex items-center gap-2 text-xs"
-            >
-              <Link2 className="h-4 w-4" />
-              <span className="hidden md:inline">{t('blockchain')}</span>
-            </Button>
-
-            <LanguageSelector />
-
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="p-2"
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </Button>
-
-            {/* Notifications / Pending Changes */}
+            {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2 relative">
+                <Button variant="ghost" size="sm" className="h-10 w-10 p-0 relative rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
                   <Bell size={20} />
                   {(pendingCount > 0 || (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2)) && (
                     <Badge
                       variant="destructive"
-                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                      className="absolute top-1 right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px] border-2 border-white dark:border-gray-900"
                     >
-                      {pendingCount + (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2 ? 1 : 0) > 99 ? '99+' : pendingCount + (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2 ? 1 : 0)}
+                      {pendingCount + (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2 ? 1 : 0) > 9 ? '9+' : pendingCount + (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2 ? 1 : 0)}
                     </Badge>
                   )}
                 </Button>
