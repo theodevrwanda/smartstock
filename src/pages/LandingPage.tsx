@@ -7,7 +7,7 @@ import SEOHelmet from '@/components/SEOHelmet';
 import { motion, useMotionValue, useTransform, animate, useScroll, useSpring } from 'framer-motion';
 import { mockPlans } from '@/data/mockPlans';
 import { useTheme } from '@/contexts/ThemeContext';
-import ChatWidget from '@/components/ChatWidget';
+
 import SupportedBy from '@/components/SupportedBy';
 import PaymentDialog from '@/components/subscription/PaymentDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -165,7 +165,6 @@ const LandingPage = () => {
     ];
     // removed duplicate useAuth
     const navigate = useNavigate();
-    const [isChatOpen, setIsChatOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { scrollYProgress } = useScroll();
     const scaleX = useSpring(scrollYProgress, {
@@ -955,10 +954,12 @@ const LandingPage = () => {
                                     whileTap={{ scale: 0.98 }}
                                 >
                                     <Button
-                                        onClick={() => setIsChatOpen(true)}
+                                        asChild
                                         className="px-10 py-7 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg text-xl shadow-xl transition-all"
                                     >
-                                        {t('partners_apply')}
+                                        <a href="https://wa.me/250792734752" target="_blank" rel="noopener noreferrer">
+                                            {t('partners_apply')}
+                                        </a>
                                     </Button>
                                 </motion.div>
                             </motion.div>
@@ -1243,8 +1244,7 @@ const LandingPage = () => {
                 </motion.a>
             </div>
 
-            {/* Chat Widget */}
-            <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
         </>
     );
 };
