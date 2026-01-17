@@ -75,6 +75,19 @@ export default function LoginPage() {
         logout();
         return;
       }
+
+      // Check subscription expiry
+      if (user.subscription) {
+        const endDate = new Date(user.subscription.endDate);
+        const isExpired = endDate < new Date();
+
+        if (isExpired) {
+          navigate('/business-status', { replace: true });
+          return;
+        }
+      }
+
+      // If active and valid subscription, go to dashboard
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, user, authLoading, navigate, logout]);
@@ -92,6 +105,20 @@ export default function LoginPage() {
         variant: 'default' as const,
         icon: Info,
         title: t('dont_have_account') || "Don't have an account?",
+        link: '/register',
+        linkText: t('sign_up_link') || "Sign up"
+      };
+    }
+
+    // Special case: Subscription expired
+    if (errorMessage === 'subscription_expired') {
+      return {
+        message: t('subscription_expired_message'),
+        variant: 'destructive' as const, // Use destructive for consistency with blocking errors
+        icon: AlertTriangle,
+        title: t('subscription_expired_title'),
+        link: '/',
+        linkText: t('subscription_expired_link')
       };
     }
 
@@ -101,6 +128,8 @@ export default function LoginPage() {
       variant: 'destructive' as const,
       icon: AlertTriangle,
       title: t('error') || 'Error',
+      link: null,
+      linkText: null
     };
   };
 
@@ -180,12 +209,12 @@ export default function LoginPage() {
             </AlertTitle>
             <AlertDescription className="text-base mt-1">
               {currentError.message}
-              {currentError.variant === 'default' && (
+              {currentError.link && (
                 <Link
-                  to="/register"
-                  className="ml-2 font-bold underline hover:text-blue-700 dark:hover:text-blue-300"
+                  to={currentError.link}
+                  className="ml-2 font-bold underline hover:opacity-80"
                 >
-                  {t('sign_up_link')}
+                  {currentError.linkText}
                 </Link>
               )}
             </AlertDescription>

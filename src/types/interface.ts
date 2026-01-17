@@ -137,6 +137,31 @@ export interface Business {
     isActive: boolean;
     createdAt?: string;
     updatedAt?: string;
+    subscription?: Subscription;
+}
+
+export interface Subscription {
+    plan: 'free' | 'standard' | 'enterprise';
+    status: 'active' | 'expired';
+    startDate: string;
+    endDate: string;
+}
+
+export interface Transaction {
+    id?: string;
+    businessId: string;
+    businessName: string;
+    amount: number;
+    currency: string;
+    paymentMethod: 'momo' | 'airtel' | 'bank';
+    senderName: string;
+    senderNumber: string;
+    receiverName: string;
+    plan: string;
+    status: 'pending' | 'confirmed' | 'failed';
+    confirm: boolean;
+    createdAt: string;
+    email?: string;
 }
 
 export interface DashboardStats {

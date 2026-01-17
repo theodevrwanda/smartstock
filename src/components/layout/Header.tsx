@@ -62,6 +62,16 @@ const Header: React.FC = () => {
 
           {/* Right Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* Plan Status */}
+            {user?.subscription && (
+              <div className="hidden md:flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+                <span className="capitalize mr-1">{user.subscription.plan}:</span>
+                <span>
+                  {Math.max(0, Math.ceil((new Date(user.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} {t('days_left')}
+                </span>
+              </div>
+            )}
+
             {/* Online/Offline Status */}
             <div className="flex items-center gap-1">
               {isOnline ? (
@@ -112,17 +122,86 @@ const Header: React.FC = () => {
             </Button>
 
             {/* Notifications / Pending Changes */}
-            <Button variant="ghost" size="sm" className="p-2 relative">
-              <Bell size={20} />
-              {pendingCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
-                >
-                  {pendingCount > 99 ? '99+' : pendingCount}
-                </Badge>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-2 relative">
+                  <Bell size={20} />
+                  {(pendingCount > 0 || (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2)) && (
+                    <Badge
+                      variant="destructive"
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+                    >
+                      {pendingCount + (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2 ? 1 : 0) > 99 ? '99+' : pendingCount + (user?.subscription && Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) <= 2 ? 1 : 0)}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                {/* Subscription Expiry Warning */}
+                {user?.subscription && (() => {
+                  const daysLeft = Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  if (daysLeft <= 0) return (
+                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 bg-red-50 dark:bg-red-900/20 focus:bg-red-100 dark:focus:bg-red-900/40">
+                      <div className="flex items-center gap-2 font-semibold text-red-600 dark:text-red-400">
+                        <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                        Plan Expired
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your subscription has expired. Access is restricted. Please renew immediately.
+                      </p>
+                    </DropdownMenuItem>
+                  );
+                  if (daysLeft <= 2) return (
+                    <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 bg-yellow-50 dark:bg-yellow-900/20 focus:bg-yellow-100 dark:focus:bg-yellow-900/40">
+                      <div className="flex items-center gap-2 font-semibold text-yellow-600 dark:text-yellow-400">
+                        <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                        Renewal Alert
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Your plan expires in {daysLeft} {daysLeft === 1 ? 'day' : 'days'}. Renew now to avoid interruption.
+                      </p>
+                    </DropdownMenuItem>
+                  );
+                  return null;
+                })()}
+
+                {/* System Active Status */}
+                {(!user?.isActive || !user?.businessActive) && (
+                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 bg-red-50 dark:bg-red-900/20">
+                    <div className="flex items-center gap-2 font-semibold text-red-600 dark:text-red-400">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      Account Inactive
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Your account or business is currently marked as inactive.
+                    </p>
+                  </DropdownMenuItem>
+                )}
+
+                {/* Offline Pending Changes */}
+                {pendingCount > 0 && (
+                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                      Pending Syncs
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {pendingCount} changes waiting to sync when online.
+                    </p>
+                  </DropdownMenuItem>
+                )}
+
+                {/* Empty State */}
+                {pendingCount === 0 && (!user?.subscription || Math.ceil((new Date(user.subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) > 2) && (user?.isActive && user?.businessActive) && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No new notifications
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User Menu */}
             <DropdownMenu>

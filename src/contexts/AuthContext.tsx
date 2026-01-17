@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, addDoc, collection, updateDoc, onSnapshot, query, where, getDocs, limit } from 'firebase/firestore';
 import { auth, db } from '@/firebase/firebase';
-import { AuthState, User } from '@/types/interface';
+import { AuthState, User, Subscription } from '@/types/interface';
 import { saveUserLocally, getLocalUser, addPendingOperation } from '@/lib/offlineDB';
 import axios from 'axios';
 
@@ -24,6 +24,7 @@ export interface AuthUser extends User {
     lowStock: number;
     outOfStock: number;
   };
+  subscription?: Subscription;
 }
 
 export interface RegisterData {
@@ -109,7 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [authState.user]);
 
   // Function to get business status
-  const getBusinessStatus = async (businessId: string): Promise<{ isActive: boolean; businessName: string; stockSettings?: { lowStock: number; outOfStock: number } }> => {
+  const getBusinessStatus = async (businessId: string): Promise<{ isActive: boolean; businessName: string; stockSettings?: { lowStock: number; outOfStock: number }; subscription?: Subscription }> => {
     try {
       const businessDoc = await getDoc(doc(db, 'businesses', businessId));
       if (businessDoc.exists()) {
@@ -121,6 +122,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             lowStock: data.lowStockThreshold ?? 10,
             outOfStock: data.outOfStockThreshold ?? 0,
           },
+          subscription: data.subscription || {
+            plan: 'free',
+            status: 'active',
+            startDate: data.createdAt || new Date().toISOString(),
+            // Default 30 days trial if missing
+            endDate: new Date((data.createdAt ? new Date(data.createdAt).getTime() : Date.now()) + 30 * 24 * 60 * 60 * 1000).toISOString()
+          }
         };
       }
       return { isActive: true, businessName: '' };
@@ -141,12 +149,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         let businessActive = true;
         let businessName = userData.businessName || '';
         let stockSettings = { lowStock: 10, outOfStock: 0 };
+        let businessSubscription: Subscription | undefined = undefined;
+
         if (userData.businessId) {
           const businessInfo = await getBusinessStatus(userData.businessId);
           businessActive = businessInfo.isActive;
           businessName = businessInfo.businessName || businessName;
           if (businessInfo.stockSettings) {
             stockSettings = businessInfo.stockSettings;
+          }
+          if (businessInfo.subscription) {
+            businessSubscription = businessInfo.subscription;
           }
         }
 
@@ -172,6 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           businessId: userData.businessId || null,
           businessActive,
           stockSettings,
+          subscription: businessSubscription
         };
 
         // Cache user locally in IndexedDB for offline access
@@ -236,6 +250,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               token: undefined,
             });
             return;
+          }
+
+          // Strict Expiry Check - Logout if expired
+          if (userData.subscription) {
+            const endDate = new Date(userData.subscription.endDate);
+            if (endDate < new Date()) {
+              await signOut(auth);
+              setErrorMessage('subscription_expired');
+              setAuthState({
+                user: null,
+                isAuthenticated: false,
+                loading: false,
+                token: undefined,
+              });
+              return;
+            }
           }
 
           axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -567,7 +597,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         cell: data.cell,
         village: data.village,
         ownerId: userCredential.user.uid,
-        isActive: false, // Business is inactive by default, needs central admin approval
+        isActive: true, // Active for free trial
+        subscription: {
+          plan: 'free',
+          status: 'active',
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+        },
+        stockSettings: {
+          lowStockThreshold: 10,
+          outOfStockThreshold: 0
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -588,7 +628,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         village: data.village,
         role: 'admin', // Default role for business owner
         branch: null,
-        isActive: false, // User is inactive by default
+        isActive: true, // User is active by default
         profileImage: data.profileImage || null,
         imagephoto: data.profileImage || null,
         businessId: businessRef.id,

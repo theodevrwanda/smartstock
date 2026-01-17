@@ -2,69 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Package, Users, BarChart3, Shield, Zap, Globe, Check, ArrowRight, Sun, Moon, MessageCircle, Menu, X, TrendingUp, Building2, Award } from 'lucide-react';
+import { Package, Users, BarChart3, Shield, Zap, Globe, Check, ArrowRight, Sun, Moon, MessageCircle, Menu, X, TrendingUp, Building2, Award, Languages } from 'lucide-react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { motion, useMotionValue, useTransform, animate, useScroll, useSpring } from 'framer-motion';
 import { mockPlans } from '@/data/mockPlans';
 import { useTheme } from '@/contexts/ThemeContext';
 import ChatWidget from '@/components/ChatWidget';
 import SupportedBy from '@/components/SupportedBy';
-
-const features = [
-    {
-        icon: Package,
-        title: 'Inventory Management',
-        description: 'Track inventory, manage stock levels, and monitor product movements in real-time with powerful analytics.'
-    },
-    {
-        icon: Users,
-        title: 'Branch & Employee Management',
-        description: 'Manage employees, assign roles, and control access across multiple branches seamlessly.'
-    },
-    {
-        icon: BarChart3,
-        title: 'Automated Reports',
-        description: 'Get detailed insights on sales, profits, and inventory performance with automated reporting.'
-    },
-    {
-        icon: Zap,
-        title: 'Real-Time Alerts',
-        description: 'Receive instant notifications when stock levels are low or when action is required.'
-    },
-    {
-        icon: Shield,
-        title: 'Enterprise Security',
-        description: 'Bank-level encryption and security to keep your business data safe and compliant.'
-    },
-    {
-        icon: Globe,
-        title: 'Cloud Backup',
-        description: 'Automatic cloud backups ensure your data is always safe and accessible from anywhere.'
-    },
-];
-
-const services = [
-    {
-        title: 'Product Tracking',
-        description: 'Monitor every product movement with detailed tracking and history logs.',
-        icon: Package,
-    },
-    {
-        title: 'Multi-Branch Support',
-        description: 'Manage unlimited branches and locations from a single dashboard.',
-        icon: Globe,
-    },
-    {
-        title: 'Smart Analytics',
-        description: 'Get actionable insights with AI-powered analytics and forecasting.',
-        icon: BarChart3,
-    },
-    {
-        title: 'Team Collaboration',
-        description: 'Enable your team to work together with role-based access control.',
-        icon: Users,
-    },
-];
+import PaymentDialog from '@/components/subscription/PaymentDialog';
+import { useLanguage } from '@/contexts/LanguageContext';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const testimonialImages = [
     'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
@@ -79,6 +33,7 @@ const testimonialImages = [
     'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=400&fit=crop',
     'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=400&h=400&fit=crop',
     'https://images.unsplash.com/photo-1557862921-37829c790f19?w=400&h=400&fit=crop',
+    'https://images.unsplash.com/photo-1557862921-37829c790f19?w=400&h=400&fit=crop', // Extra one for safety or just keep 
 ];
 
 // Animated Counter Component
@@ -101,16 +56,74 @@ const AnimatedCounter = ({ target, suffix = '' }: { target: number; suffix?: str
     return <span>{displayValue}</span>;
 };
 
-const stats = [
-    { icon: Users, label: 'Happy Clients', value: 2500, suffix: '+' },
-    { icon: Building2, label: 'Business Accounts', value: 500, suffix: '+' },
-    { icon: Award, label: 'Trusted Customers', value: 1200, suffix: '+' },
-    { icon: TrendingUp, label: 'Success Rate', value: 98, suffix: '%' },
-];
-
 const LandingPage = () => {
     const { theme, toggleTheme } = useTheme();
     const { isAuthenticated, loading: authLoading } = useAuth();
+    const { language, setLanguage, t } = useLanguage();
+
+    const stats = [
+        { icon: Users, label: t('stat_happy_clients'), value: 2500, suffix: '+' },
+        { icon: Building2, label: t('stat_business_accounts'), value: 500, suffix: '+' },
+        { icon: Award, label: t('stat_trusted_customers'), value: 1200, suffix: '+' },
+        { icon: TrendingUp, label: t('stat_success_rate'), value: 98, suffix: '%' },
+    ];
+
+    const features = [
+        {
+            icon: Package,
+            title: t('feature_inventory_title'),
+            description: t('feature_inventory_desc')
+        },
+        {
+            icon: Users,
+            title: t('feature_branch_title'),
+            description: t('feature_branch_desc')
+        },
+        {
+            icon: BarChart3,
+            title: t('feature_reports_title'),
+            description: t('feature_reports_desc')
+        },
+        {
+            icon: Zap,
+            title: t('feature_alerts_title'),
+            description: t('feature_alerts_desc')
+        },
+        {
+            icon: Shield,
+            title: t('feature_security_title'),
+            description: t('feature_security_desc')
+        },
+        {
+            icon: Globe,
+            title: t('feature_backup_title'),
+            description: t('feature_backup_desc')
+        },
+    ];
+
+    const services = [
+        {
+            title: t('service_tracking_title'),
+            description: t('service_tracking_desc'),
+            icon: Package,
+        },
+        {
+            title: t('service_multi_branch_title'),
+            description: t('service_multi_branch_desc'),
+            icon: Globe,
+        },
+        {
+            title: t('service_analytics_title'),
+            description: t('service_analytics_desc'),
+            icon: BarChart3,
+        },
+        {
+            title: t('service_collaboration_title'),
+            description: t('service_collaboration_desc'),
+            icon: Users,
+        },
+    ];
+    // removed duplicate useAuth
     const navigate = useNavigate();
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -121,11 +134,23 @@ const LandingPage = () => {
         restDelta: 0.001
     });
 
+    // Payment Dialog State
+    const [paymentOpen, setPaymentOpen] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<'standard' | 'enterprise'>('standard');
+    const [planAmount, setPlanAmount] = useState(0);
+
+    const handlePlanSelect = (planName: string, amount: number) => {
+        const type = planName.toLowerCase().includes('enterprise') ? 'enterprise' : 'standard';
+        setSelectedPlan(type);
+        setPlanAmount(amount);
+        setPaymentOpen(true);
+    };
+
     useEffect(() => {
-        if (!authLoading && isAuthenticated) {
+        if (!authLoading && isAuthenticated && !paymentOpen) {
             navigate('/dashboard', { replace: true });
         }
-    }, [isAuthenticated, authLoading, navigate]);
+    }, [isAuthenticated, authLoading, navigate, paymentOpen]);
 
     const scrollToSection = (id: string) => {
         const element = document.getElementById(id);
@@ -134,6 +159,29 @@ const LandingPage = () => {
         }
         setIsMobileMenuOpen(false);
     };
+
+    const translatedPlans = mockPlans.map(plan => {
+        let name = plan.name;
+        let description = plan.description;
+
+        if (plan._id === '1') { name = t('plan_free_name'); description = t('plan_free_desc'); }
+        else if (plan._id === '2') { name = t('plan_standard_monthly_name'); description = t('plan_standard_monthly_desc'); }
+        else if (plan._id === '3') { name = t('plan_standard_yearly_name'); description = t('plan_standard_yearly_desc'); }
+        else if (plan._id === '4') { name = t('plan_enterprise_name'); description = t('plan_enterprise_desc'); }
+
+        const features = [
+            t('feature_all_unlocked'),
+            t('feature_unlimited_products'),
+            t('feature_unlimited_employees'),
+            t('feature_multi_branch'),
+            t('feature_advanced_reports'),
+            t('feature_returns'),
+            t('feature_monitoring'),
+            t('feature_support')
+        ];
+
+        return { ...plan, name, description, features };
+    });
 
     return (
         <>
@@ -164,19 +212,19 @@ const LandingPage = () => {
                             {/* Desktop Navigation */}
                             <div className="hidden md:flex items-center gap-8">
                                 <button onClick={() => scrollToSection('features')} className="text-foreground hover:text-primary transition-colors">
-                                    Features
+                                    {t('nav_features')}
                                 </button>
                                 <button onClick={() => scrollToSection('services')} className="text-foreground hover:text-primary transition-colors">
-                                    Services
+                                    {t('nav_services')}
                                 </button>
                                 <button onClick={() => scrollToSection('pricing')} className="text-foreground hover:text-primary transition-colors">
-                                    Pricing
+                                    {t('nav_pricing')}
                                 </button>
                                 <button onClick={() => scrollToSection('testimonials')} className="text-foreground hover:text-primary transition-colors">
-                                    Testimonials
+                                    {t('nav_testimonials')}
                                 </button>
                                 <button onClick={() => scrollToSection('partners')} className="text-foreground hover:text-primary transition-colors">
-                                    Partners
+                                    {t('nav_partners')}
                                 </button>
 
                                 <div className="h-6 w-px bg-border mx-2" />
@@ -190,11 +238,29 @@ const LandingPage = () => {
                                 </button>
 
                                 <Link to="/login">
-                                    <Button variant="ghost">Login</Button>
+                                    <Button variant="ghost">{t('nav_login')}</Button>
                                 </Link>
                                 <Link to="/register">
-                                    <Button className="gradient-primary">Get Started</Button>
+                                    <Button className="gradient-primary">{t('nav_get_started')}</Button>
                                 </Link>
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="p-2">
+                                            <Languages size={20} />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>{t('switch_language')}</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => setLanguage('en')} className={language === 'en' ? 'bg-accent' : ''}>
+                                            English
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setLanguage('rw')} className={language === 'rw' ? 'bg-accent' : ''}>
+                                            Kinyarwanda
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
                             {/* Mobile Menu Button */}
@@ -223,26 +289,46 @@ const LandingPage = () => {
                                 onClick={() => scrollToSection('features')}
                                 className="block w-full text-left py-2 text-foreground hover:text-primary transition-colors"
                             >
-                                Features
+                                {t('nav_features')}
                             </button>
                             <button
                                 onClick={() => scrollToSection('services')}
                                 className="block w-full text-left py-2 text-foreground hover:text-primary transition-colors"
                             >
-                                Services
+                                {t('nav_services')}
                             </button>
                             <button
                                 onClick={() => scrollToSection('pricing')}
                                 className="block w-full text-left py-2 text-foreground hover:text-primary transition-colors"
                             >
-                                Pricing
+                                {t('nav_pricing')}
                             </button>
                             <Link to="/login" className="block">
-                                <Button variant="ghost" className="w-full justify-start">Login</Button>
+                                <Button variant="ghost" className="w-full justify-start">{t('nav_login')}</Button>
                             </Link>
                             <Link to="/register" className="block">
-                                <Button className="gradient-primary w-full">Get Started</Button>
+                                <Button className="gradient-primary w-full">{t('nav_get_started')}</Button>
                             </Link>
+
+                            <div className="pt-4 border-t border-border flex items-center justify-between">
+                                <span className="text-sm font-medium text-muted-foreground">{t('switch_language')}</span>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant={language === 'en' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLanguage('en')}
+                                    >
+                                        EN
+                                    </Button>
+                                    <Button
+                                        variant={language === 'rw' ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setLanguage('rw')}
+                                    >
+                                        RW
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
                 </motion.nav>
@@ -262,11 +348,11 @@ const LandingPage = () => {
                                 className="text-left"
                             >
                                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-foreground">
-                                    The intuitive inventory platform for{' '}
-                                    <span className="text-primary">fast-growing businesses</span>
+                                    {t('hero_title_1')}{' '}
+                                    <span className="text-primary">{t('hero_title_highlight')}</span>
                                 </h1>
                                 <p className="text-lg md:text-xl mb-8 text-muted-foreground max-w-2xl">
-                                    Streamline your inventory with SmartStock's smart tracking, multi-branch support, automated reports, and powerful analytics platform.
+                                    {t('hero_subtitle')}
                                 </p>
 
                                 <motion.div
@@ -277,7 +363,7 @@ const LandingPage = () => {
                                 >
                                     <Link to="/register">
                                         <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 rounded-full">
-                                            Get started free
+                                            {t('hero_cta_primary')}
                                         </Button>
                                     </Link>
                                     <Button
@@ -286,7 +372,7 @@ const LandingPage = () => {
                                         className="text-lg px-8 py-6 rounded-full"
                                         onClick={() => scrollToSection('features')}
                                     >
-                                        Talk to Sales
+                                        {t('hero_cta_secondary')}
                                     </Button>
                                 </motion.div>
 
@@ -298,15 +384,15 @@ const LandingPage = () => {
                                 >
                                     <div className="flex items-center gap-2">
                                         <Package className="h-4 w-4 text-primary" />
-                                        <span>Track inventory in minutes</span>
+                                        <span>{t('hero_feature_1')}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Shield className="h-4 w-4 text-primary" />
-                                        <span>Keep data secure</span>
+                                        <span>{t('hero_feature_2')}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Users className="h-4 w-4 text-primary" />
-                                        <span>Manage your team</span>
+                                        <span>{t('hero_feature_3')}</span>
                                     </div>
                                 </motion.div>
 
@@ -321,7 +407,7 @@ const LandingPage = () => {
                                             <span key={star} className="text-blue-500 text-xl">★</span>
                                         ))}
                                     </div>
-                                    <span className="text-sm font-medium">5-STAR RATING</span>
+                                    <span className="text-sm font-medium">{t('hero_rating')}</span>
                                 </motion.div>
 
                                 <motion.div
@@ -331,7 +417,7 @@ const LandingPage = () => {
                                     className="mt-4 inline-block"
                                 >
                                     <div className="relative">
-                                        <span className="text-sm font-handwriting italic">no credit card required</span>
+                                        <span className="text-sm font-handwriting italic">{t('hero_no_card')}</span>
                                         <svg className="absolute -right-12 -top-2 w-16 h-16" viewBox="0 0 100 100">
                                             <path d="M 20 50 Q 40 20, 80 50" stroke="currentColor" fill="none" strokeWidth="2" />
                                         </svg>
@@ -378,7 +464,7 @@ const LandingPage = () => {
                                                 <TrendingUp className="h-5 w-5 text-green-500" />
                                             </div>
                                             <div>
-                                                <p className="text-xs text-muted-foreground font-medium">Daily Sales</p>
+                                                <p className="text-xs text-muted-foreground font-medium">{t('hero_daily_sales')}</p>
                                                 <p className="text-lg font-bold text-foreground">+24.5%</p>
                                             </div>
                                         </div>
@@ -426,10 +512,10 @@ const LandingPage = () => {
                             className="text-center mb-16"
                         >
                             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-                                Powerful Features for Your Business
+                                {t('features_title')}
                             </h2>
                             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                                Everything you need to manage inventory efficiently and scale your business.
+                                {t('features_subtitle')}
                             </p>
                         </motion.div>
 
@@ -470,10 +556,10 @@ const LandingPage = () => {
                             className="text-center mb-16"
                         >
                             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-                                Comprehensive Services
+                                {t('services_title')}
                             </h2>
                             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                                Built for modern businesses that demand excellence and reliability.
+                                {t('services_subtitle')}
                             </p>
                         </motion.div>
 
@@ -514,15 +600,15 @@ const LandingPage = () => {
                             transition={{ duration: 0.6 }}
                             className="text-center mb-16 relative z-10"
                         >
-                            <p className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">Testimonials</p>
+                            <p className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">{t('testimonials_label')}</p>
                             <h2 className="text-4xl md:text-6xl font-bold text-foreground mb-4">
-                                Trusted by leaders
+                                {t('testimonials_title')}
                             </h2>
                             <h3 className="text-3xl md:text-5xl font-bold text-muted-foreground mb-6">
-                                from various industries
+                                {t('testimonials_subtitle')}
                             </h3>
                             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                                Learn why professionals trust our solutions to complete their customer journeys.
+                                {t('testimonials_desc')}
                             </p>
                         </motion.div>
 
@@ -675,7 +761,7 @@ const LandingPage = () => {
                                 size="lg"
                                 className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
                             >
-                                Read Success Stories <ArrowRight className="ml-2 h-5 w-5" />
+                                {t('testimonials_cta')} <ArrowRight className="ml-2 h-5 w-5" />
                             </Button>
                         </motion.div>
                     </div>
@@ -692,15 +778,15 @@ const LandingPage = () => {
                             className="text-center mb-16"
                         >
                             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-                                Simple, Transparent Pricing
+                                {t('pricing_title')}
                             </h2>
                             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                                Choose the perfect plan for your business. Start free, upgrade anytime.
+                                {t('pricing_subtitle')}
                             </p>
                         </motion.div>
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-                            {mockPlans.map((plan, index) => (
+                            {translatedPlans.map((plan, index) => (
                                 <motion.div
                                     key={plan._id}
                                     initial={{ opacity: 0, y: 30 }}
@@ -708,15 +794,15 @@ const LandingPage = () => {
                                     viewport={{ once: true }}
                                     transition={{ duration: 0.5, delay: index * 0.1 }}
                                     whileHover={{ y: -10, transition: { duration: 0.2 } }}
-                                    className={`relative p-8 rounded-2xl border-2 bg-card transition-all duration-300 ${plan.name === 'Standard Yearly Plan'
+                                    className={`relative p-8 rounded-2xl border-2 bg-card transition-all duration-300 ${plan._id === '3'
                                         ? 'border-primary shadow-hover scale-105'
                                         : 'border-border shadow-card hover:shadow-hover'
                                         }`}
                                 >
-                                    {plan.name === 'Standard Yearly Plan' && (
+                                    {plan._id === '3' && (
                                         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                                             <span className="gradient-primary text-white text-sm font-semibold px-4 py-1 rounded-full whitespace-nowrap">
-                                                Best Value
+                                                {t('pricing_best_value')}
                                             </span>
                                         </div>
                                     )}
@@ -726,7 +812,6 @@ const LandingPage = () => {
                                             {plan.name}
                                         </h3>
                                         <p className="text-sm text-primary font-medium mb-4">
-                                            {/* @ts-ignore - description was added implicitly */}
                                             {plan.description}
                                         </p>
                                         <div className="mt-4">
@@ -734,7 +819,9 @@ const LandingPage = () => {
                                                 {plan.price === 0 ? 'FREE' : `${plan.price.toLocaleString()} RWF`}
                                             </span>
                                             <span className="text-muted-foreground ml-2">
-                                                /{plan.duration}
+                                                {plan.duration === 'month' && t('pricing_duration_month')}
+                                                {plan.duration === 'year' && t('pricing_duration_year')}
+                                                {plan.duration === 'forever' && t('pricing_duration_forever')}
                                             </span>
                                         </div>
                                     </div>
@@ -751,40 +838,44 @@ const LandingPage = () => {
                                     {plan.price === 0 ? (
                                         <Link to="/register" className="block">
                                             <Button
-                                                className={`w-full ${plan.name === 'Standard Yearly Plan'
+                                                className={`w-full ${plan._id === '3'
                                                     ? 'gradient-primary'
                                                     : ''
                                                     }`}
-                                                variant={plan.name === 'Standard Yearly Plan' ? 'default' : 'outline'}
+                                                variant={plan._id === '3' ? 'default' : 'outline'}
                                             >
-                                                Get Started
+                                                {t('nav_get_started')}
                                                 <ArrowRight className="ml-2 h-4 w-4" />
                                             </Button>
                                         </Link>
                                     ) : (
-                                        <a
-                                            href={`https://wa.me/250792734752?text=${encodeURIComponent(`Hello, I'm interested in the ${plan.name}. Please guide me on how to pay/subscribe.`)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block"
+                                        <Button
+                                            onClick={() => handlePlanSelect(plan.name, plan.price)}
+                                            className={`w-full ${plan._id === '3'
+                                                ? 'gradient-primary'
+                                                : ''
+                                                }`}
+                                            variant={plan._id === '3' ? 'default' : 'outline'}
                                         >
-                                            <Button
-                                                className={`w-full ${plan.name === 'Standard Yearly Plan'
-                                                    ? 'gradient-primary'
-                                                    : ''
-                                                    }`}
-                                                variant={plan.name === 'Standard Yearly Plan' ? 'default' : 'outline'}
-                                            >
-                                                Select Plan
-                                                <MessageCircle className="ml-2 h-4 w-4" />
-                                            </Button>
-                                        </a>
+                                            {t('pricing_pay_now')}
+                                            <ArrowRight className="ml-2 h-4 w-4" />
+                                        </Button>
                                     )}
                                 </motion.div>
                             ))}
                         </div>
                     </div>
                 </section>
+
+                <PaymentDialog
+                    open={paymentOpen}
+                    onOpenChange={setPaymentOpen}
+                    plan={selectedPlan}
+                    amount={planAmount}
+                    onSuccess={() => {
+                        // Payment submitted, dialog will close automatically
+                    }}
+                />
 
                 {/* CTA Section */}
                 <section className="py-20 bg-background">
@@ -797,15 +888,15 @@ const LandingPage = () => {
                             className="bg-primary rounded-3xl p-12 md:p-16 text-center shadow-hover"
                         >
                             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary-foreground">
-                                Ready to Transform Your Business?
+                                {t('cta_title')}
                             </h2>
                             <p className="text-xl mb-10 text-primary-foreground/90 max-w-2xl mx-auto">
-                                Join hundreds of businesses already using SmartStock to streamline their inventory management.
+                                {t('cta_subtitle')}
                             </p>
                             <div className="flex flex-wrap gap-4 justify-center">
                                 <Link to="/register">
                                     <Button size="lg" className="bg-background text-foreground hover:bg-background/90 text-lg px-8 py-6 font-semibold">
-                                        Start Free Trial
+                                        {t('cta_start_free')}
                                         <ArrowRight className="ml-2 h-5 w-5" />
                                     </Button>
                                 </Link>
@@ -814,16 +905,16 @@ const LandingPage = () => {
                                         size="lg"
                                         className="bg-background text-foreground border-2 border-background hover:bg-background/80 text-lg px-8 py-6 font-semibold transition-all"
                                     >
-                                        Learn more
+                                        {t('cta_learn_more')}
                                     </Button>
                                 </a>
                             </div>
                         </motion.div>
                     </div>
-                </section>
+                </section >
 
                 {/* Partnership Section */}
-                <section id="partners" className="py-24 bg-background relative overflow-hidden">
+                < section id="partners" className="py-24 bg-background relative overflow-hidden" >
                     <div className="container mx-auto px-6">
                         <div className="grid lg:grid-cols-2 gap-16 items-center">
                             {/* Left Content */}
@@ -835,10 +926,10 @@ const LandingPage = () => {
                                 className="relative z-10"
                             >
                                 <h2 className="text-5xl md:text-7xl font-bold text-foreground mb-8 leading-tight tracking-tight">
-                                    Grow your business as a <span className="text-primary tracking-tighter">SmartStock</span> partner
+                                    {t('partners_title_1')} <span className="text-primary tracking-tighter">{t('partners_title_highlight')}</span> {t('partners_title_2')}
                                 </h2>
                                 <p className="text-xl text-muted-foreground mb-12 leading-relaxed max-w-xl">
-                                    Let's work together. Join our community of partners to better serve mutual customers and grow your business.
+                                    {t('partners_desc')}
                                 </p>
                                 <motion.div
                                     whileHover={{ scale: 1.02 }}
@@ -848,7 +939,7 @@ const LandingPage = () => {
                                         onClick={() => setIsChatOpen(true)}
                                         className="px-10 py-7 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg text-xl shadow-xl transition-all"
                                     >
-                                        Apply now
+                                        {t('partners_apply')}
                                     </Button>
                                 </motion.div>
                             </motion.div>
@@ -1021,13 +1112,13 @@ const LandingPage = () => {
                             </div>
                         </div>
                     </div>
-                </section>
+                </section >
 
                 {/* Supported By Section */}
-                <SupportedBy />
+                < SupportedBy />
 
                 {/* Footer */}
-                <footer className="bg-card border-t border-border py-12">
+                < footer className="bg-card border-t border-border py-12" >
                     <div className="container mx-auto px-6">
                         <div className="grid md:grid-cols-4 gap-8 mb-8">
                             <div>
@@ -1036,44 +1127,44 @@ const LandingPage = () => {
                                     <span className="text-2xl font-bold text-foreground">SmartStock</span>
                                 </div>
                                 <p className="text-muted-foreground text-sm">
-                                    Your trusted partner in inventory management solutions for Rwandan businesses.
+                                    {t('footer_desc')}
                                 </p>
                             </div>
 
                             <div>
-                                <h4 className="font-semibold text-foreground mb-4">Product</h4>
+                                <h4 className="font-semibold text-foreground mb-4">{t('footer_product')}</h4>
                                 <div className="space-y-2">
                                     <button onClick={() => scrollToSection('features')} className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        Features
+                                        {t('nav_features')}
                                     </button>
                                     <button onClick={() => scrollToSection('services')} className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        Services
+                                        {t('nav_services')}
                                     </button>
                                     <button onClick={() => scrollToSection('pricing')} className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        Pricing
+                                        {t('nav_pricing')}
                                     </button>
                                 </div>
                             </div>
 
                             <div>
-                                <h4 className="font-semibold text-foreground mb-4">Company</h4>
+                                <h4 className="font-semibold text-foreground mb-4">{t('footer_company')}</h4>
                                 <div className="space-y-2">
                                     <Link to="/about" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        About Us
+                                        {t('footer_about')}
                                     </Link>
                                     <Link to="/contact" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        Contact
+                                        {t('footer_contact')}
                                     </Link>
                                     <Link to="/support" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        Support
+                                        {t('footer_support')}
                                     </Link>
                                 </div>
                             </div>
 
                             <div>
-                                <h4 className="font-semibold text-foreground mb-4">Stay Updated</h4>
+                                <h4 className="font-semibold text-foreground mb-4">{t('footer_stay_updated')}</h4>
                                 <p className="text-muted-foreground text-sm mb-4">
-                                    Join our WhatsApp channel for the latest updates and news.
+                                    {t('footer_whatsapp_desc')}
                                 </p>
                                 <a
                                     href="https://whatsapp.com/channel/0029Vb79i5j8KMqkov7ng61H"
@@ -1082,38 +1173,38 @@ const LandingPage = () => {
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-[#25D366] hover:bg-[#25D366]/90 text-white rounded-md transition-all shadow-md hover:shadow-lg text-sm font-medium"
                                 >
                                     <MessageCircle className="h-4 w-4 fill-current" />
-                                    <span>Join WhatsApp Channel</span>
+                                    <span>{t('footer_join_whatsapp')}</span>
                                 </a>
                             </div>
                         </div>
 
                         <div className="border-t border-border pt-8 text-center">
                             <p className="text-muted-foreground text-sm">
-                                © 2025 SmartStock. All rights reserved. Developed by the RwandaScratch Developer Team.
+                                {t('footer_rights')}
                             </p>
                             <p className="text-muted-foreground text-sm mt-2">
-                                Join our <a href="/ourdevelopers" className="text-primary hover:underline">Developer Team</a> to be part of us.
+                                {t('footer_dev_team')} <a href="/ourdevelopers" className="text-primary hover:underline">{t('footer_dev_link')}</a>
                             </p>
                         </div>
                     </div>
-                </footer>
-            </div>
+                </footer >
+            </div >
 
             {/* Floating WhatsApp Action Button */}
-            <div className="fixed bottom-6 right-6 z-40 flex items-center gap-4 group">
+            < div className="fixed bottom-6 right-6 z-40 flex items-center gap-4 group" >
                 {/* Tooltip */}
-                <div
+                < div
                     className="opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 pointer-events-none"
                 >
                     <div className="bg-[#0B141B] text-white px-6 py-3 rounded-xl relative whitespace-nowrap shadow-2xl">
-                        <p className="text-sm font-medium">Need help? Chat with us!</p>
+                        <p className="text-sm font-medium">{t('fab_help')}</p>
                         {/* Triangle Arrow */}
                         <div className="absolute top-1/2 -right-2 -translate-y-1/2 w-0 h-0 border-t-[8px] border-t-transparent border-l-[12px] border-l-[#0B141B] border-b-[8px] border-b-transparent" />
                     </div>
-                </div>
+                </div >
 
                 {/* WhatsApp Button */}
-                <motion.a
+                < motion.a
                     href="https://wa.me/250792734752"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1132,6 +1223,7 @@ const LandingPage = () => {
                     </svg>
                 </motion.a>
             </div>
+
             {/* Chat Widget */}
             <ChatWidget isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
         </>

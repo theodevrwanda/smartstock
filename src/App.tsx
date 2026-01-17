@@ -24,9 +24,12 @@ import TrashPage from "@/pages/TrashPage";
 import ManageBranchPage from "@/pages/ManageBranchPage";
 import ManageEmployeesPage from "@/pages/ManageEmployeesPage";
 import SettingsPage from "@/pages/SettingsPage";
+import UpgradePage from "@/pages/UpgradePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "@/pages/LandingPage";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+
+import BusinessStatusPage from "@/pages/BusinessStatusPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +49,7 @@ const App = () => (
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
                       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                      <Route path="/business-status" element={<ProtectedRoute><BusinessStatusPage /></ProtectedRoute>} />
 
                       <Route path="/" element={<LandingPage />} />
                       <Route
@@ -66,6 +70,7 @@ const App = () => (
                         <Route path="manage-branch" element={<div className="page-transition"><ManageBranchPage /></div>} />
                         <Route path="manage-employees" element={<div className="page-transition"><ManageEmployeesPage /></div>} />
                         <Route path="settings" element={<div className="page-transition"><SettingsPage /></div>} />
+                        <Route path="upgrade" element={<div className="page-transition"><UpgradePage /></div>} />
                       </Route>
                       <Route path="*" element={<NotFound />} />
                     </Routes>

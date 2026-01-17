@@ -196,7 +196,7 @@ export default function RegisterPage() {
 
       if (success) {
         toast.success(
-          'Account created successfully! Please wait for central admin to approve your account.',
+          'Account created! You are using free mode. Trial ends in 1 month. Check plans on the Landing Page.',
           { duration: 6000 }
         );
         navigate('/login');
