@@ -100,5 +100,5 @@ If you find this project helpful, consider supporting its development!
 
 ### Local Support (Rwanda)
 - **Bank of Kigali (BK)**: 100246486087
-- **Recipient**: Theo-Dev Rwanda
+- **Recipient**: Theogene iradukunda
 - **MoMo**: 0792734752

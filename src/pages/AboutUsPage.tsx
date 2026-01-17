@@ -75,11 +75,6 @@ const AboutUsPage: React.FC = () => {
                     <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
                         Created by <strong>Theodev Rwanda</strong>, SmartStock was born out of a passion to bridge the digital gap in inventory management. We noticed many businesses still relied on manual records, leading to errors and losses. Our mission is to provide every business owner with the tools they need to thrive in a digital economy.
                     </p>
-                    <div className="flex justify-center gap-4">
-                        <div className="bg-background px-6 py-3 rounded-full border border-border font-medium shadow-sm">
-                            Created with ❤️ in Rwanda 🇷🇼
-                        </div>
-                    </div>
                 </motion.div>
             </div>
         </div>
