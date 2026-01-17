@@ -31,6 +31,7 @@ import AboutUsPage from "@/pages/AboutUsPage";
 import ContactPage from "@/pages/ContactPage";
 import SupportPage from "@/pages/SupportPage";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import ScrollToTop from "@/components/ScrollToTop";
 
 import BusinessStatusPage from "@/pages/BusinessStatusPage";
 
@@ -48,6 +49,7 @@ const App = () => (
                   <Toaster />
                   <Sonner />
                   <BrowserRouter>
+                    <ScrollToTop />
                     <Routes>
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
