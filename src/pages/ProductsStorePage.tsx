@@ -757,8 +757,8 @@ const ProductsStorePage: React.FC = () => {
 
 
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 bg-white dark:bg-gray-900 p-6 rounded-none border-b">
-          <div className="relative">
+        <div className="flex flex-col md:flex-row gap-4 bg-white dark:bg-gray-900 p-6 border-b">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
               placeholder={t('search_placeholder_products')}
@@ -768,44 +768,36 @@ const ProductsStorePage: React.FC = () => {
             />
           </div>
 
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger><SelectValue placeholder={t('all_categories')} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">{t('all_categories')}</SelectItem>
-              {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          {isAdmin && (
-            <Select value={branchFilter} onValueChange={setBranchFilter}>
-              <SelectTrigger><SelectValue placeholder={t('all_branches')} /></SelectTrigger>
+          <div className="flex flex-wrap gap-4">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder={t('all_categories')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">{t('all_branches')}</SelectItem>
-                {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
+                <SelectItem value="All">{t('all_categories')}</SelectItem>
+                {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
             </Select>
-          )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder={t('min_value')} value={minPrice} onChange={e => setMinPrice(e.target.value)} />
-            <Input type="number" placeholder={t('max_value')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+            {isAdmin && (
+              <Select value={branchFilter} onValueChange={setBranchFilter}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder={t('all_branches')} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">{t('all_branches')}</SelectItem>
+                  {branches.map(b => <SelectItem key={b.id} value={b.id!}>{b.branchName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setMinPrice(''); setMaxPrice(''); setMinQty(''); setMaxQty('');
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              {t('clear_filters')}
+            </Button>
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Input type="number" placeholder={t('min_qty')} value={minQty} onChange={e => setMinQty(e.target.value)} />
-            <Input type="number" placeholder={t('max_qty')} value={maxQty} onChange={e => setMaxQty(e.target.value)} />
-          </div>
-
-          {canConfirm && (
-            <Select value={confirmFilter} onValueChange={setConfirmFilter}>
-              <SelectTrigger><SelectValue placeholder={t('confirmation')} /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">{t('all')}</SelectItem>
-                <SelectItem value="Confirmed">{t('confirmed_only')}</SelectItem>
-                <SelectItem value="Unconfirmed">{t('unconfirmed_only')}</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
         </div>
 
         {/* Desktop Table */}

@@ -131,11 +131,6 @@ const DashboardPage: React.FC = () => {
         {/* Secondary Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           <SmallProCard title={t('added_today')} value={stats.productsAddedToday} subtitle={t('new_today')} icon={<PlusCircle className="text-emerald-600" />} highlight />
-          <SmallProCard title={t('added_this_week')} value={stats.productsAddedThisWeek} subtitle={t('this_week')} icon={<TrendingUp className="text-gray-900 dark:text-gray-100" />} />
-          <SmallProCard title={t('added_this_month')} value={stats.productsAddedThisMonth} subtitle={t('this_month')} icon={<TrendingUp className="text-violet-600" />} />
-          <SmallProCard title={t('updated_today')} value={stats.productsUpdatedToday} subtitle={t('updated_at')} icon={<RefreshCw className="text-orange-600" />} />
-
-          <SmallProCard title={t('never_updated')} value={stats.productsNeverUpdated} subtitle="No updates" icon={<Clock className="text-slate-400" />} />
           <SmallProCard title={t('in_stock')} value={stats.activeProducts} subtitle={t('min_qty')} icon={<CheckCircle className="text-emerald-600" />} />
           <SmallProCard
             title={t('pending_actions')}
@@ -145,13 +140,11 @@ const DashboardPage: React.FC = () => {
             danger={stats.pendingConfirmationCount > 0}
           />
           <SmallProCard title={t('sold')} value={stats.soldProducts} subtitle={t('total_products')} icon={<TrendingUp className="text-emerald-600" />} />
-
-          <SmallProCard title={t('restored')} value={stats.restoredProducts} subtitle={t('restored_label')} icon={<Archive className="text-indigo-600" />} />
           <SmallProCard title={t('deleted')} value={stats.deletedProducts} subtitle={t('trash_label')} icon={<XCircle className="text-rose-600" />} />
+
           <SmallProCard title={t('expired_products')} value={stats.expiredProductsCount} subtitle={t('expired_product')} icon={<Clock className="text-red-600" />} danger={stats.expiredProductsCount > 0} />
           <SmallProCard title={t('low_stock')} value={stats.lowStockProducts} subtitle={`≤${user?.stockSettings?.lowStock ?? 10} ${t('units')}`} icon={<AlertTriangle className="text-amber-600" />} danger={stats.lowStockProducts > 0} />
           <SmallProCard title={t('out_of_stock')} value={stats.outOfStockProducts} subtitle={`≤${user?.stockSettings?.outOfStock ?? 0} ${t('units')}`} icon={<XCircle className="text-rose-600" />} danger={stats.outOfStockProducts > 0} />
-          <SmallProCard title={t('avg_stock')} value={stats.averageStockPerProduct.toFixed(1)} subtitle={t('per_product')} icon={<Package className="text-cyan-600" />} />
         </div>
 
         {/* Stock Highlights */}
