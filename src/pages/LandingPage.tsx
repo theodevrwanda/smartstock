@@ -11,7 +11,7 @@ import ChatWidget from '@/components/ChatWidget';
 import SupportedBy from '@/components/SupportedBy';
 import PaymentDialog from '@/components/subscription/PaymentDialog';
 import { useLanguage } from '@/contexts/LanguageContext';
-import InteractiveBackground from '@/components/landing/InteractiveBackground';
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -354,9 +354,6 @@ const LandingPage = () => {
 
                 {/* Hero Section */}
                 <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-                    {/* Interactive Particle Background */}
-                    <InteractiveBackground />
-
                     {/* Gradient Background Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-background z-0" />
 

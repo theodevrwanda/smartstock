@@ -14,14 +14,14 @@ import SEOHelmet from '@/components/SEOHelmet';
 
 interface BusinessSettings {
     businessName: string;
-    lowStockThreshold: number;
-    outOfStockThreshold: number;
+    lowStockThreshold: number | string;
+    outOfStockThreshold: number | string;
 }
 
 const SettingsPage: React.FC = () => {
     const { user, updateUser } = useAuth();
     const { t } = useLanguage();
-    const { isOnline, addPendingOperation } = useOffline();
+    const { isOnline, addPendingChange } = useOffline();
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -62,7 +62,7 @@ const SettingsPage: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name.includes('Threshold') ? Number(value) : value
+            [name]: name.includes('Threshold') ? value : value
         }));
     };
 
@@ -70,12 +70,15 @@ const SettingsPage: React.FC = () => {
         if (!user?.businessId || !isAdmin) return;
 
         setSaving(true);
+        const lowStock = Number(formData.lowStockThreshold) || 0;
+        const outOfStock = Number(formData.outOfStockThreshold) || 0;
+
         try {
             const bizRef = doc(db, 'businesses', user.businessId);
             const updates = {
                 businessName: formData.businessName,
-                lowStockThreshold: formData.lowStockThreshold,
-                outOfStockThreshold: formData.outOfStockThreshold,
+                lowStockThreshold: lowStock,
+                outOfStockThreshold: outOfStock,
                 updatedAt: new Date().toISOString(),
             };
 
@@ -83,12 +86,9 @@ const SettingsPage: React.FC = () => {
                 await updateDoc(bizRef, updates);
                 toast.success(t('settings_updated_success') || 'Settings updated successfully');
             } else {
-                await addPendingOperation({
-                    type: 'updateBusiness',
-                    data: {
-                        id: user.businessId,
-                        updates: updates
-                    }
+                await addPendingChange('updateBusiness', {
+                    id: user.businessId,
+                    updates: updates
                 });
                 toast.info(t('saved_locally_offline') || 'Saved locally (offline)');
             }
@@ -97,8 +97,8 @@ const SettingsPage: React.FC = () => {
             updateUser({
                 businessName: formData.businessName,
                 stockSettings: {
-                    lowStock: formData.lowStockThreshold,
-                    outOfStock: formData.outOfStockThreshold
+                    lowStock: lowStock,
+                    outOfStock: outOfStock
                 }
             });
         } catch (error) {
