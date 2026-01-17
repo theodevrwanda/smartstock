@@ -74,10 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, className }) => 
             </div>
           </div>
         ) : (
-          <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center mx-auto shadow-sm">
-            <span className="text-primary-foreground font-bold text-xs">
-              {businessName.substring(0, 3).toUpperCase()}
-            </span>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto transition-transform hover:scale-110">
+            <img src="/smartstock.png" alt="S" className="w-6 h-6 object-contain" />
           </div>
         )}
         <Button variant="ghost" size="sm" onClick={onToggle} className="p-1.5 h-auto w-auto hover:bg-slate-100 rounded-lg">

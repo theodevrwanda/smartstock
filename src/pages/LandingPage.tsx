@@ -246,7 +246,7 @@ const LandingPage = () => {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <img src="/smartstock.png" alt="SmartStock" className="h-10 w-auto object-contain" />
-                                <span className="text-2xl font-bold text-foreground">SmartStock</span>
+                                <span className="text-2xl font-bold text-foreground hidden md:block">SmartStock</span>
                             </div>
 
                             {/* Desktop Navigation */}
