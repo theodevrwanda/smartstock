@@ -36,9 +36,9 @@ const SupportPage: React.FC = () => {
                         <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
                             <img src="/smartstock.png" alt="SmartStock" className="w-6 h-6 invert brightness-0" />
                         </div>
-                        <span className="text-xl font-black tracking-tighter uppercase">SmartStock</span>
+                        <span className="text-xl font-black tracking-tighter uppercase hidden md:block">SmartStock</span>
                     </Link>
-                    <Link to="/" className="text-sm font-bold flex items-center gap-1 hover:text-primary transition-colors">
+                    <Link to="/" className="text-sm font-bold flex items-center gap-1 hover:text-primary transition-colors hidden md:flex">
                         <ChevronLeft size={16} /> Back to Home
                     </Link>
                 </div>
