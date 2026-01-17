@@ -17,15 +17,15 @@ const LanguageSelector: React.FC = () => {
             <DropdownMenuTrigger asChild>
                 <Button
                     variant="ghost"
-                    className="flex items-center gap-3 px-3 py-2 h-11 rounded-full border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm group"
+                    className="flex items-center gap-1 md:gap-3 px-2 md:px-3 py-2 h-11 rounded-full border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm group"
                 >
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition-colors">
                         <Globe className="w-4 h-4 text-gray-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
                     </div>
-                    <span className="text-[14px] font-bold text-gray-800 dark:text-gray-200">
+                    <span className="text-[14px] font-bold text-gray-800 dark:text-gray-200 hidden md:block">
                         {language === 'en' ? 'English' : 'Kinyarwanda'}
                     </span>
-                    <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-all mr-1" />
+                    <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-all mr-1 hidden md:block" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[180px] mt-2 rounded-2xl p-2 shadow-2xl border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in duration-200">

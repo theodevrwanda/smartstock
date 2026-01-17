@@ -59,7 +59,9 @@ const Header: React.FC = () => {
           </Button>
 
           {/* Global Search */}
-          <GlobalSearch />
+          <div className="hidden md:block">
+            <GlobalSearch />
+          </div>
 
           {/* Right Section */}
           <div className="flex items-center space-x-2 sm:space-x-4">
