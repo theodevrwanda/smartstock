@@ -2,9 +2,11 @@ import React from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Coffee, CreditCard, Landmark, Smartphone, Heart, ExternalLink, MessageCircle, Globe } from 'lucide-react';
+import { Coffee, CreditCard, Landmark, Smartphone, Heart, ExternalLink, MessageCircle, Globe, ChevronLeft, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Link } from 'react-router-dom';
+import { toast } from '@/components/ui/use-toast';
 
 const SupportPage: React.FC = () => {
     const { t } = useLanguage();
@@ -13,12 +15,34 @@ const SupportPage: React.FC = () => {
         window.open('https://buymeacoffee.com/theodevrwanda', '_blank');
     };
 
+    const copyToClipboard = (text: string, label: string) => {
+        navigator.clipboard.writeText(text);
+        toast({
+            title: "Copied!",
+            description: `${label} copied to clipboard.`,
+        });
+    };
+
     return (
         <div className="min-h-screen bg-background pb-20">
             <SEOHelmet
                 title="Support Us - SmartStock"
                 description="Support the development of SmartStock. Buy us a coffee or use local Rwandan payment methods to contribute."
             />
+
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+                <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                            <img src="/smartstock.png" alt="SmartStock" className="w-6 h-6 invert brightness-0" />
+                        </div>
+                        <span className="text-xl font-black tracking-tighter uppercase">SmartStock</span>
+                    </Link>
+                    <Link to="/" className="text-sm font-bold flex items-center gap-1 hover:text-primary transition-colors">
+                        <ChevronLeft size={16} /> Back to Home
+                    </Link>
+                </div>
+            </nav>
 
             <div className="container mx-auto px-6 py-20 mt-10">
                 {/* Hero Section with Image */}
@@ -110,16 +134,21 @@ const SupportPage: React.FC = () => {
                                         <div className="space-y-3">
                                             <div className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-blue-100 dark:border-blue-900">
                                                 <p className="text-[10px] uppercase font-bold text-blue-500 opacity-70 tracking-widest">Bank of Kigali</p>
-                                                <div className="flex justify-between items-center text-lg font-black">
+                                                <div className="flex justify-between items-center text-lg font-black leading-none">
                                                     100246486087
-                                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => navigator.clipboard.writeText('100246486087')}>
-                                                        <CreditCard size={14} />
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/50" onClick={() => copyToClipboard('100246486087', 'Account Number')}>
+                                                        <Copy size={14} />
                                                     </Button>
                                                 </div>
                                             </div>
                                             <div className="p-3 rounded-xl bg-white/50 dark:bg-black/20 border border-blue-100 dark:border-blue-900">
                                                 <p className="text-[10px] uppercase font-bold text-blue-500 opacity-70 tracking-widest">MTN Mobile Money</p>
-                                                <p className="font-black text-lg">0792734752</p>
+                                                <div className="flex justify-between items-center text-lg font-black leading-none">
+                                                    0792734752
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/50" onClick={() => copyToClipboard('0792734752', 'MoMo Number')}>
+                                                        <Copy size={14} />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                         <p className="text-[10px] uppercase font-bold text-center opacity-60">
@@ -163,9 +192,14 @@ const SupportPage: React.FC = () => {
                                     <h3 className="text-2xl font-black mb-1">Theogene iradukunda</h3>
                                     <p className="text-primary font-bold text-sm mb-6 tracking-widest uppercase">Lead Developer</p>
                                     <div className="space-y-4 text-left p-4 bg-background/50 rounded-2xl border border-border">
-                                        <div className="flex items-center gap-3">
-                                            <Smartphone className="h-4 w-4 text-primary" />
-                                            <p className="text-xs font-medium">+250 792 734 752</p>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Smartphone className="h-4 w-4 text-primary" />
+                                                <p className="text-xs font-medium">+250 792 734 752</p>
+                                            </div>
+                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => copyToClipboard('+250792734752', 'Phone Number')}>
+                                                <Copy size={12} />
+                                            </Button>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Globe className="h-4 w-4 text-primary" />

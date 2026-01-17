@@ -2,7 +2,8 @@ import React from 'react';
 import SEOHelmet from '@/components/SEOHelmet';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Building2, Award, Users, Globe, Zap, Shield } from 'lucide-react';
+import { Building2, Award, Users, Globe, Zap, Shield, ChevronLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const AboutUsPage: React.FC = () => {
     const { t } = useLanguage();
@@ -13,6 +14,20 @@ const AboutUsPage: React.FC = () => {
                 title="About Us - SmartStock"
                 description="Learn more about SmartStock, the leading inventory management solution for Rwandan businesses, created by Theodev Rwanda."
             />
+
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
+                <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                            <img src="/smartstock.png" alt="SmartStock" className="w-6 h-6 invert brightness-0" />
+                        </div>
+                        <span className="text-xl font-black tracking-tighter uppercase">SmartStock</span>
+                    </Link>
+                    <Link to="/" className="text-sm font-bold flex items-center gap-1 hover:text-primary transition-colors">
+                        <ChevronLeft size={16} /> Back to Home
+                    </Link>
+                </div>
+            </nav>
 
             <div className="container mx-auto px-6 py-20 mt-10">
                 <motion.div
