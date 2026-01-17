@@ -21,6 +21,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LanguageSelector from '@/components/LanguageSelector';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { db } from '@/firebase/firebase';
 
 const testimonialImages = [
     'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
@@ -63,10 +65,48 @@ const LandingPage = () => {
     const { isAuthenticated, loading: authLoading } = useAuth();
     const { language, setLanguage, t } = useLanguage();
 
+    const [counts, setCounts] = useState({
+        happyClients: 0,
+        businessAccounts: 0,
+        trustedCustomers: 0
+    });
+
+    useEffect(() => {
+        const fetchCounts = async () => {
+            try {
+                const businessesCol = collection(db, 'businesses');
+
+                // Total businesses (all business no condition)
+                const totalSnapshot = await getCountFromServer(businessesCol);
+                const totalCount = totalSnapshot.data().count;
+
+                // Happy Clients (business use month -> standard plans)
+                const happyQuery = query(businessesCol, where('subscription.plan', '==', 'standard'));
+                const happySnapshot = await getCountFromServer(happyQuery);
+                const happyCount = happySnapshot.data().count;
+
+                // Trusted Customers (business use forever -> enterprise plans)
+                const trustedQuery = query(businessesCol, where('subscription.plan', '==', 'enterprise'));
+                const trustedSnapshot = await getCountFromServer(trustedQuery);
+                const trustedCount = trustedSnapshot.data().count;
+
+                setCounts({
+                    happyClients: happyCount,
+                    businessAccounts: totalCount,
+                    trustedCustomers: trustedCount
+                });
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        };
+
+        fetchCounts();
+    }, []);
+
     const stats = [
-        { icon: Users, label: t('stat_happy_clients'), value: 2500, suffix: '+' },
-        { icon: Building2, label: t('stat_business_accounts'), value: 500, suffix: '+' },
-        { icon: Award, label: t('stat_trusted_customers'), value: 1200, suffix: '+' },
+        { icon: Users, label: t('stat_happy_clients'), value: counts.happyClients, suffix: '+' },
+        { icon: Building2, label: t('stat_business_accounts'), value: counts.businessAccounts, suffix: '+' },
+        { icon: Award, label: t('stat_trusted_customers'), value: counts.trustedCustomers, suffix: '+' },
         { icon: TrendingUp, label: t('stat_success_rate'), value: 98, suffix: '%' },
     ];
 
