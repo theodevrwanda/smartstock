@@ -97,8 +97,3 @@ If you find this project helpful, consider supporting its development!
 <a href="https://buymeacoffee.com/theodevrwanda" target="_blank">
     <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >
 </a>
-
-### Local Support (Rwanda)
-- **Bank of Kigali (BK)**: 100246486087
-- **Recipient**: Theogene iradukunda
-- **MoMo**: 0792734752

@@ -12,7 +12,7 @@ const AboutUsPage: React.FC = () => {
         <div className="min-h-screen bg-background">
             <SEOHelmet
                 title="About Us - SmartStock"
-                description="Learn more about SmartStock, the leading inventory management solution for Rwandan businesses, created by Theodev Rwanda."
+                description="Learn more about SmartStock, the leading inventory management solution, created by Theodev."
             />
 
             <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -34,15 +34,15 @@ const AboutUsPage: React.FC = () => {
                     transition={{ duration: 0.6 }}
                     className="max-w-4xl mx-auto text-center mb-16"
                 >
-                    <h1 className="text-4xl md:text-6xl font-bold mb-6">Empowering Rwandan Businesses with <span className="text-primary">SmartStock</span></h1>
+                    <h1 className="text-4xl md:text-6xl font-bold mb-6">Empowering Businesses with <span className="text-primary">SmartStock</span></h1>
                     <p className="text-xl text-muted-foreground leading-relaxed">
-                        SmartStock is a modern, intuitive, and powerful inventory management solution meticulously crafted to meet the unique needs of businesses in Rwanda and across Africa.
+                        SmartStock is a modern, intuitive, and powerful inventory management solution meticulously crafted to meet the unique needs of businesses.
                     </p>
                 </motion.div>
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
                     {[
-                        { icon: Globe, title: "Local Focus", desc: "Designed specifically for the Rwandan market with language support for Kinyarwanda and English." },
+                        { icon: Globe, title: "Modern Focus", desc: "Designed for the modern market with comprehensive language support." },
                         { icon: Zap, title: "Efficiency", desc: "Streamline your operations with real-time tracking, automated reports, and multi-branch management." },
                         { icon: Shield, title: "Reliability", desc: "Secure data storage and offline capabilities ensure your business never stops running." },
                         { icon: Users, title: "Community Driven", desc: "Built based on feedback from local shop owners and large enterprises alike." },
@@ -73,7 +73,7 @@ const AboutUsPage: React.FC = () => {
                 >
                     <h2 className="text-3xl font-bold mb-6">The Story Behind SmartStock</h2>
                     <p className="text-lg text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
-                        Created by <strong>Theodev Rwanda</strong>, SmartStock was born out of a passion to bridge the digital gap in inventory management. We noticed many businesses still relied on manual records, leading to errors and losses. Our mission is to provide every business owner with the tools they need to thrive in a digital economy.
+                        Created by <strong>Theodev</strong>, SmartStock was born out of a passion to bridge the digital gap in inventory management. We noticed many businesses still relied on manual records, leading to errors and losses. Our mission is to provide every business owner with the tools they need to thrive in a digital economy.
                     </p>
                 </motion.div>
             </div>

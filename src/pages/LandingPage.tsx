@@ -236,8 +236,8 @@ const LandingPage = () => {
     return (
         <>
             <SEOHelmet
-                title="SmartStock - Modern Inventory Management for Rwanda"
-                description="Streamline your inventory with SmartStock, the leading management solution for Rwandan businesses."
+                title="SmartStock - Modern Inventory Management"
+                description="Streamline your inventory with SmartStock, the leading management solution for businesses."
             />
 
             <div className="min-h-screen bg-background">
@@ -1033,7 +1033,7 @@ const LandingPage = () => {
                                         </div>
                                     </motion.div>
 
-                                    {/* Center Right (Large) - Rwanda Scratch */}
+                                    {/* Center Right (Large) - Scratch Solutions */}
                                     <motion.div
                                         initial={{ scale: 0, opacity: 0, x: 20 }}
                                         whileInView={{ scale: 1, opacity: 1, x: 0 }}
@@ -1042,11 +1042,11 @@ const LandingPage = () => {
                                         transition={{ duration: 0.6, delay: 0.5, type: "spring", stiffness: 100 }}
                                         className="absolute top-1/2 -translate-y-1/2 right-10 w-48 h-48 rounded-full border-4 border-background overflow-hidden shadow-2xl group cursor-pointer"
                                     >
-                                        <img src="/partners/rwandascratch.png" alt="Rwanda Scratch" className="w-full h-full object-cover" />
+                                        <img src="/partners/rwandascratch.png" alt="Scratch Solutions" className="w-full h-full object-cover" />
                                         {/* WhatsApp-style tooltip */}
                                         <div className="absolute -top-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
                                             <div className="bg-gray-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-                                                Rwanda Scratch
+                                                Scratch Solutions
                                                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
                                             </div>
                                         </div>

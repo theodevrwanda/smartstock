@@ -27,7 +27,7 @@ const SupportPage: React.FC = () => {
         <div className="min-h-screen bg-background pb-20">
             <SEOHelmet
                 title="Support Us - SmartStock"
-                description="Support the development of SmartStock. Buy us a coffee or use local Rwandan payment methods to contribute."
+                description="Support the development of SmartStock. Buy us a coffee or use global payment methods to contribute."
             />
 
             <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -69,7 +69,7 @@ const SupportPage: React.FC = () => {
                                 </div>
                                 <h1 className="text-white text-4xl md:text-6xl font-black mb-6 tracking-tight uppercase">Let Business Go Digital</h1>
                                 <p className="text-white/80 text-lg md:text-xl max-w-3xl font-medium leading-relaxed">
-                                    SmartStock is built with passion to empower Rwandan SMBs. Your contribution helps us keep the platform free, fast, and feature-rich for everyone.
+                                    SmartStock is built with passion to empower businesses. Your contribution helps us keep the platform free, fast, and feature-rich for everyone.
                                 </p>
                             </motion.div>
                         </div>
@@ -126,7 +126,7 @@ const SupportPage: React.FC = () => {
                                             <Landmark className="h-8 w-8" />
                                         </div>
                                         <CardTitle className="text-2xl font-black">Bank & MoMo</CardTitle>
-                                        <CardDescription className="text-blue-800/70 dark:text-blue-200/50">For supporters within Rwanda.</CardDescription>
+                                        <CardDescription className="text-blue-800/70 dark:text-blue-200/50">For domestic and international supporters.</CardDescription>
                                     </CardHeader>
                                     <CardContent className="space-y-6">
                                         <div className="space-y-3">
@@ -165,7 +165,7 @@ const SupportPage: React.FC = () => {
                         >
                             <h2 className="text-2xl font-bold mb-4">Why Support SmartStock?</h2>
                             <p className="text-muted-foreground leading-relaxed">
-                                Maintaining an enterprise-grade system requires significant resources for hosting, security, and continuous updates. Your contributions directly support the infrastructure that keeps businesses running smoothly. As a small team, we appreciate every act of support that helps us build a more digital future for Rwanda.
+                                Maintaining an enterprise-grade system requires significant resources for hosting, security, and continuous updates. Your contributions directly support the infrastructure that keeps businesses running smoothly. As a small team, we appreciate every act of support that helps us build a more digital future.
                             </p>
                         </motion.div>
                     </div>
@@ -201,7 +201,7 @@ const SupportPage: React.FC = () => {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Globe className="h-4 w-4 text-primary" />
-                                            <p className="text-xs font-medium">Kigali, Rwanda</p>
+                                            <p className="text-xs font-medium">Headquarters</p>
                                         </div>
                                     </div>
                                     <div className="mt-8">

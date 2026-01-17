@@ -75,7 +75,7 @@ const ManageEmployeesPage: React.FC = () => {
 
   const isAdmin = user?.role === 'admin';
   const businessId = user?.businessId;
-  const businessName = user?.businessName || 'RwandaScratch';
+  const businessName = user?.businessName || 'SmartStock';
 
   // Set transaction logging context
   useEffect(() => {

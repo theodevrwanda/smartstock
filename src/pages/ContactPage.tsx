@@ -21,7 +21,7 @@ const ContactPage: React.FC = () => {
         <div className="min-h-screen bg-background">
             <SEOHelmet
                 title="Contact Us - SmartStock"
-                description="Get in touch with SmartStock support. Join our WhatsApp channel or chat with theodevrwanda for any inquiries."
+                description="Get in touch with SmartStock support. Join our WhatsApp channel or chat with theodev for any inquiries."
             />
 
             <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
@@ -99,8 +99,8 @@ const ContactPage: React.FC = () => {
                             </div>
                             <div>
                                 <h3 className="text-xl font-bold mb-2 font-bold tracking-tight">Location</h3>
-                                <p className="text-muted-foreground font-medium text-sm">Kigali, Rwanda</p>
-                                <p className="text-muted-foreground font-medium text-sm">Theodev Rwanda HQ</p>
+                                <p className="text-muted-foreground font-medium text-sm">Headquarters</p>
+                                <p className="text-muted-foreground font-medium text-sm">Theodev HQ</p>
                             </div>
                         </motion.div>
                     </div>
@@ -120,7 +120,7 @@ const ContactPage: React.FC = () => {
                                 className="w-full h-auto object-cover transform transition-transform duration-700 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-8">
-                                <p className="text-white text-lg font-bold tracking-tight">Helping Rwandan SMBs Scale with Technology</p>
+                                <p className="text-white text-lg font-bold tracking-tight">Helping SMBs Scale with Technology</p>
                             </div>
                         </div>
                     </motion.div>

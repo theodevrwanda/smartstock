@@ -65,14 +65,8 @@ const SEOHelmet: React.FC<SEOHelmetProps> = ({
       <meta name="twitter:creator" content="@theodevrwanda" />
 
       {/* Corporate Info */}
-      <meta property="article:author" content="Theodev Rwanda" />
-      <meta property="article:publisher" content="Theodev Rwanda" />
-
-      {/* Geographic Meta Tags */}
-      <meta name="geo.region" content="RW-01" />
-      <meta name="geo.placename" content="Kigali, Rwanda" />
-      <meta name="geo.position" content="-1.9441;30.0619" />
-      <meta name="ICBM" content="-1.9441, 30.0619" />
+      <meta property="article:author" content="SmartStock Team" />
+      <meta property="article:publisher" content="SmartStock Team" />
     </Helmet>
   );
 };

@@ -683,7 +683,7 @@ const ProfilePage: React.FC = () => {
                     {formData.district && (
                       <div className="flex items-center gap-3 text-[#050505] dark:text-[#E4E6EB]">
                         <MapPin className="w-5 h-5 text-[#8C939D]" />
-                        <span className="text-[15px]">{t('lives_in')} <strong>{formData.district || 'Rwanda'}</strong></span>
+                        <span className="text-[15px]">{t('lives_in')} <strong>{formData.district || 'Location'}</strong></span>
                       </div>
                     )}
 

@@ -676,7 +676,7 @@ const translations: Translations = {
         'partners_apply': 'Apply now',
 
         // Landing Page - Footer
-        'footer_desc': 'Your trusted partner in inventory management solutions for Rwandan businesses.',
+        'footer_desc': 'Your trusted partner in inventory management solutions for businesses.',
         'footer_product': 'Product',
         'footer_company': 'Company',
         'footer_stay_updated': 'Stay Updated',
@@ -685,7 +685,7 @@ const translations: Translations = {
         'footer_about': 'About Us',
         'footer_contact': 'Contact',
         'footer_support': 'Support',
-        'footer_rights': '© 2025 SmartStock. All rights reserved. Developed by the RwandaScratch Developer Team.',
+        'footer_rights': '© 2025 SmartStock. All rights reserved. Developed by the SmartStock Developer Team.',
         'footer_dev_team': 'Join our Developer Team to be part of us.',
         'footer_dev_link': 'Developer Team',
         'fab_help': 'Need help? Chat with us!',
@@ -1420,7 +1420,7 @@ const translations: Translations = {
         'partners_apply': 'Saba ubu',
 
         // Landing Page - Footer
-        'footer_desc': 'Umufatanyabikorwa wawe wizewe mu micungire y\'ububiko ku bucuruzi bwo mu Rwanda.',
+        'footer_desc': 'Umufatanyabikorwa wawe wizewe mu micungire y\'ububiko ku bucuruzi.',
         'footer_product': 'Igicuruzwa',
         'footer_company': 'Ikigo',
         'footer_stay_updated': 'Menya Amakuru',
@@ -1429,7 +1429,7 @@ const translations: Translations = {
         'footer_about': 'Turi bande',
         'footer_contact': 'Twandikire',
         'footer_support': 'Ubufasha',
-        'footer_rights': '© 2025 SmartStock. Uburenganzira bwose buhubijwe. Yakozwe na RwandaScratch Developer Team.',
+        'footer_rights': '© 2025 SmartStock. Uburenganzira bwose buhubijwe. Yakozwe na SmartStock Developer Team.',
         'footer_dev_team': 'Injira mu Ikipe y\'Abadeveloper bacu ube umwe natwe.',
         'footer_dev_link': 'Ikipe y\'Abadeveloper',
         'fab_help': 'Ukeneye ubufasha? Vugana natwe!',
