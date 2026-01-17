@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Building2, Calendar, CheckCircle, AlertTriangle, LogOut, RefreshCcw } from 'lucide-react';
 import PaymentDialog from '@/components/subscription/PaymentDialog';
 import SEOHelmet from '@/components/SEOHelmet';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { formatDate } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const BusinessStatusPage = () => {
     const { user, logout, refreshUser } = useAuth();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -61,7 +63,7 @@ const BusinessStatusPage = () => {
                         <div className="p-4 bg-secondary/50 rounded-xl space-y-1">
                             <p className="text-sm font-medium text-muted-foreground">Current Plan</p>
                             <div className="flex items-center gap-2">
-                                <span className="font-semibold capitalize">{user?.subscription?.plan || 'Free'}</span>
+                                <span className="font-semibold capitalize">{user?.subscription?.plan ? t(`plan_${user.subscription.plan}`) : t('plan_free')}</span>
                             </div>
                         </div>
                         <div className="p-4 bg-secondary/50 rounded-xl space-y-1">

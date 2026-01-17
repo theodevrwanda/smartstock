@@ -27,31 +27,23 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import PWAInstallButton from '@/components/PWAInstallButton';
 
-// Step 1 schema: Business & Location info
-const step1Schema = z.object({
-  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  district: z.string().min(1, 'Please enter your district'),
-  sector: z.string().min(1, 'Please enter your sector'),
-  cell: z.string().min(1, 'Please enter your cell'),
-  village: z.string().min(1, 'Please enter your village'),
-});
+type Step1Data = {
+  businessName: string;
+  district: string;
+  sector: string;
+  cell: string;
+  village: string;
+};
 
-// Step 2 schema: User info
-const step2Schema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  gender: z.string().min(1, 'Please select your gender'),
-  phoneNumber: z.string().min(10, 'Please enter a valid phone number'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type Step1Data = z.infer<typeof step1Schema>;
-type Step2Data = z.infer<typeof step2Schema>;
+type Step2Data = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: string;
+  phoneNumber: string;
+  password: string;
+  confirmPassword: string;
+};
 
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -66,6 +58,29 @@ export default function RegisterPage() {
   const { register: registerUser, isAuthenticated, user, loading } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  // Step 1 schema: Business & Location info (inside to use t)
+  const step1Schema = z.object({
+    businessName: z.string().min(2, t('business_name_min')),
+    district: z.string().min(1, t('district_required')),
+    sector: z.string().min(1, t('sector_required')),
+    cell: z.string().min(1, t('cell_required')),
+    village: z.string().min(1, t('village_required')),
+  });
+
+  // Step 2 schema: User info (inside to use t)
+  const step2Schema = z.object({
+    firstName: z.string().min(2, t('first_name_min')),
+    lastName: z.string().min(2, t('last_name_min')),
+    email: z.string().email(t('invalid_email')),
+    gender: z.string().min(1, t('select_gender')),
+    phoneNumber: z.string().min(10, t('phone_required')),
+    password: z.string().min(6, t('password_min_length')),
+    confirmPassword: z.string(),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t('passwords_dont_match'),
+    path: ["confirmPassword"],
+  });
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -90,7 +105,7 @@ export default function RegisterPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
+      toast.error(t('image_size_error'));
       return;
     }
 
@@ -125,7 +140,7 @@ export default function RegisterPage() {
       const businessExists = await checkBusinessExists(data.businessName);
       if (businessExists) {
         step1Form.setError('businessName', {
-          message: 'This business name is already registered.'
+          message: t('business_name_exists')
         });
         setIsLoading(false);
         return;
@@ -142,7 +157,7 @@ export default function RegisterPage() {
 
   const handleStep2Submit = async (data: Step2Data) => {
     if (!step1Data) {
-      toast.error('Please complete step 1 first.');
+      toast.error(t('fill_all_required_error'));
       return;
     }
 
@@ -153,7 +168,7 @@ export default function RegisterPage() {
       // Check if email exists
       const emailExists = await checkUserExists('email', data.email);
       if (emailExists) {
-        step2Form.setError('email', { message: 'This email is already registered.' });
+        step2Form.setError('email', { message: t('email_exists') });
         setIsLoading(false);
         return;
       }
@@ -161,7 +176,7 @@ export default function RegisterPage() {
       // Check if phone exists
       const phoneExists = await checkUserExists('phone', data.phoneNumber);
       if (phoneExists) {
-        step2Form.setError('phoneNumber', { message: 'This phone number is already registered.' });
+        step2Form.setError('phoneNumber', { message: t('phone_exists') });
         setIsLoading(false);
         return;
       }
@@ -172,7 +187,7 @@ export default function RegisterPage() {
         try {
           profileImageUrl = await uploadToCloudinary(selectedFile);
         } catch (error) {
-          toast.error('Failed to upload profile image.');
+          toast.error(t('profile_image_upload_failed'));
           setIsLoading(false);
           return;
         }
@@ -196,7 +211,7 @@ export default function RegisterPage() {
 
       if (success) {
         toast.success(
-          'Account created! You are using free mode. Trial ends in 1 month. Check plans on the Landing Page.',
+          t('account_created_success'),
           { duration: 6000 }
         );
         navigate('/login');
@@ -447,12 +462,12 @@ export default function RegisterPage() {
                 <Label className="text-muted-foreground text-xs font-bold uppercase tracking-wider pl-1">{t('gender')}</Label>
                 <Select onValueChange={(value) => step2Form.setValue('gender', value)}>
                   <SelectTrigger className="h-11 bg-background border-border rounded-xl shadow-sm text-foreground focus:ring-primary">
-                    <SelectValue placeholder="Select" />
+                    <SelectValue placeholder={t('select')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="male">{t('male')}</SelectItem>
+                    <SelectItem value="female">{t('female')}</SelectItem>
+                    <SelectItem value="other">{t('other')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {step2Form.formState.errors.gender && (

@@ -18,6 +18,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import GlobalSearch from '@/components/GlobalSearch';
 import MobileMenu from './MobileMenu';
+import LanguageSelector from '@/components/LanguageSelector';
 import BlockchainLedger from '@/components/BlockchainLedger';
 
 const Header: React.FC = () => {
@@ -65,7 +66,7 @@ const Header: React.FC = () => {
             {/* Plan Status */}
             {user?.subscription && (
               <div className="hidden md:flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-                <span className="capitalize mr-1">{user.subscription.plan}:</span>
+                <span className="capitalize mr-1">{t(`plan_${user.subscription.plan}`)}:</span>
                 <span>
                   {Math.max(0, Math.ceil((new Date(user.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} {t('days_left')}
                 </span>
@@ -92,24 +93,7 @@ const Header: React.FC = () => {
               <span className="hidden md:inline">{t('blockchain')}</span>
             </Button>
 
-            {/* Language Switcher */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2">
-                  <Languages size={20} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{t('switch_language')}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setLanguage('en')} className={language === 'en' ? 'bg-accent' : ''}>
-                  English
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLanguage('rw')} className={language === 'rw' ? 'bg-accent' : ''}>
-                  Kinyarwanda
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <LanguageSelector />
 
             {/* Theme Toggle */}
             <Button

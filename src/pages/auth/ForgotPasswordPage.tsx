@@ -13,11 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-});
-
-type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
+type ForgotPasswordData = {
+  email: string;
+};
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +25,10 @@ export default function ForgotPasswordPage() {
   const { resetPassword } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+
+  const forgotPasswordSchema = z.object({
+    email: z.string().email(t('invalid_email')),
+  });
 
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordData>({
     resolver: zodResolver(forgotPasswordSchema),

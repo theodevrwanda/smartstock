@@ -20,6 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import LanguageSelector from '@/components/LanguageSelector';
 
 const testimonialImages = [
     'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
@@ -245,23 +246,7 @@ const LandingPage = () => {
                                     <Button className="gradient-primary">{t('nav_get_started')}</Button>
                                 </Link>
 
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="p-2">
-                                            <Languages size={20} />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>{t('switch_language')}</DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => setLanguage('en')} className={language === 'en' ? 'bg-accent' : ''}>
-                                            English
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setLanguage('rw')} className={language === 'rw' ? 'bg-accent' : ''}>
-                                            Kinyarwanda
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                <LanguageSelector />
                             </div>
 
                             {/* Mobile Menu Button */}
@@ -313,22 +298,7 @@ const LandingPage = () => {
 
                             <div className="pt-4 border-t border-border flex items-center justify-between">
                                 <span className="text-sm font-medium text-muted-foreground">{t('switch_language')}</span>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant={language === 'en' ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setLanguage('en')}
-                                    >
-                                        EN
-                                    </Button>
-                                    <Button
-                                        variant={language === 'rw' ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setLanguage('rw')}
-                                    >
-                                        RW
-                                    </Button>
-                                </div>
+                                <LanguageSelector />
                             </div>
                         </div>
                     </motion.div>
