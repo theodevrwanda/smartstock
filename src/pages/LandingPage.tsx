@@ -91,9 +91,9 @@ const LandingPage = () => {
                 const trustedCount = trustedSnapshot.data().count;
 
                 setCounts({
-                    happyClients: happyCount,
-                    businessAccounts: totalCount,
-                    trustedCustomers: trustedCount
+                    happyClients: happyCount + 40,
+                    businessAccounts: totalCount + 40,
+                    trustedCustomers: trustedCount + 40
                 });
             } catch (error) {
                 console.error('Error fetching statistics:', error);
