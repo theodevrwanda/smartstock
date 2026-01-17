@@ -92,29 +92,22 @@ const ContactPage: React.FC = () => {
                         </motion.div>
                     </div>
 
-                    {/* Quick Support Message (Visual Only for now) */}
+                    {/* Promotional Image */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6 }}
-                        className="relative"
+                        className="relative group"
                     >
-                        <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-blue-500/20 blur-2xl opacity-50" />
-                        <div className="bg-card p-8 rounded-3xl border border-border shadow-2xl relative z-10">
-                            <h3 className="text-2xl font-bold mb-6">Need a callback?</h3>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Business Name</label>
-                                    <input className="w-full p-3 rounded-xl border border-border bg-background outline-none focus:ring-2 focus:ring-primary/50" placeholder="Your Business" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Phone Number</label>
-                                    <input className="w-full p-3 rounded-xl border border-border bg-background outline-none focus:ring-2 focus:ring-primary/50" placeholder="07XX XXX XXX" />
-                                </div>
-                                <Button className="w-full py-6 rounded-xl text-lg font-bold" disabled>
-                                    Request Callback (In Development)
-                                </Button>
-                                <p className="text-[10px] text-center text-muted-foreground uppercase font-bold tracking-widest">Available 8AM - 8PM (CAT)</p>
+                        <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-blue-500/20 blur-3xl opacity-30 group-hover:opacity-50 transition-opacity" />
+                        <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-border bg-card">
+                            <img
+                                src="/letbusinessgodigital.png"
+                                alt="Let Business Go Digital"
+                                className="w-full h-auto object-cover transform transition-transform duration-700 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-8">
+                                <p className="text-white text-lg font-bold tracking-tight">Helping Rwandan SMBs Scale with Technology</p>
                             </div>
                         </div>
                     </motion.div>

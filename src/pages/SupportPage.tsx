@@ -22,6 +22,21 @@ const SupportPage: React.FC = () => {
 
             <div className="container mx-auto px-6 py-20 mt-10">
                 <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.6 }}
+                    className="flex justify-center mb-8"
+                >
+                    <div className="relative">
+                        <div className="absolute -inset-1 bg-gradient-to-tr from-primary to-blue-500 rounded-full blur opacity-40 animate-pulse" />
+                        <img
+                            src="/partners/theodev.png"
+                            alt="Theogene Iradukunda"
+                            className="w-32 h-32 rounded-full border-4 border-background shadow-2xl relative z-10"
+                        />
+                    </div>
+                </motion.div>
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
@@ -115,7 +130,7 @@ const SupportPage: React.FC = () => {
                                     </div>
                                 </div>
                                 <p className="text-[10px] uppercase font-bold text-center opacity-60">
-                                    Recipient Name: Theo-Dev Rwanda
+                                    Recipient Name: Theogene iradukunda
                                 </p>
                             </CardContent>
                         </Card>
