@@ -1162,13 +1162,13 @@ const LandingPage = () => {
                                 <h4 className="font-semibold text-foreground mb-4">{t('footer_company')}</h4>
                                 <div className="space-y-2">
                                     <Link to="/about" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        {t('footer_about')}
+                                        About Us
                                     </Link>
                                     <Link to="/contact" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        {t('footer_contact')}
+                                        Contact
                                     </Link>
                                     <Link to="/support" className="block text-muted-foreground hover:text-primary transition-colors text-sm">
-                                        {t('footer_support')}
+                                        Support Development
                                     </Link>
                                 </div>
                             </div>

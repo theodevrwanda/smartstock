@@ -27,6 +27,9 @@ import SettingsPage from "@/pages/SettingsPage";
 import UpgradePage from "@/pages/UpgradePage";
 import NotFound from "./pages/NotFound";
 import LandingPage from "@/pages/LandingPage";
+import AboutUsPage from "@/pages/AboutUsPage";
+import ContactPage from "@/pages/ContactPage";
+import SupportPage from "@/pages/SupportPage";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 import BusinessStatusPage from "@/pages/BusinessStatusPage";
@@ -52,6 +55,9 @@ const App = () => (
                       <Route path="/business-status" element={<ProtectedRoute><BusinessStatusPage /></ProtectedRoute>} />
 
                       <Route path="/" element={<LandingPage />} />
+                      <Route path="/about" element={<AboutUsPage />} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/support" element={<SupportPage />} />
                       <Route
                         path="/dashboard"
                         element={

@@ -85,13 +85,20 @@ Sidebar menu items are defined in `src/components/layout/Sidebar.tsx`.
 **Theodev Rwanda**
 *   **Role**: Lead Developer
 *   **Contact**: [Join our WhatsApp Channel](https://whatsapp.com/channel/0029Vb79i5j8KMqkov7ng61H)
+*   **Support**: [Chat on WhatsApp](https://wa.me/250792734752) (Personal: 0792734752)
 
 ---
 
 ## ☕ Support the Project
 
-If you find this project helpful, consider buying me a coffee to support further development!
+If you find this project helpful, consider supporting its development!
 
+### Global Support
 <a href="https://buymeacoffee.com/theodevrwanda" target="_blank">
     <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" >
 </a>
+
+### Local Support (Rwanda)
+- **Bank of Kigali (BK)**: 100246486087
+- **Recipient**: Theo-Dev Rwanda
+- **MoMo**: 0792734752

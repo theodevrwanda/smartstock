@@ -30,7 +30,7 @@ const SEOHelmet: React.FC<SEOHelmetProps> = ({
   const finalOgDescription = ogDescription || description;
   const finalTwitterTitle = twitterTitle || title;
   const finalTwitterDescription = twitterDescription || description;
-  const finalCanonical = canonical || `https://pixelmartrw.pages.dev${window.location.pathname}`;
+  const finalCanonical = canonical || `https://smartstock.pages.dev${window.location.pathname}`;
 
   return (
     <Helmet>
@@ -62,11 +62,11 @@ const SEOHelmet: React.FC<SEOHelmetProps> = ({
       <meta name="twitter:title" content={finalTwitterTitle} />
       <meta name="twitter:description" content={finalTwitterDescription} />
       <meta name="twitter:image" content={ogImage} />
-      <meta name="twitter:creator" content="@Jiridasee" />
+      <meta name="twitter:creator" content="@theodevrwanda" />
 
-      {/* LinkedIn - Updated to Jiridasee */}
-      <meta property="article:author" content="Jiridasee" />
-      <meta property="article:publisher" content="Jiridasee" />
+      {/* Corporate Info */}
+      <meta property="article:author" content="Theodev Rwanda" />
+      <meta property="article:publisher" content="Theodev Rwanda" />
 
       {/* Geographic Meta Tags */}
       <meta name="geo.region" content="RW-01" />
