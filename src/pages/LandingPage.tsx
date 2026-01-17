@@ -193,11 +193,21 @@ const LandingPage = () => {
     }, [isAuthenticated, authLoading, navigate, paymentOpen]);
 
     const scrollToSection = (id: string) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
         setIsMobileMenuOpen(false);
+        // Small delay to let the mobile menu animation start/finish
+        setTimeout(() => {
+            const element = document.getElementById(id);
+            if (element) {
+                const navHeight = 80;
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - navHeight;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            }
+        }, 300);
     };
 
     const translatedPlans = mockPlans.map(plan => {

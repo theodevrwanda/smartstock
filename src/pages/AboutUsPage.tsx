@@ -18,9 +18,7 @@ const AboutUsPage: React.FC = () => {
             <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
                 <div className="container mx-auto px-6 h-16 flex items-center justify-between">
                     <Link to="/" className="flex items-center gap-2 group">
-                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-                            <img src="/smartstock.png" alt="SmartStock" className="w-6 h-6 invert brightness-0" />
-                        </div>
+                        <img src="/smartstock.png" alt="SmartStock" className="h-10 w-auto object-contain group-hover:scale-110 transition-transform" />
                         <span className="text-xl font-black tracking-tighter uppercase hidden md:block">SmartStock</span>
                     </Link>
                     <Link to="/" className="text-sm font-bold flex items-center gap-1 hover:text-primary transition-colors hidden md:flex">
