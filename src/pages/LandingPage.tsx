@@ -80,10 +80,8 @@ const LandingPage = () => {
                 const totalSnapshot = await getCountFromServer(businessesCol);
                 const totalCount = totalSnapshot.data().count;
 
-                // Happy Clients (business use month -> standard plans)
-                const happyQuery = query(businessesCol, where('subscription.plan', '==', 'standard'));
-                const happySnapshot = await getCountFromServer(happyQuery);
-                const happyCount = happySnapshot.data().count;
+                // Happy Clients (show total number of users no condition)
+                const happyCount = totalCount;
 
                 // Trusted Customers (business use forever -> enterprise plans)
                 const trustedQuery = query(businessesCol, where('subscription.plan', '==', 'enterprise'));
