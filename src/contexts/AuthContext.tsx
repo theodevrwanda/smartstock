@@ -253,7 +253,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
 
           // Strict Expiry Check - Logout if expired
-          if (userData.subscription) {
+          if (userData.subscription && userData.subscription.plan !== 'forever') {
             const endDate = new Date(userData.subscription.endDate);
             if (endDate < new Date()) {
               await signOut(auth);

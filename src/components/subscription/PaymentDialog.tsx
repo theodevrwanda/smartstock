@@ -8,13 +8,14 @@ import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/firebase/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Smartphone, Building2, Copy, CheckCircle2, ChevronRight, MessageCircle } from 'lucide-react';
+import { Smartphone, Building2, Copy, CheckCircle, CheckCircle2, ChevronRight, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface PaymentDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    plan: 'standard' | 'enterprise';
+    plan: 'free' | 'monthly' | 'annually' | 'forever';
     amount: number;
     onSuccess: () => void;
 }
@@ -239,6 +240,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ open, onOpenChange, plan,
 
     const isSubscriptionActive = () => {
         if (!businessData?.subscription) return false;
+        if (businessData.subscription.plan === 'forever') return true;
         return new Date(businessData.subscription.endDate) > new Date();
     };
 
@@ -404,14 +406,20 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ open, onOpenChange, plan,
                                         </div>
                                         <div className="flex justify-between items-center text-sm border-b pb-2 border-primary/10">
                                             <span className="text-muted-foreground">{t('subscription_ends_on')}:</span>
-                                            <span className="font-medium">{new Date(businessData.subscription.endDate).toLocaleDateString(t('locale'))}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm">
-                                            <span className="text-muted-foreground">{t('days_remaining')}:</span>
-                                            <span className="font-bold text-primary">
-                                                {Math.ceil((new Date(businessData.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
+                                            <span className="font-medium">
+                                                {businessData.subscription.plan === 'forever'
+                                                    ? t('plan_forever_name')
+                                                    : new Date(businessData.subscription.endDate).toLocaleDateString(t('locale'))}
                                             </span>
                                         </div>
+                                        {businessData.subscription.plan !== 'forever' && (
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span className="text-muted-foreground">{t('days_remaining')}:</span>
+                                                <span className="font-bold text-primary">
+                                                    {Math.ceil((new Date(businessData.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -425,6 +433,32 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ open, onOpenChange, plan,
                                 >
                                     {t('continue_to_dashboard')}
                                 </Button>
+                            </div>
+                        ) : amount === 0 ? (
+                            <div className="px-6 pb-6 space-y-4">
+                                <Alert className="bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800">
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                    <AlertTitle className="text-green-800 dark:text-green-300">Free Trial Activation</AlertTitle>
+                                    <AlertDescription className="text-green-700 dark:text-green-400">
+                                        You are activating the Free Plan. No payment is required for the first month.
+                                    </AlertDescription>
+                                </Alert>
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setStep(2)}
+                                        className="flex-1 h-11 text-base font-semibold"
+                                    >
+                                        {t('back')}
+                                    </Button>
+                                    <Button
+                                        onClick={handlePayment}
+                                        disabled={loading}
+                                        className="flex-1 h-11 text-base font-semibold"
+                                    >
+                                        {loading ? t('processing') : 'Activate Free Trial'}
+                                    </Button>
+                                </div>
                             </div>
                         ) : (
                             <>

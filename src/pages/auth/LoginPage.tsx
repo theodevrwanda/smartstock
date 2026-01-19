@@ -77,7 +77,7 @@ export default function LoginPage() {
       }
 
       // Check subscription expiry
-      if (user.subscription) {
+      if (user.subscription && user.subscription.plan !== 'forever') {
         const endDate = new Date(user.subscription.endDate);
         const isExpired = endDate < new Date();
 

@@ -175,11 +175,18 @@ const LandingPage = () => {
 
     // Payment Dialog State
     const [paymentOpen, setPaymentOpen] = useState(false);
-    const [selectedPlan, setSelectedPlan] = useState<'standard' | 'enterprise'>('standard');
+    const [selectedPlan, setSelectedPlan] = useState<'free' | 'monthly' | 'annually' | 'forever'>('monthly');
     const [planAmount, setPlanAmount] = useState(0);
 
     const handlePlanSelect = (planName: string, amount: number) => {
-        const type = planName.toLowerCase().includes('enterprise') ? 'enterprise' : 'standard';
+        const lowerName = planName.toLowerCase();
+        let type: 'free' | 'monthly' | 'annually' | 'forever' = 'monthly';
+
+        if (lowerName.includes('forever')) type = 'forever';
+        else if (lowerName.includes('annually')) type = 'annually';
+        else if (lowerName.includes('monthly')) type = 'monthly';
+        else if (lowerName.includes('free')) type = 'free';
+
         setSelectedPlan(type);
         setPlanAmount(amount);
         setPaymentOpen(true);
@@ -214,9 +221,9 @@ const LandingPage = () => {
         let description = plan.description;
 
         if (plan._id === '1') { name = t('plan_free_name'); description = t('plan_free_desc'); }
-        else if (plan._id === '2') { name = t('plan_standard_monthly_name'); description = t('plan_standard_monthly_desc'); }
-        else if (plan._id === '3') { name = t('plan_standard_yearly_name'); description = t('plan_standard_yearly_desc'); }
-        else if (plan._id === '4') { name = t('plan_enterprise_name'); description = t('plan_enterprise_desc'); }
+        else if (plan._id === '2') { name = t('plan_monthly_name'); description = t('plan_monthly_desc'); }
+        else if (plan._id === '3') { name = t('plan_annually_name'); description = t('plan_annually_desc'); }
+        else if (plan._id === '4') { name = t('plan_forever_name'); description = t('plan_forever_desc'); }
 
         const features = [
             t('feature_all_unlocked'),

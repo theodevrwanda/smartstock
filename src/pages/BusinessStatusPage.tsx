@@ -18,12 +18,18 @@ const BusinessStatusPage = () => {
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    // Default to Standard plan pricing for renewal if not specified
-    // In a real app, this might come from the user's current plan or a selection
-    const planToPay = user?.subscription?.plan === 'enterprise' ? 'enterprise' : 'standard';
-    const amountToPay = planToPay === 'enterprise' ? 500000 : 10000;
+    // Default to Monthly plan pricing for renewal if not specified
+    const currentPlan = user?.subscription?.plan || 'free';
+    const planToPay: 'free' | 'monthly' | 'annually' | 'forever' =
+        currentPlan === 'forever' ? 'forever' :
+            currentPlan === 'annually' ? 'annually' : 'monthly';
 
-    const isExpired = user?.subscription ? new Date(user.subscription.endDate) < new Date() : false;
+    const amountToPay =
+        planToPay === 'forever' ? 500000 :
+            planToPay === 'annually' ? 90000 : 10000;
+
+    const isForever = user?.subscription?.plan === 'forever';
+    const isExpired = !isForever && (user?.subscription ? new Date(user.subscription.endDate) < new Date() : false);
     const daysRemaining = user?.subscription
         ? Math.ceil((new Date(user.subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
         : 0;
@@ -84,15 +90,22 @@ const BusinessStatusPage = () => {
                         <div>
                             <p className="font-medium text-blue-900 dark:text-blue-100">Subscription Period</p>
                             <p className="text-sm text-blue-700 dark:text-blue-300">
-                                {user?.subscription?.startDate && user?.subscription?.endDate ? (
+                                {isForever ? (
+                                    t('plan_forever_name')
+                                ) : user?.subscription?.startDate && user?.subscription?.endDate ? (
                                     <>
                                         {formatDate(new Date(user.subscription.startDate))} - {formatDate(new Date(user.subscription.endDate))}
                                     </>
                                 ) : 'N/A'}
                             </p>
-                            {!isExpired && (
+                            {!isExpired && !isForever && (
                                 <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mt-1">
                                     {daysRemaining} days remaining
+                                </p>
+                            )}
+                            {isForever && (
+                                <p className="text-xs font-semibold text-green-600 dark:text-green-400 mt-1">
+                                    Lifetime Access
                                 </p>
                             )}
                         </div>

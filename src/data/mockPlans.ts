@@ -2,9 +2,9 @@
 export const mockPlans = [
     {
         _id: '1',
-        name: 'Free Trial Plan',
+        name: 'Free Plan',
         price: 0,
-        duration: 'month',
+        duration: 'free',
         description: '(Test Mode – First Month Only)',
         features: [
             'All SmartStock features unlocked',
@@ -19,7 +19,7 @@ export const mockPlans = [
     },
     {
         _id: '2',
-        name: 'Standard Monthly Plan',
+        name: 'Monthly Plan',
         price: 10000,
         duration: 'month',
         description: '(For Active Businesses)',
@@ -36,7 +36,7 @@ export const mockPlans = [
     },
     {
         _id: '3',
-        name: 'Standard Yearly Plan',
+        name: 'Annually Plan',
         price: 90000,
         duration: 'year',
         description: '(Best Value – Save 25%)',
@@ -53,7 +53,7 @@ export const mockPlans = [
     },
     {
         _id: '4',
-        name: 'Enterprise Plan',
+        name: 'Forever Plan',
         price: 500000,
         duration: 'forever',
         description: 'Lifetime License – One Time Payment',

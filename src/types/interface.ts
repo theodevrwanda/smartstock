@@ -141,7 +141,7 @@ export interface Business {
 }
 
 export interface Subscription {
-    plan: 'free' | 'standard' | 'enterprise';
+    plan: 'free' | 'monthly' | 'annually' | 'forever';
     status: 'active' | 'expired';
     startDate: string;
     endDate: string;
